@@ -161,7 +161,7 @@ yarn.lock
 pnpm-lock.yaml
 
 # Custom Python scripts
-assets/
+
 
 # Misc
 *.pem
