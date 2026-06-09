@@ -420,10 +420,26 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date() });
 });
 
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: "E Mediclub API is running!",
+    version: "1.0.0",
+    endpoints: {
+      auth: "/api/auth",
+      doctors: "/api/doctors",
+      labs: "/api/labs",
+      products: "/api/products",
+      health: "/api/health"
+    }
+  });
+});
+
 // 404 Route handler
 app.use('*', (req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });
+
 
 // Global Error Handler
 app.use(errorHandler);
