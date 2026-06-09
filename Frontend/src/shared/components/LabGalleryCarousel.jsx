@@ -8,12 +8,12 @@ const labImages = [
     subtitle: "Ensuring 100% precision in every clinical report"
   },
   {
-    url: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80",
+    url: "https://images.unsplash.com/photo-1579154261908-5f9c1c5f0d6d?auto=format&fit=crop&w=800&q=80",
     title: "Advanced Diagnostic Testing & Screening",
     subtitle: "Equipped with high-end automated analyzers"
   },
   {
-    url: "https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&fit=crop&w=800&q=80",
+    url: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&w=800&q=80",
     title: "Sterile and Safe Sample Collections",
     subtitle: "Your safety is our medical staff's top priority"
   }

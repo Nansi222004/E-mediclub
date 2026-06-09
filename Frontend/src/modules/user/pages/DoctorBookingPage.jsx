@@ -157,7 +157,9 @@ export default function DoctorBookingPage() {
         hasPrescription: !!prescriptionFile,
         amountPaid: selectedDoctor.fee,
         paymentStatus: 'Paid',
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        city: selectedDoctor.city,
+        pincode: selectedDoctor.pincode
       };
 
       dispatch(bookDoctorAppointment(newAppointment));

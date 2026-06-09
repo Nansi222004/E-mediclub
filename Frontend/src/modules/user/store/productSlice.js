@@ -2110,6 +2110,45 @@ const generateTestimonials = (specialty, docName, index) => {
   });
 };
 
+const cities = [
+  'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune',
+  'Kolkata', 'Ahmedabad', 'Jaipur', 'Surat', 'Indore', 'Bhopal',
+  'Ujjain', 'Dewas', 'Ratlam', 'Jabalpur', 'Gwalior', 'Sagar',
+  'Satna', 'Rewa', 'Chhindwara', 'Vidisha', 'Hoshangabad',
+  'Nagpur', 'Nashik', 'Aurangabad', 'Kolhapur', 'Solapur'
+];
+
+const cityDefaults = {
+  'Mumbai': { pincode: '400001', state: 'Maharashtra' },
+  'Delhi': { pincode: '110001', state: 'Delhi' },
+  'Bangalore': { pincode: '560001', state: 'Karnataka' },
+  'Chennai': { pincode: '600001', state: 'Tamil Nadu' },
+  'Hyderabad': { pincode: '500001', state: 'Telangana' },
+  'Pune': { pincode: '411001', state: 'Maharashtra' },
+  'Kolkata': { pincode: '700001', state: 'West Bengal' },
+  'Ahmedabad': { pincode: '380001', state: 'Gujarat' },
+  'Jaipur': { pincode: '302001', state: 'Rajasthan' },
+  'Surat': { pincode: '395003', state: 'Gujarat' },
+  'Indore': { pincode: '452010', state: 'Madhya Pradesh' },
+  'Bhopal': { pincode: '462001', state: 'Madhya Pradesh' },
+  'Ujjain': { pincode: '456010', state: 'Madhya Pradesh' },
+  'Dewas': { pincode: '455001', state: 'Madhya Pradesh' },
+  'Ratlam': { pincode: '457001', state: 'Madhya Pradesh' },
+  'Jabalpur': { pincode: '482001', state: 'Madhya Pradesh' },
+  'Gwalior': { pincode: '474001', state: 'Madhya Pradesh' },
+  'Sagar': { pincode: '470001', state: 'Madhya Pradesh' },
+  'Satna': { pincode: '485001', state: 'Madhya Pradesh' },
+  'Rewa': { pincode: '486001', state: 'Madhya Pradesh' },
+  'Chhindwara': { pincode: '480001', state: 'Madhya Pradesh' },
+  'Vidisha': { pincode: '464001', state: 'Madhya Pradesh' },
+  'Hoshangabad': { pincode: '461001', state: 'Madhya Pradesh' },
+  'Nagpur': { pincode: '440001', state: 'Maharashtra' },
+  'Nashik': { pincode: '422001', state: 'Maharashtra' },
+  'Aurangabad': { pincode: '431001', state: 'Maharashtra' },
+  'Kolhapur': { pincode: '416001', state: 'Maharashtra' },
+  'Solapur': { pincode: '413001', state: 'Maharashtra' }
+};
+
 const initialDoctors = [];
 let docIdCounter = 1;
 
@@ -2129,12 +2168,16 @@ Object.entries(specialtiesData).forEach(([specialty, docs]) => {
     const citiesList = ["Mumbai", "Indore", "Delhi", "Bangalore"];
     const fallbackCity = citiesList[idx % citiesList.length];
     const city = specificDoctorCities[doc.name] || doc.city || fallbackCity;
+    const defaults = cityDefaults[city] || { pincode: '400001', state: 'Maharashtra' };
 
     initialDoctors.push({
       id: `doc-${docIdCounter}`,
       name: doc.name,
       specialty: specialty,
       city: city,
+      pincode: defaults.pincode,
+      state: defaults.state,
+      address: `${city} General Hospital, ${city}`,
       subSpecialty: doc.subSpecialty,
       avatar: `https://images.unsplash.com/photo-${doc.gender === 'female' ? '1559839734-2b71ea197ec2' : '1622253692010-333f2da6031d'}?auto=format&fit=crop&w=150&h=150&q=80`,
       qualification: doc.qualification,
@@ -2529,45 +2572,6 @@ export const normalizeCity = (city) => {
   return city.charAt(0).toUpperCase() + city.slice(1);
 };
 
-const cities = [
-  'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune',
-  'Kolkata', 'Ahmedabad', 'Jaipur', 'Surat', 'Indore', 'Bhopal',
-  'Ujjain', 'Dewas', 'Ratlam', 'Jabalpur', 'Gwalior', 'Sagar',
-  'Satna', 'Rewa', 'Chhindwara', 'Vidisha', 'Hoshangabad',
-  'Nagpur', 'Nashik', 'Aurangabad', 'Kolhapur', 'Solapur'
-];
-
-const cityDefaults = {
-  'Mumbai': { pincode: '400001', state: 'Maharashtra' },
-  'Delhi': { pincode: '110001', state: 'Delhi' },
-  'Bangalore': { pincode: '560001', state: 'Karnataka' },
-  'Chennai': { pincode: '600001', state: 'Tamil Nadu' },
-  'Hyderabad': { pincode: '500001', state: 'Telangana' },
-  'Pune': { pincode: '411001', state: 'Maharashtra' },
-  'Kolkata': { pincode: '700001', state: 'West Bengal' },
-  'Ahmedabad': { pincode: '380001', state: 'Gujarat' },
-  'Jaipur': { pincode: '302001', state: 'Rajasthan' },
-  'Surat': { pincode: '395003', state: 'Gujarat' },
-  'Indore': { pincode: '452010', state: 'Madhya Pradesh' },
-  'Bhopal': { pincode: '462001', state: 'Madhya Pradesh' },
-  'Ujjain': { pincode: '456010', state: 'Madhya Pradesh' },
-  'Dewas': { pincode: '455001', state: 'Madhya Pradesh' },
-  'Ratlam': { pincode: '457001', state: 'Madhya Pradesh' },
-  'Jabalpur': { pincode: '482001', state: 'Madhya Pradesh' },
-  'Gwalior': { pincode: '474001', state: 'Madhya Pradesh' },
-  'Sagar': { pincode: '470001', state: 'Madhya Pradesh' },
-  'Satna': { pincode: '485001', state: 'Madhya Pradesh' },
-  'Rewa': { pincode: '486001', state: 'Madhya Pradesh' },
-  'Chhindwara': { pincode: '480001', state: 'Madhya Pradesh' },
-  'Vidisha': { pincode: '464001', state: 'Madhya Pradesh' },
-  'Hoshangabad': { pincode: '461001', state: 'Madhya Pradesh' },
-  'Nagpur': { pincode: '440001', state: 'Maharashtra' },
-  'Nashik': { pincode: '422001', state: 'Maharashtra' },
-  'Aurangabad': { pincode: '431001', state: 'Maharashtra' },
-  'Kolhapur': { pincode: '416001', state: 'Maharashtra' },
-  'Solapur': { pincode: '413001', state: 'Maharashtra' }
-};
-
 // Dynamic frontend seeder
 cities.forEach((city, cIdx) => {
   const defaults = cityDefaults[city] || { pincode: '400001', state: 'Maharashtra' };
@@ -2597,7 +2601,7 @@ cities.forEach((city, cIdx) => {
       const expVal = 8 + (i * 2);
 
       initialDoctors.push({
-        id: `doc-gen-${city.toLowerCase().slice(0, 3)}-${i + 1}`,
+        id: `doc-gen-${city.toLowerCase().replace(/\s+/g, '')}-${i + 1}`,
         name,
         specialty: spec.name,
         subSpecialty: spec.sub,
@@ -2645,7 +2649,7 @@ cities.forEach((city, cIdx) => {
       const prefix = prefixes[(cIdx * 5 + i) % prefixes.length];
       const suffix = labNames[i % labNames.length];
       const name = `${prefix} ${suffix}`;
-      const labId = `lab-gen-${city.toLowerCase().slice(0, 3)}-${i + 1}`;
+      const labId = `lab-gen-${city.toLowerCase().replace(/\s+/g, '')}-${i + 1}`;
 
       initialLabs.push({
         id: labId,
@@ -2682,7 +2686,7 @@ cities.forEach((city, cIdx) => {
 
       testNames.forEach((t, tIdx) => {
         initialLabTests.push({
-          id: `labtest-${city.toLowerCase().slice(0, 3)}-${i + 1}-${tIdx + 1}`,
+          id: `labtest-${city.toLowerCase().replace(/\s+/g, '')}-${i + 1}-${tIdx + 1}`,
           name: t.name,
           tag: t.tag,
           parameters: "4 Parameters Checked",
@@ -2714,7 +2718,7 @@ cities.forEach((city, cIdx) => {
 
     productTemplates.forEach((template, prodIdx) => {
       initialMedicines.push({
-        id: `med-${city.toLowerCase().slice(0, 3)}-gen-${prodIdx + 1}`,
+        id: `med-${city.toLowerCase().replace(/\s+/g, '')}-gen-${prodIdx + 1}`,
         name: template.name,
         category: template.category,
         brand: template.brand,
@@ -2760,7 +2764,9 @@ const storedAppointments = localStorage.getItem('em_appointments')
         date: '2026-05-28',
         timeSlot: '05:30 PM - 06:00 PM',
         type: 'Online Consultation',
-        status: 'Confirmed'
+        status: 'Confirmed',
+        city: 'Mumbai',
+        pincode: '400001'
       }
     ];
 
@@ -2773,7 +2779,9 @@ const storedLabBookings = localStorage.getItem('em_lab_bookings')
         date: '2026-05-29',
         timeSlot: '08:00 AM - 10:00 AM',
         status: 'Scheduled',
-        address: 'Home (Mumbai)'
+        address: 'Home (Mumbai)',
+        city: 'Mumbai',
+        pincode: '400001'
       }
     ];
 
@@ -2783,6 +2791,35 @@ const storedPrescriptions = localStorage.getItem('em_prescriptions')
 const savedLocation = localStorage.getItem('em_location') 
   ? JSON.parse(localStorage.getItem('em_location')) 
   : null;
+
+if (savedLocation && savedLocation.city) {
+  const normCity = savedLocation.city;
+  const pin = savedLocation.pincode;
+  const stName = savedLocation.state;
+  const dist = savedLocation.district || normCity;
+
+  initialDoctors.forEach(doc => {
+    doc.city = normCity;
+    doc.pincode = pin || doc.pincode;
+    doc.state = stName || doc.state;
+    doc.hospital = `${normCity} City Hospital`;
+    doc.bio = `${doc.name} is a dedicated ${doc.specialty} specialist in ${normCity}.`;
+    doc.address = `${dist} Health Clinic, ${normCity}`;
+  });
+
+  initialLabs.forEach(lab => {
+    lab.city = normCity;
+    lab.pincode = pin || lab.pincode;
+    lab.state = stName || lab.state;
+    lab.address = `${dist} Diagnostics, ${normCity}`;
+  });
+
+  initialMedicines.forEach(med => {
+    med.vendorCity = normCity;
+    med.vendorPincode = pin || med.vendorPincode;
+    med.vendorState = stName || med.vendorState;
+  });
+}
 
 const savedSelectedLocation = localStorage.getItem('em_selected_location')
   ? localStorage.getItem('em_selected_location')
@@ -2878,10 +2915,44 @@ const productSlice = createSlice({
         fullAddress: fullAddress || ""
       };
       if (pincode) {
-        state.selectedLocation = `${normalizedCity}, ${getStateAbbreviation(st)} - ${pincode}`;
+        const areaLabel = (district && district.toLowerCase() !== normalizedCity.toLowerCase())
+          ? `${district}, ${normalizedCity}`
+          : normalizedCity;
+        state.selectedLocation = `${areaLabel}, ${getStateAbbreviation(st)} - ${pincode}`;
       } else {
         state.selectedLocation = normalizedCity;
       }
+
+      if (normalizedCity) {
+        // Dynamic Pan-India doctor rewrite
+        state.doctors = (state.doctors || []).map(doc => ({
+          ...doc,
+          city: normalizedCity,
+          pincode: pincode || doc.pincode || "110001",
+          state: st || doc.state || "Delhi",
+          hospital: `${normalizedCity} City Hospital`,
+          bio: `${doc.name} is a dedicated ${doc.specialty} specialist in ${normalizedCity}.`,
+          address: `${district || normalizedCity} Health Clinic, ${normalizedCity}`
+        }));
+
+        // Dynamic Pan-India lab rewrite
+        state.labs = (state.labs || []).map(lab => ({
+          ...lab,
+          city: normalizedCity,
+          pincode: pincode || lab.pincode || "110001",
+          state: st || lab.state || "Delhi",
+          address: `${district || normalizedCity} Diagnostics, ${normalizedCity}`
+        }));
+
+        // Dynamic Pan-India medicine rewrite
+        state.medicines = (state.medicines || []).map(med => ({
+          ...med,
+          vendorCity: normalizedCity,
+          vendorPincode: pincode || med.vendorPincode || "110001",
+          vendorState: st || med.vendorState || "Delhi"
+        }));
+      }
+
       localStorage.setItem('em_location', JSON.stringify(state.location));
       localStorage.setItem('em_selected_location', state.selectedLocation);
     },

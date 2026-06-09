@@ -15,6 +15,26 @@ import Shimmer from '../../../shared/components/Shimmer';
 import { setSelectedCategory, setSearchTerm, setPrescriptionFilterActive, normalizeCity } from '../store/productSlice';
 import MedicinesFilter from '../../../shared/components/MedicinesFilter';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
+function ImageWithFallback({ src, alt, initials, colorClass }) {
+  const [error, setError] = useState(!src);
+
+  if (error) {
+    return (
+      <div className={`w-full h-full flex items-center justify-center bg-gradient-to-tr from-teal/20 to-emerald-100 text-teal-dark font-black text-sm uppercase`}>
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setError(true)}
+    />
+  );
+}
 
 
 export default function HomePage() {
@@ -85,21 +105,21 @@ export default function HomePage() {
       route: '/medicines',
       accent: 'from-emerald-50 to-white',
       badge: 'Medicines',
-      image: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=300&q=80'
+      image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=300&q=80'
     },
     {
       name: 'Labs',
       route: '/lab-tests',
       accent: 'from-cyan-50 to-white',
       badge: 'Diagnostics',
-      image: 'https://images.unsplash.com/photo-1579154204601-01588f351167?auto=format&fit=crop&w=300&q=80'
+      image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=300&q=80'
     },
     {
       name: 'Consult',
       route: '/doctor-appointments',
       accent: 'from-teal-50 to-white',
       badge: 'Doctors',
-      image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?auto=format&fit=crop&w=300&q=80'
+      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=300&q=80'
     },
   ];
 
@@ -243,26 +263,33 @@ export default function HomePage() {
   };
 
   const prioritizedMedicines = getPrioritizedMedicines(medicines, selectedLocation);
+  const pincode = locationState?.pincode ? locationState.pincode.trim() : '';
 
-  const cityFilteredDoctors = city
-    ? doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase())
-    : doctors;
-  const homeDoctors = city ? cityFilteredDoctors : doctors;
+  const cityFilteredDoctors = pincode
+    ? doctors.filter(doc => doc.pincode === pincode)
+    : city
+      ? doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase())
+      : doctors;
+  const homeDoctors = (pincode || city) ? cityFilteredDoctors : doctors;
 
-  const cityFilteredLabs = city
-    ? labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase())
-    : labs;
-  const homeLabTests = city
+  const cityFilteredLabs = pincode
+    ? labs.filter(lab => lab.pincode === pincode)
+    : city
+      ? labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase())
+      : labs;
+  const homeLabTests = (pincode || city)
     ? labTests.filter(test => cityFilteredLabs.some(l => 
         l.name.toLowerCase().includes(test.labName.toLowerCase()) || 
         test.labName.toLowerCase().includes(l.name.toLowerCase())
       ))
     : labTests;
 
-  const cityFilteredMedicines = city
-    ? prioritizedMedicines.filter(med => med.vendorCity && normalizeCity(med.vendorCity).toLowerCase() === city.toLowerCase())
-    : prioritizedMedicines;
-  const homeMedicines = city ? cityFilteredMedicines : prioritizedMedicines;
+  const cityFilteredMedicines = pincode
+    ? prioritizedMedicines.filter(med => med.vendorPincode === pincode)
+    : city
+      ? prioritizedMedicines.filter(med => med.vendorCity && normalizeCity(med.vendorCity).toLowerCase() === city.toLowerCase())
+      : prioritizedMedicines;
+  const homeMedicines = (pincode || city) ? cityFilteredMedicines : prioritizedMedicines;
 
   const filteredMedicines = React.useMemo(() => {
     let result = homeMedicines;
@@ -990,28 +1017,56 @@ export default function HomePage() {
               SEE ALL
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {featuredBrands.slice(0, 6).map((brand, idx) => (
-              <motion.button
-                key={brand.name}
-                whileTap={{ scale: 0.96 }}
-                whileHover={{ y: -2 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                onClick={() => navigate('/categories')}
-                className="bg-white rounded-[24px] border border-slate-100 shadow-premium p-3 flex flex-col items-center justify-center text-center min-h-[110px] cursor-pointer"
-              >
-                <div className="w-14 h-14 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                  {brand.image ? (
-                    <img src={brand.image} alt={brand.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className={`text-[10px] font-black ${brand.color}`}>{brand.name.split(' ')[0]}</span>
-                  )}
+          <div className="grid grid-cols-3 gap-3.5 px-1">
+            {featuredBrands.slice(0, 6).map((brand, idx) => {
+              const brandLogos = {
+                'Sun Pharmaceutical Industries Ltd': 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=150&h=150&q=80',
+                'Sun Pharmaceutical Industries Limited': 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=150&h=150&q=80',
+                'Micro Labs Ltd': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=150&h=150&q=80',
+                'Dabur India Ltd': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=150&h=150&q=80',
+                'Dabur India Limited': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=150&h=150&q=80',
+                'Roche Diabetes Care': 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?auto=format&fit=crop&w=150&h=150&q=80',
+                'Koye Pharmaceuticals': 'https://images.unsplash.com/photo-1626645738196-c2a792747f14?auto=format&fit=crop&w=150&h=150&q=80',
+                'Koye Pharmaceuticals Pvt Ltd': 'https://images.unsplash.com/photo-1626645738196-c2a792747f14?auto=format&fit=crop&w=150&h=150&q=80',
+                'The Himalaya Drug Company': 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=150&h=150&q=80',
+                'Himalaya Drug Company': 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=150&h=150&q=80'
+              };
+              const brandImg = brandLogos[brand.name] || brand.image;
+
+              // Helper to get initials of brand
+              const initials = brand.name
+                .split(' ')
+                .filter(w => !['Ltd', 'Pvt', 'Company', 'Care', 'Drug', 'Industries'].includes(w))
+                .slice(0, 2)
+                .map(w => w[0])
+                .join('')
+                .toUpperCase() || brand.name[0].toUpperCase();
+
+              return (
+                <div key={brand.name} className="flex flex-col items-center gap-2 mx-auto text-center w-full">
+                  <motion.button
+                    whileTap={{ scale: 0.92, rotate: -2 }}
+                    whileHover={{ scale: 1.08, y: -4 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                    onClick={() => {
+                      dispatch(setSelectedCategory('Medicines'));
+                      navigate('/categories');
+                    }}
+                    className="bg-white rounded-full border border-slate-100 hover:border-teal/30 shadow-premium w-20 h-20 flex items-center justify-center cursor-pointer overflow-hidden p-0 outline-none relative group"
+                  >
+                    <ImageWithFallback
+                      src={brandImg}
+                      alt={brand.name}
+                      initials={initials}
+                      colorClass={brand.color}
+                    />
+                  </motion.button>
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight leading-tight text-center break-words max-w-[85px]">
+                    {brand.name}
+                  </span>
                 </div>
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider mt-2 truncate max-w-full">
-                  {brand.name}
-                </span>
-              </motion.button>
-            ))}
+              );
+            })}
           </div>
         </section>
 

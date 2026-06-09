@@ -111,7 +111,7 @@ export default function ProductCard({ product }) {
           </span>
 
           {/* Variants Selector */}
-          <div onClick={(e) => e.stopPropagation()}>
+          <div onClick={(e) => e.stopPropagation()} className="mt-2.5 mb-1">
             <MedicineVariant
               product={product}
               selectedVariant={selectedVariant}
@@ -122,7 +122,7 @@ export default function ProductCard({ product }) {
 
         {/* Rating and Pricing Row */}
         <div className="mt-3.5 pt-3 border-t border-slate-50">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3">
             <div className="flex items-center gap-0.5 bg-yellow-50 text-gold-dark text-[10px] font-black px-1.5 py-0.5 rounded">
               <FiStar className="fill-gold stroke-gold" />
               <span>{product.rating}</span>
@@ -136,10 +136,10 @@ export default function ProductCard({ product }) {
               {currentDiscountPrice ? (
                 <>
                   <span className="text-[11px] text-slate-400 line-through font-medium leading-none">
-                    Rs. {currentPrice}
+                    ₹{currentPrice}
                   </span>
                   <span className="text-base font-black text-slate-900 leading-tight mt-0.5">
-                    Rs. {currentDiscountPrice}
+                    ₹{currentDiscountPrice}
                   </span>
                 </>
               ) : (
@@ -148,7 +148,7 @@ export default function ProductCard({ product }) {
                     &nbsp;
                   </span>
                   <span className="text-base font-black text-slate-900 leading-tight mt-0.5">
-                    Rs. {currentPrice}
+                    ₹{currentPrice}
                   </span>
                 </>
               )}

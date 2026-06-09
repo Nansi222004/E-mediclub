@@ -122,11 +122,79 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
   const [addrCity, setAddrCity] = useState('');
   const [addrState, setAddrState] = useState('');
 
+  const [resolvedPincodeLocation, setResolvedPincodeLocation] = useState(null);
+
   useEffect(() => {
     if (reduxLocation && reduxLocation.city) {
       setLocationEnabled(true);
     }
   }, [reduxLocation]);
+
+  // Real-time pincode search resolution
+  useEffect(() => {
+    const pin = citySearchQuery.trim().replace(/\D/g, '');
+    if (pin.length === 6) {
+      const localCity = Object.keys(CITY_MAPPINGS).find(k => CITY_MAPPINGS[k].pincode === pin);
+      if (localCity) {
+        setResolvedPincodeLocation({
+          pincode: pin,
+          city: localCity,
+          state: CITY_MAPPINGS[localCity].state,
+          district: CITY_MAPPINGS[localCity].district || localCity
+        });
+      } else {
+        // Immediate smart fallback guess
+        const prefix = pin.slice(0, 3);
+        const prefix2 = pin.slice(0, 2);
+        let city = 'Bhopal';
+        let state = 'Madhya Pradesh';
+        if (prefix === '452') { city = 'Indore'; state = 'Madhya Pradesh'; }
+        else if (prefix === '462') { city = 'Bhopal'; state = 'Madhya Pradesh'; }
+        else if (prefix.startsWith('40')) { city = 'Mumbai'; state = 'Maharashtra'; }
+        else if (prefix.startsWith('41')) { city = 'Pune'; state = 'Maharashtra'; }
+        else if (prefix.startsWith('11')) { city = 'Delhi'; state = 'Delhi'; }
+        else if (prefix.startsWith('56')) { city = 'Bangalore'; state = 'Karnataka'; }
+        else if (prefix.startsWith('60')) { city = 'Chennai'; state = 'Tamil Nadu'; }
+        else if (prefix.startsWith('50')) { city = 'Hyderabad'; state = 'Telangana'; }
+        else if (prefix.startsWith('70')) { city = 'Kolkata'; state = 'West Bengal'; }
+        else {
+          if (prefix2 >= '11' && prefix2 <= '13') { city = 'Delhi'; state = 'Delhi'; }
+          else if (prefix2 >= '40' && prefix2 <= '44') { city = 'Mumbai'; state = 'Maharashtra'; }
+          else if (prefix2 >= '45' && prefix2 <= '48') { city = 'Bhopal'; state = 'Madhya Pradesh'; }
+          else if (prefix2 >= '56' && prefix2 <= '59') { city = 'Bangalore'; state = 'Karnataka'; }
+          else if (prefix2 >= '60' && prefix2 <= '64') { city = 'Chennai'; state = 'Tamil Nadu'; }
+          else if (prefix2 >= '50' && prefix2 <= '53') { city = 'Hyderabad'; state = 'Telangana'; }
+          else if (prefix2 >= '70' && prefix2 <= '74') { city = 'Kolkata'; state = 'West Bengal'; }
+        }
+        setResolvedPincodeLocation({
+          pincode: pin,
+          city,
+          state,
+          district: city
+        });
+
+        // Query API to refine
+        fetch(`https://api.postalpincode.in/pincode/${pin}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+              const po = data[0].PostOffice[0];
+              setResolvedPincodeLocation({
+                pincode: pin,
+                city: po.District || po.Name,
+                state: po.State,
+                district: po.Name || po.District
+              });
+            }
+          })
+          .catch(err => {
+            console.log('Postal API lookup offline or timed out; using local smart guess.');
+          });
+      }
+    } else {
+      setResolvedPincodeLocation(null);
+    }
+  }, [citySearchQuery]);
 
   // Handle automatic Geolocation lookup
   const handleAutoDetect = () => {
@@ -174,7 +242,7 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
               });
             }
           } catch (err) {
-            console.error(err);
+            console.warn('Reverse Geocoding failed:', err);
             setStatusMsg({
               type: 'invalid',
               text: '❌ Failed to connect to location service.'
@@ -249,7 +317,8 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
 
   // Filter Suggested Cities + Other list
   const filteredSuggested = SUGGESTED_CITIES.filter(c => 
-    c.name.toLowerCase().includes(citySearchQuery.toLowerCase())
+    c.name.toLowerCase().includes(citySearchQuery.toLowerCase()) ||
+    (CITY_MAPPINGS[c.name] && CITY_MAPPINGS[c.name].pincode.includes(citySearchQuery))
   );
 
   const filteredOthers = Object.keys(CITY_MAPPINGS)
@@ -512,6 +581,34 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
                     <FiPlus className="w-4 h-4 text-slate-400" />
                     <span>Add New Address</span>
                   </button>
+
+                  {resolvedPincodeLocation && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch(setLocation({
+                          pincode: resolvedPincodeLocation.pincode,
+                          city: resolvedPincodeLocation.city,
+                          district: resolvedPincodeLocation.district,
+                          state: resolvedPincodeLocation.state,
+                          fullAddress: ''
+                        }));
+                        onClose();
+                      }}
+                      className="w-full py-3.5 px-4 border border-teal bg-teal-50/20 hover:bg-teal-50/40 rounded-2xl flex items-center justify-between text-left cursor-pointer transition-all shadow-sm shrink-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-teal-55 flex items-center justify-center text-teal-dark shrink-0">
+                          📍
+                        </div>
+                        <div>
+                          <span className="text-xs font-black text-teal-dark block">Pincode: {resolvedPincodeLocation.pincode}</span>
+                          <span className="text-[10px] text-slate-550 font-bold block">{resolvedPincodeLocation.city}, {resolvedPincodeLocation.state}</span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] bg-teal text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Select</span>
+                    </button>
+                  )}
 
                   {/* Suggested Cities Section */}
                   <div className="flex flex-col gap-2 mt-1 shrink-0">

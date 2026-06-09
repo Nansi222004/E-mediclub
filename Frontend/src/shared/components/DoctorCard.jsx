@@ -10,8 +10,46 @@ export default function DoctorCard({ doctor, onViewProfile }) {
   const { isAuthenticated } = useSelector(state => state.auth || {});
   const fallbackAvatar = 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=300&q=80';
 
+  const isAppointmentActive = (apt) => {
+    if (!apt.date) return false;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+    
+    if (apt.date < todayStr) return false;
+    if (apt.date > todayStr) return true;
+    
+    const parts = apt.timeSlot.split(' - ');
+    if (parts.length < 2) return true;
+    const endTimeStr = parts[1].trim();
+    
+    const timeMatch = endTimeStr.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+    if (!timeMatch) return true;
+    
+    let hour = parseInt(timeMatch[1]);
+    const min = parseInt(timeMatch[2]);
+    const ampm = timeMatch[3].toUpperCase();
+    
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+    
+    if (currentHour > hour || (currentHour === hour && currentMin >= min)) {
+      return false;
+    }
+    return true;
+  };
+
   // Check if user already has an appointment booked with this doctor
-  const isBooked = isAuthenticated && appointments.some(apt => apt.doctorName === doctor.name && (apt.status === 'Confirmed' || apt.status === 'Scheduled'));
+  const isBooked = isAuthenticated && appointments.some(apt => 
+    apt.doctorName === doctor.name && 
+    (apt.status === 'Confirmed' || apt.status === 'Scheduled') &&
+    isAppointmentActive(apt)
+  );
 
   return (
     <div
@@ -26,7 +64,7 @@ export default function DoctorCard({ doctor, onViewProfile }) {
           <div className="flex items-center gap-1 text-[10px] text-amber-500 font-extrabold bg-amber-50 px-2 py-0.5 rounded">
             <FiStar className="fill-amber-500 stroke-[3px]" />
             <span>{doctor.rating}</span>
-            <span className="text-slate-355 font-bold">�</span>
+            <span className="text-slate-355 font-bold"></span>
             <span className="text-slate-400 font-bold">{doctor.reviewsCount} reviews</span>
           </div>
         </div>
@@ -89,13 +127,13 @@ export default function DoctorCard({ doctor, onViewProfile }) {
           <div className="flex flex-col">
             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">Consultation Fee</span>
             <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-base font-black text-slate-800">Rs. {doctor.fee}</span>
+              <span className="text-base font-black text-slate-800">₹{doctor.fee}</span>
               <span className="text-[9px] text-slate-400 font-semibold uppercase">Online</span>
             </div>
-            <span className="text-[9px] text-slate-400 font-bold mt-0.5">In-Clinic: Rs. {doctor.offlineFee}</span>
+            <span className="text-[9px] text-slate-400 font-bold mt-0.5">In-Clinic: ₹{doctor.offlineFee}</span>
           </div>
 
-          <div className="flex w-full sm:w-auto items-stretch sm:items-center gap-2 sm:gap-3">
+          <div className="flex w-full sm:w-auto items-stretch sm:items-center gap-3.5 sm:gap-3 mt-1.5 sm:mt-0">
             {/* View Profile Button */}
             <button 
               type="button"
@@ -114,7 +152,7 @@ export default function DoctorCard({ doctor, onViewProfile }) {
             </button>
 
             {isBooked ? (
-              <span className="w-full sm:w-auto bg-emerald-50 text-emerald-600 text-[10px] font-black px-4 py-2.5 rounded-full flex items-center justify-center gap-1 border border-emerald-100 min-h-[44px] sm:min-h-[36px] min-w-0 sm:min-w-[92px] select-none">
+              <span className="w-full sm:w-auto bg-emerald-50 text-emerald-600 text-[10px] font-black px-4 py-2.5 rounded-full flex items-center justify-center gap-1 border border-emerald-100 min-h-[44px] sm:min-h-[36px] min-w-0 sm:min-w-[92px] select-none flex-1 sm:flex-initial">
                 <FiCheckCircle className="stroke-[3px]" />
                 BOOKED
               </span>
@@ -129,7 +167,7 @@ export default function DoctorCard({ doctor, onViewProfile }) {
                     navigate('/login', { state: { from: `/doctors/${doctor.id}/book` } });
                   }
                 }}
-                className="w-full sm:w-auto bg-forest hover:bg-forest-dark text-white font-bold text-xs px-4 py-2.5 sm:py-2 rounded-full shadow-sm hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer border-0 min-h-[44px] sm:min-h-[36px] min-w-0 sm:min-w-[92px] outline-none"
+                className="w-full sm:w-auto bg-forest hover:bg-forest-dark text-white font-bold text-xs px-4 py-2.5 sm:py-2 rounded-full shadow-sm hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer border-0 min-h-[44px] sm:min-h-[36px] min-w-0 sm:min-w-[92px] outline-none flex-1 sm:flex-initial"
               >
                 <FiCalendar className="w-4 h-4 shrink-0" />
                 <span>BOOK</span>

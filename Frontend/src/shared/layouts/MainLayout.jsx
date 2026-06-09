@@ -132,28 +132,7 @@ const getPromoBanners = (pathname) => {
   }
 
   if (pathname.startsWith('/profile')) {
-    return [
-      {
-        title: 'Unlock member discounts on your next order',
-        subtitle: 'Track consultations, lab bookings, and save more with profile-only deals.',
-        bgGradient: 'linear-gradient(135deg, #0F9D8A 0%, #0F766E 100%)',
-        icon: '👤',
-        discount: 'MEMBER DEAL',
-        eyebrow: 'Profile Offer',
-        cta: 'Book Care',
-        route: '/doctor-appointments'
-      },
-      {
-        title: 'Your health journey, made faster and smarter',
-        subtitle: 'Manage prescriptions, bookings, and offers from one responsive dashboard.',
-        bgGradient: 'linear-gradient(135deg, #115E59 0%, #0F766E 100%)',
-        icon: '✨',
-        discount: 'EXTRA PERKS',
-        eyebrow: 'For You',
-        cta: 'View Profile',
-        route: '/profile'
-      }
-    ];
+    return [];
   }
 
   return [
@@ -243,7 +222,7 @@ export default function MainLayout() {
     }
     dispatch(fetchDoctors(params));
     dispatch(fetchLabs(params));
-    dispatch(fetchProducts({ city: locationState?.city || '' }));
+    dispatch(fetchProducts(params));
   }, [locationState?.city, locationState?.pincode, dispatch]);
 
   // Compute live intelligent suggestions
@@ -914,7 +893,7 @@ export default function MainLayout() {
 
       {/* 2. Main Page Content wrapper */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8">
-        {location.pathname !== '/login' && (
+        {location.pathname !== '/login' && promoBanners && promoBanners.length > 0 && (
           <div className="mb-4 md:mb-6">
             <AnimatedBanner banners={promoBanners} compact className="border border-white/60" />
           </div>

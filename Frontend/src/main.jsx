@@ -3,14 +3,24 @@ import './shared/styles/index.css'
 import App from './App.jsx'
 import ErrorBoundary from './shared/components/ErrorBoundary'
 
-// Suppress removeChild warnings during development
-const originalError = console.error;
-console.error = function(...args) {
-  if (typeof args[0] === 'string' && args[0].includes('removeChild')) {
-    return; // Silently ignore removeChild errors
-  }
-  originalError.apply(console, args);
-};
+// Patch DOM Node methods to prevent browser extensions (like Google Translate) from crashing React on unmounting/removal
+if (typeof Node !== 'undefined' && Node.prototype) {
+  const originalRemoveChild = Node.prototype.removeChild;
+  Node.prototype.removeChild = function (child) {
+    if (child && child.parentNode === this) {
+      return originalRemoveChild.call(this, child);
+    }
+    return child;
+  };
+
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function (newNode, referenceNode) {
+    if (referenceNode && referenceNode.parentNode !== this) {
+      return newNode;
+    }
+    return originalInsertBefore.call(this, newNode, referenceNode);
+  };
+}
 
 createRoot(document.getElementById('root')).render(
   <ErrorBoundary>

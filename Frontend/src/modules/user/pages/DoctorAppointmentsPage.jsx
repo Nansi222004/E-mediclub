@@ -33,6 +33,9 @@ export default function DoctorAppointmentsPage() {
   const { isAuthenticated } = useSelector(state => state.auth || {});
   const globalSearchTerm = useSelector(state => state.products.searchTerm);
 
+  const pincode = locationState?.pincode ? locationState.pincode.trim() : '';
+  const city = locationState?.city ? normalizeCity(locationState.city) : '';
+
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [isBrowsingAll, setIsBrowsingAll] = useState(false);
 
@@ -107,7 +110,14 @@ export default function DoctorAppointmentsPage() {
   };
 
   const todayStr = getTodayStr();
-  const activeAppointments = appointments.filter(isAppointmentActive);
+  const activeAppointments = appointments
+    .filter(isAppointmentActive)
+    .filter(apt => {
+      if (!pincode && !city) return true;
+      if (pincode && apt.pincode === pincode) return true;
+      if (city && apt.city && normalizeCity(apt.city).toLowerCase() === city.toLowerCase()) return true;
+      return false;
+    });
 
   // Trigger active call timer simulation
   useEffect(() => {
@@ -174,16 +184,23 @@ export default function DoctorAppointmentsPage() {
     return () => clearTimeout(timer);
   }, [selectedSpecialty, filterMode, filterGender, filterExperience, filterFeeMax, searchQuery]);
 
-  const city = locationState?.city ? normalizeCity(locationState.city) : '';
-  const doctorsInCity = city
-    ? doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase())
-    : doctors;
-  const labsInCity = city
-    ? labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase())
-    : labs;
-  const hasNoResultsForCity = city && doctorsInCity.length === 0;
 
-  const baseDoctors = city
+
+  const doctorsInCity = pincode
+    ? doctors.filter(doc => doc.pincode === pincode)
+    : city
+      ? doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase())
+      : doctors;
+
+  const labsInCity = pincode
+    ? labs.filter(lab => lab.pincode === pincode)
+    : city
+      ? labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase())
+      : labs;
+
+  const hasNoResultsForCity = (pincode || city) && doctorsInCity.length === 0;
+
+  const baseDoctors = (pincode || city) && doctorsInCity.length > 0
     ? doctorsInCity
     : doctors;
 
@@ -249,51 +266,68 @@ export default function DoctorAppointmentsPage() {
         </div>
       )}
 
-      {/* My Consultations Section (if logged in) */}
-      {isAuthenticated && activeAppointments.length > 0 && (
-        <motion.section
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-100 rounded-2xl p-4 flex flex-col gap-3"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs md:text-sm font-extrabold text-slate-800 flex items-center gap-2">
-              <FiCheckCircle className="text-teal" />
-              My Upcoming Consultations
-            </h2>
-            <button
-              onClick={() => navigate('/profile')}
-              className="text-[9px] font-bold text-teal hover:text-forest uppercase tracking-wider bg-transparent border-0 cursor-pointer"
-            >
-              View All
-            </button>
+
+
+      {/* 2. Upcoming Active Appointments section */}
+      {isAuthenticated && (
+        <section className="flex flex-col gap-2.5 bg-white border border-slate-100 p-4 rounded-3xl shadow-premium text-left">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black text-slate-805 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
+              </span>
+              Upcoming Doctor Appointments
+            </h3>
+            <span className="text-[8px] text-teal font-black uppercase tracking-wider bg-teal-light/20 px-2 py-0.5 rounded-md">
+              {activeAppointments.length} Scheduled
+            </span>
           </div>
-          <div className="flex overflow-x-auto no-scrollbar gap-3 pb-1">
-            {activeAppointments.slice(0, 3).map((appointment) => (
-              <motion.div
-                key={appointment.id || appointment._id}
-                className="shrink-0 w-[280px] bg-white rounded-xl p-3 border border-teal-100 shadow-sm"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[9px] font-black text-teal bg-teal-100 px-2 py-0.5 rounded-full uppercase">
-                    {appointment.status}
-                  </span>
-                  <span className="text-[9px] font-bold text-slate-400">{appointment.date}</span>
-                </div>
-                <p className="text-xs font-extrabold text-slate-800 line-clamp-1">Dr. {appointment.doctorName}</p>
-                <p className="text-[9px] text-slate-500 font-semibold mt-1">{appointment.timeSlot?.split(' - ')[0]}</p>
-                <p className="text-[8.5px] text-slate-400 font-bold mt-1">{appointment.type || 'Consultation'}</p>
-                <button
-                  onClick={() => navigate('/profile')}
-                  className="text-[8.5px] font-black text-teal hover:text-forest bg-transparent border-0 cursor-pointer mt-2"
-                >
-                  View Details →
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
+
+          {activeAppointments.length > 0 ? (
+            <div className="flex gap-4 overflow-x-auto no-scrollbar py-1 -mx-2 px-2 select-none">
+              {activeAppointments.map((apt) => {
+                const avatar = getDoctorAvatar(apt);
+                const isToday = apt.date === todayStr;
+                return (
+                  <div
+                    key={apt.id || apt._id}
+                    onClick={() => setSelectedCircleApt(apt)}
+                    className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group transition-all"
+                  >
+                    <div className="relative w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-teal via-emerald-400 to-forest shadow-md group-hover:scale-105 transition-all duration-300">
+                      <div className="w-full h-full rounded-full border border-white overflow-hidden bg-slate-100">
+                        <img
+                          src={avatar}
+                          alt={apt.doctorName}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </div>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white animate-pulse" />
+                    </div>
+
+                    <span className="text-[9px] font-black text-slate-700 max-w-[70px] truncate text-center leading-none mt-1 group-hover:text-teal transition-colors">
+                      {apt.doctorName.replace('Dr. ', '')}
+                    </span>
+
+                    <span className={`text-[7.5px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      isToday ? 'bg-teal-light/25 text-teal border border-teal/10 animate-pulse' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {isToday ? 'Today' : apt.date.split('-').slice(1).reverse().join('/')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-slate-50/50 border border-slate-100 p-4 rounded-2xl text-center">
+              <p className="text-[11px] text-slate-700 font-extrabold">No upcoming doctor consultations booked.</p>
+              <p className="text-[9px] text-slate-400 font-semibold mt-1">Book your first video call or clinic visit with our expert doctors below.</p>
+            </div>
+          )}
+        </section>
       )}
+
 
       {/* 1. Page Header */}
       <div className="border-b border-slate-100 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -309,102 +343,7 @@ export default function DoctorAppointmentsPage() {
         </div>
       </div>
 
-      {/* 2. Upcoming Active Appointments circles */}
-      {isAuthenticated && activeAppointments.length > 0 && (
-        <section className="flex flex-col gap-2.5 bg-white border border-slate-100 p-4 rounded-3xl shadow-premium">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black text-slate-805 uppercase tracking-wider flex items-center gap-1.5">
-              <span className="flex h-2 w-2 relative shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
-              </span>
-              Active consultations
-            </h3>
-            <span className="text-[8px] text-teal font-black uppercase tracking-wider bg-teal-light/20 px-2 py-0.5 rounded-md">
-              {activeAppointments.length} Scheduled
-            </span>
-          </div>
 
-          <div className="flex gap-4 overflow-x-auto no-scrollbar py-1 -mx-2 px-2 select-none">
-            {activeAppointments.map((apt) => {
-              const avatar = getDoctorAvatar(apt);
-              const isToday = apt.date === todayStr;
-              return (
-                <div
-                  key={apt.id || apt._id}
-                  onClick={() => setSelectedCircleApt(apt)}
-                  className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group transition-all"
-                >
-                  <div className="relative w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-teal via-emerald-400 to-forest shadow-md group-hover:scale-105 transition-all duration-300">
-                    <div className="w-full h-full rounded-full border border-white overflow-hidden bg-slate-100">
-                      <img
-                        src={avatar}
-                        alt={apt.doctorName}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white animate-pulse" />
-                  </div>
-
-                  <span className="text-[9px] font-black text-slate-700 max-w-[70px] truncate text-center leading-none mt-1 group-hover:text-teal transition-colors">
-                    {apt.doctorName.replace('Dr. ', '')}
-                  </span>
-
-                  <span className={`text-[7.5px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
-                    isToday ? 'bg-teal-light/25 text-teal border border-teal/10 animate-pulse' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {isToday ? 'Today' : apt.date.split('-').slice(1).reverse().join('/')}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* 3. Horizontal Scrollable Department Filter Slider */}
-      <section className="relative w-full bg-white p-3 rounded-3xl border border-slate-100 shadow-premium select-none group">
-        <div className="flex items-center justify-between mb-2 px-1">
-          <h3 className="text-[10px] font-black text-slate-455 uppercase tracking-widest">Shop by Clinical Department</h3>
-          <span className="text-[8.5px] text-slate-400 font-bold hidden sm:block">Scroll to browse all specialties</span>
-        </div>
-
-        {/* Left Arrow Button */}
-        <button
-          onClick={() => scrollDepts('left')}
-          className="absolute left-1 top-[60%] -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white border border-slate-100 shadow-md hover:bg-slate-50 flex items-center justify-center cursor-pointer text-slate-600 transition-opacity opacity-0 group-hover:opacity-100 border-0 outline-none"
-        >
-          <FiChevronLeft className="text-xs" />
-        </button>
-
-        {/* Departments Row */}
-        <div 
-          ref={deptScrollRef}
-          className="w-full overflow-x-auto no-scrollbar scroll-smooth flex gap-2 py-0.5 px-6"
-        >
-          {departments.map((dept) => (
-            <button
-              key={dept.name}
-              onClick={() => setSelectedSpecialty(dept.name)}
-              className={`flex items-center gap-2 whitespace-nowrap px-3 py-1.5 text-xs font-black rounded-full transition-all shrink-0 cursor-pointer duration-200 border ${selectedSpecialty === dept.name
-                  ? 'bg-forest text-white border-forest shadow-sm'
-                  : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-forest/20 hover:bg-slate-105'
-                }`}
-            >
-              <span className="text-sm">{dept.icon}</span>
-              <span>{dept.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Right Arrow Button */}
-        <button
-          onClick={() => scrollDepts('right')}
-          className="absolute right-1 top-[60%] -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white border border-slate-100 shadow-md hover:bg-slate-50 flex items-center justify-center cursor-pointer text-slate-655 transition-opacity opacity-0 group-hover:opacity-100 border-0 outline-none"
-        >
-          <FiChevronRight className="text-xs" />
-        </button>
-      </section>
 
       {/* 4. Compact Search + Filters Toggle Row */}
       <div className="flex gap-2.5 w-full items-center">
@@ -438,15 +377,62 @@ export default function DoctorAppointmentsPage() {
             initial={{ height: 0, opacity: 0, marginTop: 0 }}
             animate={{ height: 'auto', opacity: 1, marginTop: 4 }}
             exit={{ height: 0, opacity: 0, marginTop: 0 }}
-            className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-hidden shadow-inner"
+            className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-hidden shadow-inner text-left"
           >
-            {/* Filter: Consultation Mode */}
+            {/* Horizontal Scrollable Department Filter Slider */}
+            <div className="col-span-full relative w-full bg-white p-3 rounded-2xl border border-slate-150 shadow-sm select-none group">
+              <div className="flex items-center justify-between mb-2 px-1">
+                <h3 className="text-[10px] font-black text-slate-455 uppercase tracking-widest">Shop by Clinical Department</h3>
+                <span className="text-[8.5px] text-slate-400 font-bold hidden sm:block">Scroll to browse all specialties</span>
+              </div>
+
+              {/* Left Arrow Button */}
+              <button
+                type="button"
+                onClick={() => scrollDepts('left')}
+                className="absolute left-1 top-[60%] -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white border border-slate-100 shadow-md hover:bg-slate-50 flex items-center justify-center cursor-pointer text-slate-600 transition-opacity opacity-0 group-hover:opacity-100 border-0 outline-none"
+              >
+                <FiChevronLeft className="text-xs" />
+              </button>
+
+              {/* Departments Row */}
+              <div 
+                ref={deptScrollRef}
+                className="w-full overflow-x-auto no-scrollbar scroll-smooth flex gap-2 py-0.5 px-6"
+              >
+                {departments.map((dept) => (
+                  <button
+                    key={dept.name}
+                    type="button"
+                    onClick={() => setSelectedSpecialty(dept.name)}
+                    className={`flex items-center gap-2 whitespace-nowrap px-3 py-1.5 text-xs font-black rounded-full transition-all shrink-0 cursor-pointer duration-200 border ${selectedSpecialty === dept.name
+                        ? 'bg-forest text-white border-forest shadow-sm'
+                        : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-forest/20 hover:bg-slate-105'
+                      }`}
+                  >
+                    <span className="text-sm">{dept.icon}</span>
+                    <span>{dept.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Right Arrow Button */}
+              <button
+                type="button"
+                onClick={() => scrollDepts('right')}
+                className="absolute right-1 top-[60%] -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white border border-slate-100 shadow-md hover:bg-slate-50 flex items-center justify-center cursor-pointer text-slate-655 transition-opacity opacity-0 group-hover:opacity-100 border-0 outline-none"
+              >
+                <FiChevronRight className="text-xs" />
+              </button>
+            </div>
+
+             {/* Filter: Consultation Mode */}
             <div className="flex flex-col gap-1">
               <label className="text-[8px] font-black uppercase text-slate-400 tracking-wider">Consultation Mode</label>
               <select
                 value={filterMode}
                 onChange={(e) => setFilterMode(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-100 bg-white text-[10px] font-bold text-slate-650 cursor-pointer outline-none focus:border-teal/30"
+                className="pl-2.5 pr-8 py-1.5 rounded-lg border border-slate-100 bg-white text-[10px] font-bold text-slate-650 cursor-pointer outline-none focus:border-teal/30"
               >
                 <option value="All">All Consultation Modes</option>
                 <option value="Online">📹 Online Video</option>
@@ -461,7 +447,7 @@ export default function DoctorAppointmentsPage() {
               <select
                 value={filterGender}
                 onChange={(e) => setFilterGender(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-100 bg-white text-[10px] font-bold text-slate-655 cursor-pointer outline-none focus:border-teal/30"
+                className="pl-2.5 pr-8 py-1.5 rounded-lg border border-slate-100 bg-white text-[10px] font-bold text-slate-655 cursor-pointer outline-none focus:border-teal/30"
               >
                 <option value="All">All Genders</option>
                 <option value="male">Male Doctor</option>
@@ -475,7 +461,7 @@ export default function DoctorAppointmentsPage() {
               <select
                 value={filterExperience}
                 onChange={(e) => setFilterExperience(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-100 bg-white text-[10px] font-bold text-slate-650 cursor-pointer outline-none focus:border-teal/30"
+                className="pl-2.5 pr-8 py-1.5 rounded-lg border border-slate-100 bg-white text-[10px] font-bold text-slate-650 cursor-pointer outline-none focus:border-teal/30"
               >
                 <option value="All">Any Experience</option>
                 <option value="10+">10+ Years of Experience</option>

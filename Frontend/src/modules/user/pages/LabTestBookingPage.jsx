@@ -14,7 +14,7 @@ export default function LabTestBookingPage() {
   const dispatch = useDispatch();
 
   // Selectors
-  const { labTests } = useSelector(state => state.products);
+  const { labTests, labs = [] } = useSelector(state => state.products);
   const { addresses = [], isAuthenticated } = useSelector(state => state.auth);
   const test = labTests.find(t => t.id === testId);
 
@@ -206,6 +206,7 @@ export default function LabTestBookingPage() {
           : customAddress;
       }
 
+      const associatedLab = labs.find(l => l.id === test.labId || l.name === test.labName);
       const newBooking = {
         id: bookingRef,
         testId: test.id,
@@ -224,7 +225,9 @@ export default function LabTestBookingPage() {
         status: 'Scheduled', // Automatically confirmed after payment
         paymentMethod: paymentMethod,
         paymentStatus: 'Paid',
-        amountPaid: test.discountPrice || test.price
+        amountPaid: test.discountPrice || test.price,
+        city: associatedLab ? associatedLab.city : '',
+        pincode: associatedLab ? associatedLab.pincode : ''
       };
 
       dispatch(bookLabPackage(newBooking));

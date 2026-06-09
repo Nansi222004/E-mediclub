@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fi';
 import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile } from '../../auth/store/authSlice';
 import { addToCart } from '../store/cartSlice';
-import { submitAppointmentFeedback, submitLabFeedback } from '../store/productSlice';
+import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus } from '../store/productSlice';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
 
@@ -244,50 +244,177 @@ export default function ProfilePage() {
   const renderTabContent = (tab) => {
     switch (tab) {
       case 'orders':
-        const pastOrders = orders.filter(ord => ord.status === 'Delivered');
+        const activeOrders = orders.filter(ord => ord.status !== 'Delivered' && !ord.archived);
+        const pastOrders = orders.filter(ord => ord.status === 'Delivered' && !ord.archived);
+        
+        const steps = [
+          { label: 'Order Placed', desc: 'Received & verified' },
+          { label: 'Confirmed', desc: 'Approved by pharmacist' },
+          { label: 'Packed', desc: 'Sterile sealed package' },
+          { label: 'Out for Delivery', desc: 'Dispatched with courier' },
+          { label: 'Delivered', desc: 'Doorstep handover' }
+        ];
+
+        const getStepIndex = (status) => {
+          const s = status ? status.toLowerCase() : '';
+          if (s === 'delivered') return 4;
+          if (s === 'out for delivery' || s === 'dispatched' || s === 'shipped') return 3;
+          if (s === 'packed') return 2;
+          if (s === 'confirmed') return 1;
+          return 1;
+        };
+
+        const getStatusIcon = (status) => {
+          switch (status) {
+            case 'Delivered':
+              return <FiCheck className="text-emerald-500 w-3 h-3 shrink-0" />;
+            case 'Shipped':
+            case 'Dispatched':
+            case 'Out for Delivery':
+              return <FiClock className="text-teal w-3 h-3 shrink-0" />;
+            case 'Packed':
+              return <FiCheck className="text-forest w-3 h-3 shrink-0" />;
+            default:
+              return <FiClock className="text-forest w-3 h-3 shrink-0" />;
+          }
+        };
+
+        const getStatusColor = (status) => {
+          switch (status) {
+            case 'Delivered':
+              return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+            case 'Shipped':
+            case 'Dispatched':
+            case 'Out for Delivery':
+              return 'bg-teal-light/50 text-teal border border-teal/10';
+            case 'Packed':
+              return 'bg-amber-50 text-amber-605 border border-amber-100';
+            default:
+              return 'bg-forest-light/40 text-forest border border-forest/10';
+          }
+        };
+
+        const handleSimulateProgress = (orderId, currentStatus) => {
+          let nextStatus = 'Ordered';
+          if (currentStatus === 'Ordered' || currentStatus === 'pending') {
+            nextStatus = 'Packed';
+          } else if (currentStatus === 'Packed') {
+            nextStatus = 'Dispatched';
+          } else if (currentStatus === 'Dispatched' || currentStatus === 'Shipped') {
+            nextStatus = 'Delivered';
+          }
+          dispatch(updateOrderStatus({ orderId, status: nextStatus }));
+        };
+
         return (
-          <div className="flex flex-col gap-3">
-            {pastOrders.length > 0 ? (
-              pastOrders.map((ord) => (
-                <div key={ord.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex flex-col gap-3 shadow-sm text-xs">
-                  <div className="flex justify-between items-start border-b border-slate-50 pb-2">
-                    <div>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Reference ID</span>
-                      <strong className="text-slate-800">{ord.id}</strong>
-                    </div>
-                    <span className="text-[9px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-black uppercase tracking-wider">{ord.status}</span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-1.5 text-slate-605 font-bold pl-1">
-                    {ord.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between">
-                        <span>{item.name} x{item.qty}</span>
-                        <span className="text-slate-805">₹{item.price * item.qty}</span>
+          <div className="flex flex-col gap-6 text-left">
+            {/* Active/Tracking Shipments */}
+            <div className="flex flex-col gap-3">
+              <h5 className="text-[10px] text-teal font-black uppercase tracking-wider pl-1">Active Shipments Pipeline</h5>
+              {activeOrders.length > 0 ? (
+                activeOrders.map((ord) => {
+                  const currentStepIndex = getStepIndex(ord.status);
+                  return (
+                    <div key={ord.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex flex-col gap-4 shadow-sm text-xs">
+                      <div className="flex justify-between items-center border-b border-slate-50 pb-2.5">
+                        <div className="min-w-0">
+                          <span className="text-[8px] text-slate-400 font-bold uppercase block">Reference ID</span>
+                          <strong className="text-slate-800 truncate block mt-0.5">{ord.id}</strong>
+                        </div>
+                        <div className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${getStatusColor(ord.status)}`}>
+                          <span>{ord.status}</span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
 
-                  <div className="flex justify-between items-center border-t border-slate-50 pt-3 mt-1">
-                    <span className="text-slate-400 font-bold">Total: <strong className="text-slate-700">₹{ord.total}</strong></span>
-                    <button
-                      onClick={() => handleOrderAgain(ord.items)}
-                      className="px-4 py-2 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-colors outline-none"
-                    >
-                      Order Again
-                    </button>
-                  </div>
-                </div>
-              ))
+                      <div className="flex flex-col gap-1 text-slate-605 font-bold pl-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50">
+                        {ord.items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span>{item.name} x{item.qty}</span>
+                            <span className="text-slate-805">₹{item.price * item.qty}</span>
+                          </div>
+                        ))}
+                      </div>
 
-            
-            ) : (
-              <p className="text-xs text-slate-400 font-bold py-2 text-center uppercase tracking-wide">No order history available.</p>
-            )}
+                      {/* Micro-stepper inside Profile tab */}
+                      <div className="flex justify-between items-center gap-1.5 px-1 pt-1.5 border-t border-slate-50/60 mt-1 select-none">
+                        {steps.map((step, idx) => {
+                          const isDone = idx <= currentStepIndex;
+                          return (
+                            <div key={idx} className="flex flex-col items-center gap-1 flex-1 relative">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${isDone ? 'bg-forest text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}>
+                                {isDone ? '✓' : idx + 1}
+                              </div>
+                              <span className={`text-[7.5px] font-extrabold tracking-tight text-center leading-tight hidden xs:block ${isDone ? 'text-slate-700' : 'text-slate-400'}`}>
+                                {step.label.split(' ')[0]}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2.5 border-t border-slate-50 mt-1">
+                        <span className="text-slate-400 font-bold">Total charged: <strong className="text-slate-750">₹{ord.total}</strong></span>
+                        <button
+                          type="button"
+                          onClick={() => handleSimulateProgress(ord.id, ord.status)}
+                          className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 hover:text-slate-800 text-[9px] font-black uppercase tracking-wider rounded-lg border border-slate-150 cursor-pointer outline-none shrink-0"
+                        >
+                          Next Step ➔
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-slate-400 font-bold py-2 text-center uppercase tracking-wide bg-slate-50/50 border border-dashed border-slate-200 rounded-xl">No active shipments in transit.</p>
+              )}
+            </div>
+
+            {/* Completed Orders History */}
+            <div className="flex flex-col gap-3">
+              <h5 className="text-[10px] text-slate-400 font-black uppercase tracking-wider pl-1">Delivered Orders History</h5>
+              {pastOrders.length > 0 ? (
+                pastOrders.map((ord) => (
+                  <div key={ord.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex flex-col gap-3 shadow-sm text-xs">
+                    <div className="flex justify-between items-start border-b border-slate-50 pb-2">
+                      <div>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Reference ID</span>
+                        <strong className="text-slate-800">{ord.id}</strong>
+                      </div>
+                      <span className="text-[9px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-black uppercase tracking-wider">{ord.status}</span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-1.5 text-slate-605 font-bold pl-1">
+                      {ord.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>{item.name} x{item.qty}</span>
+                          <span className="text-slate-850">₹{item.price * item.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center border-t border-slate-50 pt-3 mt-1">
+                      <span className="text-slate-400 font-bold">Total: <strong className="text-slate-700">₹{ord.total}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => handleOrderAgain(ord.items)}
+                        className="px-4 py-2 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-colors outline-none"
+                      >
+                        Order Again
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-400 font-bold py-2 text-center uppercase tracking-wide">No past order history available.</p>
+              )}
+            </div>
+
             <button 
               onClick={() => navigate('/orders')} 
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border-0 mt-2 cursor-pointer outline-none"
+              className="w-full py-3 bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border-0 mt-2 cursor-pointer outline-none text-center"
             >
-              Go to Order Tracking Page ➔
+              Go to Full Screen Order Stepper ➔
             </button>
           </div>
         );

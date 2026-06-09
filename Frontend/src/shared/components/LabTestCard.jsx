@@ -123,7 +123,7 @@ export default function LabTestCard({ test }) {
             <button
               type="button"
               onClick={handleInfoClick}
-              className="relative z-20 w-full sm:w-auto px-3.5 py-2.5 sm:py-2 bg-slate-50 hover:bg-slate-100 text-[9px] font-black text-slate-650 hover:text-teal rounded-full shadow-sm cursor-pointer border-0 uppercase tracking-wider flex items-center justify-center gap-0.5 min-h-[44px] sm:min-h-[36px] outline-none"
+              className="relative z-20 w-full sm:w-auto px-3.5 py-2.5 sm:py-2 bg-slate-50 hover:bg-slate-100 text-[9px] font-black text-slate-650 hover:text-teal rounded-full shadow-sm cursor-pointer border-0 uppercase tracking-wider flex items-center justify-center gap-0.5 min-h-[44px] sm:min-h-[36px] outline-none flex-1 sm:flex-initial"
             >
               <FiInfo className="text-[10px]" />
               Info
@@ -133,7 +133,7 @@ export default function LabTestCard({ test }) {
               whileTap={{ scale: 0.95 }}
               type="button"
               onClick={handleBookingRedirect}
-              className="relative z-20 w-full sm:w-auto bg-forest hover:bg-forest-dark text-white font-bold text-xs px-4 py-2.5 sm:py-2 rounded-full shadow-sm hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer border-0 min-h-[44px] sm:min-h-[36px] outline-none"
+              className="relative z-20 w-full sm:w-auto bg-forest hover:bg-forest-dark text-white font-bold text-xs px-4 py-2.5 sm:py-2 rounded-full shadow-sm hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer border-0 min-h-[44px] sm:min-h-[36px] outline-none flex-1 sm:flex-initial"
             >
               <FiCalendar className="w-4 h-4 shrink-0" />
               <span>BOOK NOW</span>

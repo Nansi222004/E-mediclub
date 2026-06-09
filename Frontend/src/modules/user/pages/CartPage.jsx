@@ -14,7 +14,7 @@ export default function CartPage() {
 
   // Redux Selectors
   const { items, subtotal, savings, deliveryFee, coupon, couponDiscount, total } = useSelector(state => state.cart);
-  const { addresses } = useSelector(state => state.auth);
+  const { addresses, isAuthenticated } = useSelector(state => state.auth || {});
   const { selectedLocation, medicines } = useSelector(state => state.products);
 
   // Dynamic Location Suggestions
@@ -300,7 +300,13 @@ export default function CartPage() {
               {/* Checkout CTA */}
               <button
                 type="button"
-                onClick={() => navigate('/checkout')}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    navigate('/login', { state: { from: '/checkout' } });
+                  } else {
+                    navigate('/checkout');
+                  }
+                }}
                 className="w-full py-3.5 bg-forest hover:bg-forest-dark text-white font-black text-xs rounded-2xl shadow-sm hover:shadow text-center transition-all min-h-[44px] outline-none cursor-pointer"
               >
                 PROCEED TO CHECKOUT

@@ -86,6 +86,7 @@ export default function ProductDetailsPage() {
   // Redux selectors
   const { medicines } = useSelector(state => state.products);
   const cartItems = useSelector(state => state.cart.items);
+  const { isAuthenticated } = useSelector(state => state.auth || {});
 
   // States
   const [pincode, setPincode] = useState('');
@@ -100,6 +101,10 @@ export default function ProductDetailsPage() {
   const qty = cartItem ? cartItem.qty : 0;
 
   const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/product/${product.id}` } });
+      return;
+    }
     dispatch(addToCart({
       id: product.id,
       name: product.name,
@@ -238,38 +243,6 @@ export default function ProductDetailsPage() {
               )}
             </div>
 
-            {/* Pincode Availability Checker */}
-            <form onSubmit={handlePincodeCheck} className="flex flex-col gap-2 mt-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Check Delivery Pincode</label>
-              <div className="flex gap-2 max-w-sm">
-                <input
-                  type="text"
-                  placeholder="Enter 6-digit pincode"
-                  maxLength={6}
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                  className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 focus:border-teal-500 rounded-xl text-xs font-semibold outline-none"
-                />
-                <button 
-                  type="submit" 
-                  className="bg-slate-900 text-white text-xs font-black px-4 rounded-xl hover:bg-slate-800 border-0 cursor-pointer"
-                >
-                  CHECK
-                </button>
-              </div>
-
-              {/* Delivery checker statuses */}
-              {deliveryStatus === 'success' && (
-                <p className="text-emerald-600 text-xs font-bold flex items-center gap-1">
-                  <FiTruck /> Express shipping is active. Delivery by Today evening!
-                </p>
-              )}
-              {deliveryStatus === 'fail' && (
-                <p className="text-coral text-xs font-bold flex items-center gap-1">
-                  <FiAlertTriangle /> Standard shipping only (Takes 2-3 clinical days).
-                </p>
-              )}
-            </form>
 
           </div>
         </div>
@@ -300,18 +273,6 @@ export default function ProductDetailsPage() {
           </div>
         </div>
       </section>
-
-      {/* Similar items recommendation slider */}
-      {similarItems.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <h3 className="font-extrabold text-slate-800 text-base">Similar Products You Might Need</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {similarItems.map((med) => (
-              <ProductCard key={med.id} product={med} />
-            ))}
-          </div>
-        </section>
-      )}
 
     </div>
   );

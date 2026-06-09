@@ -23,6 +23,9 @@ export default function LabTestsPage() {
   const { user, isAuthenticated } = useSelector(state => state.auth || {});
   const globalSearchTerm = useSelector(state => state.products.searchTerm);
 
+  const pincode = locationState?.pincode ? locationState.pincode.trim() : '';
+  const city = locationState?.city ? normalizeCity(locationState.city) : '';
+
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [isBrowsingAll, setIsBrowsingAll] = useState(false);
 
@@ -104,7 +107,14 @@ export default function LabTestsPage() {
   };
 
   const todayStr = getTodayStr();
-  const activeLabBookings = labBookings.filter(isLabBookingActive);
+  const activeLabBookings = labBookings
+    .filter(isLabBookingActive)
+    .filter(bk => {
+      if (!pincode && !city) return true;
+      if (pincode && bk.pincode === pincode) return true;
+      if (city && bk.city && normalizeCity(bk.city).toLowerCase() === city.toLowerCase()) return true;
+      return false;
+    });
 
   // Live Calling Simulation Timer Hook
   useEffect(() => {
@@ -157,16 +167,23 @@ export default function LabTestsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, filterHomeCollection, filterFastReport, filterPriceLimit, filterLab]);
 
-  const city = locationState?.city ? normalizeCity(locationState.city) : '';
-  const labsInCity = city
-    ? labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase())
-    : labs;
-  const doctorsInCity = city
-    ? doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase())
-    : doctors;
-  const hasNoResultsForCity = city && labsInCity.length === 0;
 
-  const baseLabs = city
+
+  const labsInCity = pincode
+    ? labs.filter(lab => lab.pincode === pincode)
+    : city
+      ? labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase())
+      : labs;
+
+  const doctorsInCity = pincode
+    ? doctors.filter(doc => doc.pincode === pincode)
+    : city
+      ? doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase())
+      : doctors;
+
+  const hasNoResultsForCity = (pincode || city) && labsInCity.length === 0;
+
+  const baseLabs = (pincode || city) && labsInCity.length > 0
     ? labsInCity
     : labs;
 
@@ -227,50 +244,60 @@ export default function LabTestsPage() {
         </div>
       )}
 
+
       {/* My Bookings Section (if logged in) */}
       {isAuthenticated && activeLabBookings.length > 0 && (
-        <motion.section
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-100 rounded-2xl p-4 flex flex-col gap-3"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs md:text-sm font-extrabold text-slate-800 flex items-center gap-2">
-              <FiCheckCircle className="text-teal" />
-              My Upcoming Lab Bookings
-            </h2>
-            <button
-              onClick={() => navigate('/profile')}
-              className="text-[9px] font-bold text-teal hover:text-teal-dark uppercase tracking-wider bg-transparent border-0 cursor-pointer"
-            >
-              View All
-            </button>
+        <section className="flex flex-col gap-2.5 bg-white border border-slate-100 p-4 rounded-3xl shadow-premium">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black text-slate-805 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
+              </span>
+              Upcoming Diagnostics
+            </h3>
+            <span className="text-[8px] text-teal font-black uppercase tracking-wider bg-teal-light/20 px-2 py-0.5 rounded-md">
+              {activeLabBookings.length} Collections
+            </span>
           </div>
-          <div className="flex overflow-x-auto no-scrollbar gap-3 pb-1">
-            {activeLabBookings.slice(0, 3).map((booking) => (
-              <motion.div
-                key={booking.id || booking._id}
-                className="shrink-0 w-[280px] bg-white rounded-xl p-3 border border-teal-100 shadow-sm"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[9px] font-black text-teal bg-teal-light/20 px-2 py-0.5 rounded-full uppercase">
-                    {booking.status}
-                  </span>
-                  <span className="text-[9px] font-bold text-slate-400">{booking.date}</span>
-                </div>
-                <p className="text-xs font-extrabold text-slate-800 line-clamp-2">{booking.packageName}</p>
-                <p className="text-[9px] text-slate-500 font-semibold mt-1">{booking.timeSlot}</p>
-                <button
-                  onClick={() => navigate('/profile')}
-                  className="text-[8.5px] font-black text-teal hover:text-teal-dark bg-transparent border-0 cursor-pointer mt-2"
+
+          <div className="flex gap-4 overflow-x-auto no-scrollbar py-1 -mx-2 px-2 select-none">
+            {activeLabBookings.map((bk) => {
+              const isToday = bk.date === todayStr;
+              return (
+                <div
+                  key={bk.id || bk._id}
+                  onClick={() => {
+                    if (isAuthenticated) {
+                      setSelectedBookingDetails(bk);
+                    } else {
+                      navigate('/login');
+                    }
+                  }}
+                  className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group transition-all"
                 >
-                  View Details →
-                </button>
-              </motion.div>
-            ))}
+                  <div className="relative w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-teal via-emerald-400 to-forest shadow-md group-hover:scale-105 transition-all duration-300">
+                    <div className="w-full h-full rounded-full border border-white overflow-hidden bg-teal-light/20 flex items-center justify-center text-xl shadow-inner">
+                      🧪
+                    </div>
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white animate-pulse" />
+                  </div>
+
+                  <span className="text-[9px] font-black text-slate-700 max-w-[70px] truncate text-center leading-none mt-1 group-hover:text-teal transition-colors">
+                    {bk.packageName.replace('Checkup', '').replace('Profile', '')}
+                  </span>
+
+                  <span className={`text-[7.5px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isToday ? 'bg-teal-light/25 text-teal border border-teal/10 animate-pulse' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                    {isToday ? 'Today' : bk.date.split('-').slice(1).reverse().join('/')}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </motion.section>
+        </section>
       )}
+
 
       {/* 1. Page Header */}
       <div className="border-b border-slate-100 pb-2.5 flex flex-col gap-1.5">
@@ -375,58 +402,7 @@ export default function LabTestsPage() {
         )}
       </AnimatePresence>
 
-      {/* 4. Upcoming Diagnostic Collections */}
-      {isAuthenticated && activeLabBookings.length > 0 && (
-        <section className="flex flex-col gap-2.5 bg-white border border-slate-100 p-4 rounded-3xl shadow-premium">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black text-slate-805 uppercase tracking-wider flex items-center gap-1.5">
-              <span className="flex h-2 w-2 relative shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
-              </span>
-              Upcoming Diagnostics
-            </h3>
-            <span className="text-[8px] text-teal font-black uppercase tracking-wider bg-teal-light/20 px-2 py-0.5 rounded-md">
-              {activeLabBookings.length} Collections
-            </span>
-          </div>
 
-          <div className="flex gap-4 overflow-x-auto no-scrollbar py-1 -mx-2 px-2 select-none">
-            {activeLabBookings.map((bk) => {
-              const isToday = bk.date === todayStr;
-              return (
-                <div
-                  key={bk.id || bk._id}
-                  onClick={() => {
-                    if (isAuthenticated) {
-                      setSelectedBookingDetails(bk);
-                    } else {
-                      navigate('/login');
-                    }
-                  }}
-                  className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group transition-all"
-                >
-                  <div className="relative w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-teal via-emerald-400 to-forest shadow-md group-hover:scale-105 transition-all duration-300">
-                    <div className="w-full h-full rounded-full border border-white overflow-hidden bg-teal-light/20 flex items-center justify-center text-xl shadow-inner">
-                      🧪
-                    </div>
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white animate-pulse" />
-                  </div>
-
-                  <span className="text-[9px] font-black text-slate-700 max-w-[70px] truncate text-center leading-none mt-1 group-hover:text-teal transition-colors">
-                    {bk.packageName.replace('Checkup', '').replace('Profile', '')}
-                  </span>
-
-                  <span className={`text-[7.5px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isToday ? 'bg-teal-light/25 text-teal border border-teal/10 animate-pulse' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                    {isToday ? 'Today' : bk.date.split('-').slice(1).reverse().join('/')}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
 
       {/* 5. Certified Partner Laboratories Horizontal Row (Height Reduced 50%) */}
       {baseLabs.length > 0 && (

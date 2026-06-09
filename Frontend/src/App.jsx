@@ -8,7 +8,6 @@ import AppRoutes from './routes';
 import ScrollToTop from './shared/components/ScrollToTop';
 import SplashScreen from './modules/auth/pages/SplashScreen';
 import LocationModal from './shared/components/LocationModal';
-
 // Create premium custom Material UI theme matching Tailwind Forest Green + Teal
 const theme = createTheme({
   palette: {

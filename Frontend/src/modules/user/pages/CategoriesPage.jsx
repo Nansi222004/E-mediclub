@@ -173,13 +173,18 @@ export default function CategoriesPage() {
     return medicines.filter(med => med.category === 'Medicines' && boughtNames.has(med.name));
   }, [isAuthenticated, orders, medicines]);
 
+  const pincode = locationState?.pincode ? locationState.pincode.trim() : '';
   const city = locationState?.city ? normalizeCity(locationState.city) : '';
-  const medicinesInCity = city
-    ? medicines.filter(med => med.vendorCity && normalizeCity(med.vendorCity).toLowerCase() === city.toLowerCase())
-    : medicines;
-  const hasNoResultsForCity = city && medicinesInCity.length === 0;
 
-  const baseMedicines = (city && !hasNoResultsForCity && !isBrowsingAll)
+  const medicinesInCity = pincode
+    ? medicines.filter(med => med.vendorPincode === pincode)
+    : city
+      ? medicines.filter(med => med.vendorCity && normalizeCity(med.vendorCity).toLowerCase() === city.toLowerCase())
+      : medicines;
+
+  const hasNoResultsForCity = (pincode || city) && medicinesInCity.length === 0;
+
+  const baseMedicines = ((pincode || city) && !hasNoResultsForCity && !isBrowsingAll)
     ? medicinesInCity
     : medicines;
 

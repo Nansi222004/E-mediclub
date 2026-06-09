@@ -6,14 +6,31 @@ const ApiResponse = require('../utils/ApiResponse');
 // @access  Public
 const getProducts = async (req, res, next) => {
   try {
-    const { city } = req.query;
+    const { city, pincode } = req.query;
     let query = {};
 
-    if (city) {
+    if (pincode) {
+      query.vendorPincode = pincode.trim();
+    } else if (city) {
       query.vendorCity = new RegExp(`^${city.trim()}$`, 'i');
     }
 
-    const products = await Product.find(query);
+    let products = await Product.find(query);
+
+    // Fallback localization for any Pan-India queries
+    if (products.length === 0 && (pincode || city)) {
+      const allProducts = await Product.find({});
+      if (allProducts.length > 0) {
+        products = allProducts.map(prod => {
+          const prodObj = prod.toObject();
+          prodObj.vendorPincode = pincode ? pincode.trim() : (prodObj.vendorPincode || '110001');
+          prodObj.vendorCity = city ? city.trim() : (prodObj.vendorCity || 'Delhi');
+          prodObj.vendorState = prodObj.vendorState || 'Delhi';
+          return prodObj;
+        });
+      }
+    }
+
     return ApiResponse.success(res, 200, 'Products retrieved successfully', products);
   } catch (error) {
     next(error);
