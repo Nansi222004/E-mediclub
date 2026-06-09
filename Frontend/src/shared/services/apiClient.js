@@ -4,7 +4,7 @@ import { refreshTokenSuccess, logout } from '../../modules/auth/store/authSlice'
 
 // Create base Axios instance
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5001',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001',
   timeout: 15000,
   withCredentials: true, // Crucial for reading/writing HTTP-Only refresh cookies
 });
@@ -90,7 +90,7 @@ apiClient.interceptors.response.use(
         // Send refresh token if stored locally, or rely on cookies (withCredentials is true)
         const storedRefreshToken = localStorage.getItem('em_refresh_token');
         const response = await axios.post(
-          'http://localhost:5000/api/auth/refresh',
+          `${import.meta.env.VITE_API_URL}/api/auth/refresh`,
           { refreshToken: storedRefreshToken },
           { withCredentials: true }
         );

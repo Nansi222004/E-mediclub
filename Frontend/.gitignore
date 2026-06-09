@@ -166,3 +166,6 @@ assets/
 # Misc
 *.pem
 .claude/
+
+
+.env 
