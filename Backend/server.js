@@ -29,7 +29,17 @@ connectDB();
 // Global Middlewares
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174', 'http://127.0.0.1:5175'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
+    'https://e-mediclub-vert.vercel.app',
+    'https://e-mediclub-git-main-harshita845s-projects.vercel.app',
+    /\.vercel\.app$/
+  ],
   credentials: true,
 }));
 app.use(morgan('dev'));
@@ -56,7 +66,7 @@ const seedUsers = async () => {
     const userCount = await User.countDocuments();
     if (userCount === 0) {
       console.log('No users found in database. Seeding default demo accounts...');
-      
+
       // Default Admin
       await User.create({
         name: 'Demo Admin',
@@ -292,8 +302,8 @@ const seedMockData = async () => {
             consultationMode: "Both",
             registrationNumber: `MCI-${2010 + i}-${10000 + cIdx * 6 + i}`,
             bio: `${name} is a dedicated ${spec.name} specialist in ${city} with over ${expVal} years of clinical expertise.`,
-            avatar: isFemale 
-              ? femaleAvatars[i % femaleAvatars.length] 
+            avatar: isFemale
+              ? femaleAvatars[i % femaleAvatars.length]
               : maleAvatars[i % maleAvatars.length],
             languages: ["Hindi", "English"],
             availableDays: ["Mon", "Wed", "Fri"],
@@ -321,7 +331,7 @@ const seedMockData = async () => {
           "Thyrocare",
           "Redcliffe Labs"
         ];
-        
+
         for (let i = 0; i < 9; i++) {
           let name;
           if (i < specificLabNames.length) {
