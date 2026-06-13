@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiFileText, 
+import {
+  FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiFileText,
   FiUploadCloud, FiTrash2, FiShield, FiUser, FiInfo, FiActivity, FiMapPin, FiCreditCard, FiAlertCircle
 } from 'react-icons/fi';
 import { bookLabPackage, normalizeCity } from '../store/productSlice';
-import apiClient from '../../shared/services/apiClient';
+import apiClient from "../../../shared/services/apiClient";
 
 export default function LabTestBookingPage() {
   const { testId } = useParams();
@@ -44,11 +44,11 @@ export default function LabTestBookingPage() {
   const [patientAge, setPatientAge] = useState('');
   const [patientGender, setPatientGender] = useState('Male');
   const [patientPhone, setPatientPhone] = useState('');
-  
+
   // Address selection states
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [customAddress, setCustomAddress] = useState('');
-  
+
   const getTodayStr = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -60,7 +60,7 @@ export default function LabTestBookingPage() {
   // Slot selection states
   const [preferredDate, setPreferredDate] = useState(getTodayStr());
   const [preferredTimeSlot, setPreferredTimeSlot] = useState('');
-  
+
   // Referring Doctor states
   const [doctorName, setDoctorName] = useState('');
   const [doctorRegNo, setDoctorRegNo] = useState('');
@@ -87,17 +87,17 @@ export default function LabTestBookingPage() {
 
   const isLabSlotAvailable = (slot, selectedDate) => {
     if (!selectedDate) return true;
-    
+
     const todayStr = getTodayStr();
     if (selectedDate !== todayStr) return true;
-    
+
     // Determine the end hour of the slot in 24h format:
     // '06:00 AM - 09:00 AM (Early Bird)' -> ends at 9:00 (9)
     // '09:00 AM - 12:00 PM (Morning Slot)' -> ends at 12:00 (12)
     // '12:00 PM - 03:00 PM (Afternoon Slot)' -> ends at 15:00 (15)
     // '03:00 PM - 06:00 PM (Evening Slot)' -> ends at 18:00 (18)
     let endHour = 9;
-    
+
     if (slot.includes('09:00 AM')) {
       endHour = 9;
     } else if (slot.includes('12:00 PM (Morning Slot)')) {
@@ -107,11 +107,11 @@ export default function LabTestBookingPage() {
     } else if (slot.includes('06:00 PM')) {
       endHour = 18;
     }
-    
+
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
-    
+
     if (currentHour > endHour || (currentHour === endHour && currentMinute >= 0)) {
       return false;
     }
@@ -124,7 +124,7 @@ export default function LabTestBookingPage() {
         <FiActivity className="text-coral text-5xl mb-4 animate-pulse" />
         <h2 className="text-base font-extrabold text-slate-800">Lab Test Profile Not Found</h2>
         <p className="text-xs text-slate-400 font-semibold mt-2">The requested diagnostic package could not be retrieved.</p>
-        <button 
+        <button
           onClick={() => navigate('/lab-tests')}
           className="mt-5 px-6 py-2.5 bg-forest hover:bg-forest-dark text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-sm border-0 cursor-pointer"
         >
@@ -148,10 +148,10 @@ export default function LabTestBookingPage() {
   // Step Navigations
   const handleNextStep = () => {
     setValidationError('');
-    
+
     if (currentStep === 1) {
       setCurrentStep(2);
-    } 
+    }
     else if (currentStep === 2) {
       if (!patientName.trim()) {
         setValidationError('Patient Full Name is required.');
@@ -166,7 +166,7 @@ export default function LabTestBookingPage() {
         return;
       }
       setCurrentStep(3);
-    } 
+    }
     else if (currentStep === 3) {
       if (test.homeCollection) {
         const hasSelectedAddress = selectedAddressId && addresses.some(a => a.id === selectedAddressId);
@@ -176,7 +176,7 @@ export default function LabTestBookingPage() {
         }
       }
       setCurrentStep(4);
-    } 
+    }
     else if (currentStep === 4) {
       if (!preferredDate) {
         setValidationError('Please select a preferred date.');
@@ -211,13 +211,13 @@ export default function LabTestBookingPage() {
       let selectedAddrStr = 'Walk-in Diagnostic Center';
       if (test.homeCollection) {
         const found = addresses.find(a => a.id === selectedAddressId);
-        selectedAddrStr = found 
-          ? `${found.addressLine}, ${found.city}, ${found.state} - ${found.pincode}` 
+        selectedAddrStr = found
+          ? `${found.addressLine}, ${found.city}, ${found.state} - ${found.pincode}`
           : customAddress;
       }
 
       const associatedLab = labs.find(l => l.id === test.labId || l.name === test.labName);
-      
+
       const formData = new FormData();
       formData.append('id', bookingRef);
       formData.append('packageName', test.name);
@@ -261,7 +261,7 @@ export default function LabTestBookingPage() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       // If the backend returns a reportUrl, we can add it to the Redux state
       if (response.data?.data?.reportUrl) {
         newBooking.reportUrl = response.data.data.reportUrl;
@@ -285,25 +285,22 @@ export default function LabTestBookingPage() {
         {stepNames.map((name, idx) => (
           <React.Fragment key={idx}>
             <div className="flex flex-col items-center gap-1.5 z-10">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                currentStep > idx + 1 
-                  ? 'bg-forest text-white' 
-                  : currentStep === idx + 1 
-                  ? 'bg-teal text-white ring-4 ring-teal-light' 
-                  : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${currentStep > idx + 1
+                  ? 'bg-forest text-white'
+                  : currentStep === idx + 1
+                    ? 'bg-teal text-white ring-4 ring-teal-light'
+                    : 'bg-slate-100 text-slate-400'
+                }`}>
                 {idx + 1}
               </div>
-              <span className={`text-[9px] font-black uppercase tracking-wider ${
-                currentStep === idx + 1 ? 'text-teal font-extrabold' : 'text-slate-400'
-              }`}>
+              <span className={`text-[9px] font-black uppercase tracking-wider ${currentStep === idx + 1 ? 'text-teal font-extrabold' : 'text-slate-400'
+                }`}>
                 {name}
               </span>
             </div>
             {idx < stepNames.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 transition-all ${
-                currentStep > idx + 1 ? 'bg-forest' : 'bg-slate-100'
-              }`} />
+              <div className={`flex-1 h-0.5 mx-2 transition-all ${currentStep > idx + 1 ? 'bg-forest' : 'bg-slate-100'
+                }`} />
             )}
           </React.Fragment>
         ))}
@@ -313,10 +310,10 @@ export default function LabTestBookingPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4 md:py-8 font-sans select-none">
-      
+
       {/* Back button */}
       {currentStep < 6 && (
-        <button 
+        <button
           onClick={currentStep === 1 ? () => navigate('/lab-tests') : handleBackStep}
           className="flex items-center gap-1.5 text-xs font-black text-slate-400 hover:text-teal transition-colors mb-5 uppercase tracking-wider bg-transparent border-0 cursor-pointer outline-none"
         >
@@ -398,7 +395,7 @@ export default function LabTestBookingPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Full Name *</label>
-                <input 
+                <input
                   type="text"
                   value={patientName}
                   onChange={(e) => setPatientName(e.target.value)}
@@ -410,7 +407,7 @@ export default function LabTestBookingPage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Age (Years) *</label>
-                <input 
+                <input
                   type="number"
                   value={patientAge}
                   onChange={(e) => setPatientAge(e.target.value)}
@@ -422,7 +419,7 @@ export default function LabTestBookingPage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Gender *</label>
-                <select 
+                <select
                   value={patientGender}
                   onChange={(e) => setPatientGender(e.target.value)}
                   className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer"
@@ -435,7 +432,7 @@ export default function LabTestBookingPage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Contact Phone *</label>
-                <input 
+                <input
                   type="tel"
                   value={patientPhone}
                   onChange={(e) => setPatientPhone(e.target.value)}
@@ -450,14 +447,14 @@ export default function LabTestBookingPage() {
             <div className="border-t border-slate-50 pt-5 flex flex-col gap-4">
               <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Referring Doctor & Prescriptions (Optional)</h4>
               <div className="grid grid-cols-2 gap-4">
-                <input 
+                <input
                   type="text"
                   placeholder="Doctor Name"
                   value={doctorName}
                   onChange={(e) => setDoctorName(e.target.value)}
                   className="px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white text-xs font-bold"
                 />
-                <input 
+                <input
                   type="text"
                   placeholder="Doctor Registration No."
                   value={doctorRegNo}
@@ -519,11 +516,10 @@ export default function LabTestBookingPage() {
                           key={addr.id}
                           type="button"
                           onClick={() => { setSelectedAddressId(addr.id); setCustomAddress(''); }}
-                          className={`text-left p-3.5 border rounded-2xl transition-all cursor-pointer flex items-start gap-2.5 ${
-                            selectedAddressId === addr.id
+                          className={`text-left p-3.5 border rounded-2xl transition-all cursor-pointer flex items-start gap-2.5 ${selectedAddressId === addr.id
                               ? 'border-teal bg-teal-light/20 shadow-sm'
                               : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
-                          }`}
+                            }`}
                         >
                           <FiMapPin className={`w-4 h-4 mt-0.5 shrink-0 ${selectedAddressId === addr.id ? 'text-teal' : 'text-slate-400'}`} />
                           <div className="text-xs">
@@ -585,7 +581,7 @@ export default function LabTestBookingPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Preferred Date *</label>
-                <input 
+                <input
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
@@ -597,7 +593,7 @@ export default function LabTestBookingPage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Preferred Time Slot *</label>
-                <select 
+                <select
                   value={preferredTimeSlot}
                   onChange={(e) => setPreferredTimeSlot(e.target.value)}
                   className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer"
@@ -664,7 +660,7 @@ export default function LabTestBookingPage() {
             </div>
 
             <form onSubmit={handleProcessPayment} className="flex flex-col gap-5">
-              
+
               {/* Payment Methods triggers */}
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Choose Payment Option</label>
@@ -672,27 +668,24 @@ export default function LabTestBookingPage() {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('upi')}
-                    className={`py-3 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${
-                      paymentMethod === 'upi' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                    }`}
+                    className={`py-3 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${paymentMethod === 'upi' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                      }`}
                   >
                     <span>📱</span> UPI / GPay
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('card')}
-                    className={`py-3 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${
-                      paymentMethod === 'card' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                    }`}
+                    className={`py-3 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${paymentMethod === 'card' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                      }`}
                   >
                     <span>💳</span> Card
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('cash')}
-                    className={`py-3 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${
-                      paymentMethod === 'cash' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                    }`}
+                    className={`py-3 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${paymentMethod === 'cash' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                      }`}
                   >
                     <span>💵</span> Cash
                   </button>
@@ -723,7 +716,7 @@ export default function LabTestBookingPage() {
                       type="text"
                       maxLength="16"
                       value={dummyCardNumber}
-                      onChange={(e) => setDummyCardNumber(e.target.value.replace(/\D/g,''))}
+                      onChange={(e) => setDummyCardNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="4111 2222 3333 4444"
                       className="px-4 py-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none"
                       required
@@ -749,7 +742,7 @@ export default function LabTestBookingPage() {
                         maxLength="3"
                         placeholder="123"
                         value={dummyCardCvv}
-                        onChange={(e) => setDummyCardCvv(e.target.value.replace(/\D/g,''))}
+                        onChange={(e) => setDummyCardCvv(e.target.value.replace(/\D/g, ''))}
                         className="px-4 py-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none text-center"
                         required
                       />
@@ -846,13 +839,13 @@ export default function LabTestBookingPage() {
 
             {/* Navigation buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
-              <button 
+              <button
                 onClick={() => navigate('/profile')}
                 className="flex-1 py-3 px-5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0"
               >
                 Go to Profile
               </button>
-              <button 
+              <button
                 onClick={() => navigate('/')}
                 className="flex-1 py-3 px-5 bg-slate-100 hover:bg-slate-200 text-slate-655 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0"
               >
