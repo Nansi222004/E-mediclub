@@ -1,20 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useAdminLocation } from '../context/AdminLocationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReusableTable from '../components/ReusableTable';
 import Logo from '../../../shared/components/Logo';
 import { FiShoppingBag, FiFileText, FiPrinter, FiXCircle, FiCheckCircle, FiTruck } from 'react-icons/fi';
-
-const mockGlobalOrders = [
-  { id: 'EM-OD-9081', customerName: 'Ramesh Kumar', items: 'Organic Ashvagandha Daily Tablets x 2, Paracetamol 650mg x 1', totalAmount: 630, status: 'pending', date: '2026-05-26', email: 'ramesh@gmail.com', phone: '9876543201', address: '12, Garden View, Link Road, Bandra, Mumbai, MH - 400050' },
-  { id: 'EM-OD-9065', customerName: 'Vijay Chawla', items: 'Chyawanprash Awaleha Immune x 1', totalAmount: 304, status: 'shipped', date: '2026-05-25', email: 'vijay@gmail.com', phone: '9876543204', address: 'Plot 45, Tech Park, Sector V, Salt Lake, New Delhi, DL - 110001' },
-  { id: 'EM-OD-8991', customerName: 'Anoop Singh', items: 'Amoxicillin 500mg Capsules x 2', totalAmount: 212, status: 'delivered', date: '2026-05-20', email: 'anoop@gmail.com', phone: '9876543202', address: '12, Garden View, Link Road, Bandra, Mumbai, MH - 400050' },
-  { id: 'EM-OD-8772', customerName: 'Sunita Sharma', items: 'Multivitamins Daily Care x 1', totalAmount: 450, status: 'cancelled', date: '2026-05-18', email: 'sunita@gmail.com', phone: '9876543203', address: 'Apartment 34, City Heights, Sector 62, Gurgaon, HR - 122001' },
-];
+import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import apiClient from '../../../shared/services/apiClient';
+import { buildApiUrl } from '../utils/adminQueryHelper';
 
 export default function OrdersManagement() {
-  const [orders, setOrders] = useState(mockGlobalOrders);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [searchParams] = useSearchParams();
+  const { locationFilter, isFiltered } = useAdminLocation();
+
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
+  const timeframe = searchParams.get('timeframe') || 'month';
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoading(true);
+      try {
+        const url = buildApiUrl('/api/admin/orders/medicines', locationFilter, timeframe);
+        const res = await apiClient.get(url);
+        setOrders(res.data.data || []);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
 
   const handleOpenInvoice = (order) => {
     setSelectedOrder(order);
@@ -83,23 +108,47 @@ export default function OrdersManagement() {
       {/* Page Header */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Global Orders Registry</h1>
-          <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
+          <div className="admin-page-title">Global Orders Registry</div>
+          <p className="admin-page-subtitle mt-2">
             Monitor patient bookings, process dispatch dispatches, and print compliance invoices.
           </p>
         </div>
       </div>
 
-      {/* Main Table grid */}
-      <ReusableTable 
-        columns={columns}
-        data={orders}
-        searchPlaceholder="Search order ID or client name..."
-        searchKey="customerName"
-        filterOptions={{ key: 'status', label: 'Fulfillment', options: ['pending', 'shipped', 'delivered', 'cancelled'] }}
-        actions={tableActions}
-        fileName="emediclub-global-orders"
-      />
+      {/* Location Filter Bar */}
+      <LocationFilter />
+      <LocationBanner />
+
+      {/* Main Table grid or Empty State */}
+      {loading ? (
+        <div className="admin-skeleton-grid">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="admin-skeleton-card" />
+          ))}
+        </div>
+      ) : isFiltered && orders.length === 0 ? (
+        <LocationEmptyState 
+          locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ') || 'Selected Location'}
+          hasVendors={true}
+          hasOrders={false}
+        />
+      ) : !isFiltered && orders.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[300px]">
+          <span className="text-3xl mb-3">📦</span>
+          <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Orders Yet</div>
+          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no orders registered in the system yet.</p>
+        </div>
+      ) : (
+        <ReusableTable 
+          columns={columns}
+          data={orders}
+          searchPlaceholder="Search order ID or client name..."
+          searchKey="customerName"
+          filterOptions={{ key: 'status', label: 'Fulfillment', options: ['pending', 'shipped', 'delivered', 'cancelled'] }}
+          actions={tableActions}
+          fileName="emediclub-global-orders"
+        />
+      )}
 
       {/* 4. High Fidelity Print Invoice Glassmorphic Modal */}
       <AnimatePresence>
@@ -131,7 +180,7 @@ export default function OrdersManagement() {
                     <span className="text-[8px] text-slate-400 font-black uppercase tracking-widest mt-1">Hospital Care & Diagnostic Corp</span>
                   </div>
                   <div className="text-right">
-                    <h3 className="text-base font-black text-slate-800 uppercase tracking-wide leading-none">INVOICE SHEET</h3>
+                    <div className="admin-modal-title uppercase tracking-wide leading-none">INVOICE SHEET</div>
                     <span className="text-[10px] text-slate-400 font-bold mt-1.5 block uppercase tracking-wider">RECPT: #{selectedOrder.id}</span>
                   </div>
                 </div>

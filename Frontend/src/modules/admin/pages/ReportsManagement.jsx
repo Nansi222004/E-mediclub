@@ -49,7 +49,7 @@ export default function ReportsManagement() {
       {/* Header */}
       <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-black text-slate-805 uppercase tracking-wide leading-none">Reports & Analytics</h1>
+          <div className="text-xl font-black text-slate-805 uppercase tracking-wide leading-none">Reports & Analytics</div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2">
             Generate and download comprehensive clinical, financial, and diagnostic analytics reports.
           </p>
@@ -64,28 +64,28 @@ export default function ReportsManagement() {
         <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
           <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Clinical Reports</span>
           <div className="flex justify-between items-end mt-2">
-            <h3 className="text-xl font-black text-slate-800 leading-none">24 Total</h3>
+            <div className="text-xl font-black text-slate-800 leading-none">24 Total</div>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#0D6E56] flex items-center justify-center"><FiActivity /></div>
           </div>
         </div>
         <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
           <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Financial Audit Files</span>
           <div className="flex justify-between items-end mt-2">
-            <h3 className="text-xl font-black text-slate-800 leading-none">18 Total</h3>
+            <div className="text-xl font-black text-slate-800 leading-none">18 Total</div>
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><FiDollarSign /></div>
           </div>
         </div>
         <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
           <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">User Growth Graphs</span>
           <div className="flex justify-between items-end mt-2">
-            <h3 className="text-xl font-black text-slate-800 leading-none">12 Total</h3>
+            <div className="text-xl font-black text-slate-800 leading-none">12 Total</div>
             <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center"><FiUsers /></div>
           </div>
         </div>
         <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
           <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Growth Rate YTD</span>
           <div className="flex justify-between items-end mt-2">
-            <h3 className="text-xl font-black text-emerald-600 leading-none">+28.4%</h3>
+            <div className="text-xl font-black text-emerald-600 leading-none">+28.4%</div>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#0D6E56] flex items-center justify-center"><FiTrendingUp /></div>
           </div>
         </div>
@@ -96,13 +96,14 @@ export default function ReportsManagement() {
         
         {/* Filters and Title */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 pb-4">
-          <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Document Registry</h3>
+          <div className="text-xs font-black text-slate-800 uppercase tracking-widest">Document Registry</div>
           <div className="flex gap-2">
             {['All', 'Clinical', 'Financial', 'Diagnostics'].map(type => (
               <button
                 key={type}
+                type="button"
                 onClick={() => setReportType(type)}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border-0 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider tracking-wider transition-all border-0 cursor-pointer ${
                   reportType === type 
                     ? 'bg-[#0D6E56] text-white' 
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
@@ -128,7 +129,7 @@ export default function ReportsManagement() {
                     <FiFileText />
                   </div>
                   <div>
-                    <h4 className="text-xs font-extrabold text-slate-800 leading-none">{report.name}</h4>
+                    <div className="text-xs font-extrabold text-slate-800 leading-none">{report.name}</div>
                     <div className="flex items-center gap-2 mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       <span>{report.id}</span>
                       <span>•</span>
@@ -157,6 +158,7 @@ export default function ReportsManagement() {
                     </div>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => startDownload(report.id)}
                       className="flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-black text-white text-[10.5px] font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all border-0 shadow-sm"
                     >

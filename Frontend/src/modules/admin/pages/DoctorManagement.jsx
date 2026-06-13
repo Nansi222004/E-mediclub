@@ -1,11 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
+import { useAdminLocation } from '../context/AdminLocationContext';
 import { deleteDoctor, approveDoctor, rejectDoctor } from '../../user/store/productSlice';
 import { FiCheckCircle, FiXCircle, FiTrash2, FiSearch, FiFilter, FiDownload } from 'react-icons/fi';
+import LocationFilter from '../components/LocationFilter';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import apiClient from '../../../shared/services/apiClient';
+import { buildApiUrl } from '../utils/adminQueryHelper';
 
 export default function DoctorManagement() {
   const dispatch = useDispatch();
-  const { doctors, doctorSpecialties } = useSelector(state => state.products);
+  const { doctorSpecialties } = useSelector(state => state.products);
+  const [doctorsList, setDoctorsList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { locationFilter, getQueryString, isFiltered } = useAdminLocation();
+  const [searchParams] = useSearchParams();
+
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
+  const timeframe = searchParams.get('timeframe') || 'month';
 
   // Filter States
   const [searchName, setSearchName] = useState("");
@@ -15,21 +32,40 @@ export default function DoctorManagement() {
   const [selectedMode, setSelectedMode] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
 
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      setLoading(true);
+      try {
+        const url = buildApiUrl('/api/admin/doctors', locationFilter, timeframe);
+        const res = await apiClient.get(url);
+        setDoctorsList(res.data.data || []);
+      } catch (err) {
+        console.error('Error fetching doctors:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDoctors();
+  }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
+
   const handleDelete = (id) => {
     dispatch(deleteDoctor(id));
+    setDoctorsList(prev => prev.filter(doc => doc.id !== id));
   };
 
   const handleApprove = (id) => {
     dispatch(approveDoctor(id));
+    setDoctorsList(prev => prev.map(doc => doc.id === id ? { ...doc, status: 'approved' } : doc));
   };
 
   const handleReject = (id) => {
     dispatch(rejectDoctor(id));
+    setDoctorsList(prev => prev.map(doc => doc.id === id ? { ...doc, status: 'rejected' } : doc));
   };
 
   // Get unique hospital names for filter dropdown
   const uniqueHospitals = Array.from(
-    new Set(doctors.map(doc => doc.hospital).filter(Boolean))
+    new Set(doctorsList.map(doc => doc.hospital).filter(Boolean))
   );
 
   const categories = ["Cardiology", "Dermatology", "Pediatrics", "Orthopedics", "Neurology", "General Medicine"];
@@ -52,18 +88,21 @@ export default function DoctorManagement() {
   };
 
   // Filter Logic
-  const filteredDoctors = doctors.filter(doc => {
-    const matchesName = doc.name.toLowerCase().includes(searchName.toLowerCase());
-    const matchesSpecialty = selectedSpecialty === "all" ? true : doc.specialty === mapDropdownSpecialtyToDb(selectedSpecialty);
-    const matchesHospital = selectedHospital === "all" ? true : doc.hospital === selectedHospital;
-    const matchesCategory = selectedCategory === "all" ? true : doc.specialty === mapCategoryToDb(selectedCategory);
-    const matchesMode = selectedMode === "all" ? true : doc.consultationMode === selectedMode;
-    const matchesStatus = selectedStatus === "all" ? true :
-                          selectedStatus === "Active" ? doc.status === "approved" :
-                          selectedStatus === "Pending" ? (doc.status === "pending" || !doc.status) :
-                          selectedStatus === "Rejected" ? doc.status === "rejected" : true;
-    return matchesName && matchesSpecialty && matchesHospital && matchesCategory && matchesMode && matchesStatus;
-  });
+  const filteredDoctors = useMemo(() => {
+    return doctorsList.filter(doc => {
+      const matchesName = doc.name.toLowerCase().includes(searchName.toLowerCase());
+      const matchesSpecialty = selectedSpecialty === "all" ? true : doc.specialty === mapDropdownSpecialtyToDb(selectedSpecialty);
+      const matchesHospital = selectedHospital === "all" ? true : doc.hospital === selectedHospital;
+      const matchesCategory = selectedCategory === "all" ? true : doc.specialty === mapCategoryToDb(selectedCategory);
+      const matchesMode = selectedMode === "all" ? true : doc.consultationMode === selectedMode;
+      const matchesStatus = selectedStatus === "all" ? true :
+                            selectedStatus === "Active" ? doc.status === "approved" :
+                            selectedStatus === "Pending" ? (doc.status === "pending" || !doc.status) :
+                            selectedStatus === "Rejected" ? doc.status === "rejected" : true;
+
+      return matchesName && matchesSpecialty && matchesHospital && matchesCategory && matchesMode && matchesStatus;
+    });
+  }, [doctorsList, searchName, selectedSpecialty, selectedHospital, selectedCategory, selectedMode, selectedStatus]);
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -98,8 +137,8 @@ export default function DoctorManagement() {
       {/* Page Header */}
       <div className="flex flex-row items-center justify-between gap-2 border-b border-slate-100 pb-2 shrink-0">
         <div>
-          <h1 className="text-base font-extrabold text-slate-800 leading-none">Clinical Practitioners Listings</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider leading-tight">
+          <div className="admin-page-title">Clinical Practitioners Listings</div>
+          <p className="admin-page-subtitle mt-2">
             Review registered doctors directory, specialty profiles, schedules, and active consultation fees.
           </p>
         </div>
@@ -112,6 +151,10 @@ export default function DoctorManagement() {
           <span className="sm:hidden">CSV</span>
         </button>
       </div>
+
+      {/* Location Filter Bar */}
+      <LocationFilter />
+      <LocationBanner />
 
       {/* Filter Deck */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 bg-white p-3 rounded-2xl border border-slate-100 shadow-premium shrink-0">
@@ -207,7 +250,25 @@ export default function DoctorManagement() {
 
       {/* Main Listings */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
-        {filteredDoctors.length > 0 ? (
+        {loading ? (
+          <div className="admin-skeleton-grid">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="admin-skeleton-card" />
+            ))}
+          </div>
+        ) : isFiltered && doctorsList.length === 0 ? (
+          <LocationEmptyState 
+            locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ')}
+            hasVendors={false}
+            hasOrders={false}
+          />
+        ) : !isFiltered && doctorsList.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[300px]">
+            <span className="text-3xl mb-3">👨‍⚕️</span>
+            <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Doctors Registered Yet</div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no doctors registered in the system yet.</p>
+          </div>
+        ) : filteredDoctors.length > 0 ? (
           <>
             {/* Desktop Table */}
             <div className="hidden md:block bg-white border border-slate-100 rounded-3xl shadow-premium overflow-hidden">
@@ -328,7 +389,7 @@ export default function DoctorManagement() {
                       className="w-10 h-10 rounded-2xl object-cover border border-slate-100 shrink-0"
                     />
                     <div className="min-w-0">
-                      <h3 className="font-extrabold text-slate-800 text-sm leading-tight truncate">{doc.name}</h3>
+                       <div className="font-extrabold text-slate-800 text-sm leading-tight truncate">{doc.name}</div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 truncate">{doc.qualification || 'MBBS, MD'}</p>
                       <p className="text-[9px] text-slate-550 mt-1 font-bold truncate">🏥 {doc.hospital || 'Private Clinic'}</p>
                     </div>

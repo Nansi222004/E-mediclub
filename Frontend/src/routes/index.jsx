@@ -51,6 +51,13 @@ const ReportsManagement = lazy(() => import('../modules/admin/pages/ReportsManag
 const CMSManagement = lazy(() => import('../modules/admin/pages/CMSManagement'));
 const SettingsPage = lazy(() => import('../modules/admin/pages/SettingsPage'));
 const NotificationsPage = lazy(() => import('../modules/admin/pages/NotificationsPage'));
+const ComplaintsManagement = lazy(() => import('../modules/admin/pages/ComplaintsManagement'));
+
+const CitiesCoverage = lazy(() => import('../modules/admin/pages/CitiesCoverage'));
+const PincodeManager = lazy(() => import('../modules/admin/pages/PincodeManager'));
+const UnserviceableAreas = lazy(() => import('../modules/admin/pages/UnserviceableAreas'));
+const HomeCollections = lazy(() => import('../modules/admin/pages/HomeCollections'));
+const Prescriptions = lazy(() => import('../modules/admin/pages/Prescriptions'));
 
 // Multi-Vendor Auth Page Modules
 const VendorLoginPage = lazy(() => import('../modules/auth/vendor/pages/VendorLoginPage'));
@@ -143,14 +150,27 @@ export default function AppRoutes() {
         <Route path="vendors" element={<VendorManagement />} />
         <Route path="products" element={<ProductManagement />} />
         <Route path="medicines" element={<MedicinesPage />} />
+        <Route path="medicines/add" element={<ProductManagement autoOpenAdd={true} />} />
         <Route path="orders" element={<OrdersManagement />} />
+        <Route path="orders/medicines" element={<OrdersManagement />} />
+        <Route path="orders/lab-bookings" element={<BookingsManagement defaultTab="Lab Tests" />} />
+        <Route path="orders/appointments" element={<BookingsManagement defaultTab="Doctors" />} />
         <Route path="users" element={<UsersManagement />} />
+        <Route path="patients" element={<UsersManagement />} />
         <Route path="doctors" element={<DoctorManagement />} />
         <Route path="doctors-categories" element={<DoctorSpecialtyRegistry />} />
         <Route path="lab-tests" element={<LabTestsManagement />} />
+        <Route path="lab-tests/add" element={<LabTestsManagement autoOpenAdd={true} />} />
         <Route path="lab-categories" element={<LabCategoriesRegistry />} />
         <Route path="bookings" element={<BookingsManagement />} />
+        <Route path="appointments" element={<BookingsManagement defaultTab="Doctors" />} />
         <Route path="payments" element={<PaymentsManagement />} />
+        <Route path="locations/cities" element={<CitiesCoverage />} />
+        <Route path="locations/pincodes" element={<PincodeManager />} />
+        <Route path="locations/gaps" element={<UnserviceableAreas />} />
+        <Route path="home-collections" element={<HomeCollections />} />
+        <Route path="prescriptions" element={<Prescriptions />} />
+        <Route path="complaints" element={<ComplaintsManagement />} />
         <Route path="reports" element={<ReportsManagement />} />
         <Route path="cms" element={<CMSManagement />} />
         <Route path="settings" element={<SettingsPage />} />

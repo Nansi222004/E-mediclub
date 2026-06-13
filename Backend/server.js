@@ -18,6 +18,7 @@ const locationRoutes = require('./routes/locationRoutes');
 const doctorsRoutes = require('./routes/doctorsRoutes');
 const labsRoutes = require('./routes/labsRoutes');
 const productsRoutes = require('./routes/productsRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const errorHandler = require('./middleware/errorMiddleware');
 const User = require('./models/User');
 
@@ -74,6 +75,10 @@ const seedUsers = async () => {
         email: 'admin@emediclub.com',
         password: 'admin123',
         role: 'admin',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400001',
+        profile: { city: 'Mumbai', state: 'Maharashtra', pincode: '400001' }
       });
 
       // Default Vendor
@@ -83,6 +88,10 @@ const seedUsers = async () => {
         email: 'vendor@emediclub.com',
         password: 'vendor123',
         role: 'vendor',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400001',
+        profile: { city: 'Mumbai', state: 'Maharashtra', pincode: '400001' }
       });
 
       // Default Standard User
@@ -92,12 +101,26 @@ const seedUsers = async () => {
         email: 'user@emediclub.com',
         password: 'user123',
         role: 'user',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400001',
+        profile: { city: 'Mumbai', state: 'Maharashtra', pincode: '400001' }
       });
 
-      console.log('Demo accounts seeded successfully:');
-      console.log('- Admin: Phone 9999999999, Password: admin123');
-      console.log('- Vendor: Phone 8888888888, Password: vendor123');
-      console.log('- User: Phone 7777777777, Password: user123');
+      // Indore Standard User
+      await User.create({
+        name: 'Indore Patient 1',
+        phone: '7777700001',
+        email: 'indore_pat1@emediclub.com',
+        password: 'user123',
+        role: 'user',
+        city: 'Indore',
+        state: 'Madhya Pradesh',
+        pincode: '452010',
+        profile: { city: 'Indore', state: 'Madhya Pradesh', pincode: '452010' }
+      });
+
+      console.log('Demo accounts seeded successfully.');
     }
 
     // Seed specific Multi-Vendor role demo accounts if they do not exist
@@ -109,6 +132,10 @@ const seedUsers = async () => {
         email: 'pharmacy@emediclub.com',
         password: 'Pharmacy@123',
         role: 'pharmacy_vendor',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400001',
+        profile: { city: 'Mumbai', state: 'Maharashtra', pincode: '400001' }
       });
       console.log('Seeded City Pharmacy (pharmacy@emediclub.com / Pharmacy@123)');
     }
@@ -121,6 +148,10 @@ const seedUsers = async () => {
         email: 'lab@emediclub.com',
         password: 'Lab@123',
         role: 'lab_vendor',
+        city: 'Pune',
+        state: 'Maharashtra',
+        pincode: '411001',
+        profile: { city: 'Pune', state: 'Maharashtra', pincode: '411001' }
       });
       console.log('Seeded Diagnostics Lab (lab@emediclub.com / Lab@123)');
     }
@@ -133,8 +164,28 @@ const seedUsers = async () => {
         email: 'doctor@emediclub.com',
         password: 'Doctor@123',
         role: 'doctor_vendor',
+        city: 'Delhi',
+        state: 'Delhi',
+        pincode: '110001',
+        profile: { city: 'Delhi', state: 'Delhi', pincode: '110001' }
       });
       console.log('Seeded Dr. Ramesh (doctor@emediclub.com / Doctor@123)');
+    }
+
+    const indoreVendorExists = await User.findOne({ email: 'indore_vendor@emediclub.com' });
+    if (!indoreVendorExists) {
+      await User.create({
+        name: 'Indore Medical Services',
+        phone: '8888800001',
+        email: 'indore_vendor@emediclub.com',
+        password: 'Vendor@123',
+        role: 'pharmacy_vendor',
+        city: 'Indore',
+        state: 'Madhya Pradesh',
+        pincode: '452010',
+        profile: { city: 'Indore', state: 'Madhya Pradesh', pincode: '452010' }
+      });
+      console.log('Seeded Indore Pharmacy Vendor');
     }
 
   } catch (err) {
@@ -254,20 +305,70 @@ const seedMockData = async () => {
     ];
 
     const productTemplates = [
+      // Sun Pharmaceutical Industries Ltd
       { name: 'Revital H Capsule', category: 'Wellness', brand: 'Sun Pharmaceutical Industries Ltd', price: 310, discountPrice: 263, discountPercent: 15, packSize: 'Bottle of 30 capsules', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
-      { name: 'Dolo 650 Tablet', category: 'Medicines', brand: 'Micro Labs Ltd', price: 34, discountPrice: 28, discountPercent: 18, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
-      { name: 'Accu-Chek Active Test Strips', category: 'Health Devices', brand: 'Roche Diabetes Care', price: 975, discountPrice: 875, discountPercent: 10, packSize: 'Box of 50 strips', image: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?auto=format&fit=crop&w=400&q=80' },
-      { name: 'Chyawanprash Awaleha', category: 'Ayurveda', brand: 'Dabur India Ltd', price: 495, discountPrice: 420, discountPercent: 15, packSize: 'Tub of 1 kg', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80' },
       { name: 'Volini Pain Relief Spray', category: 'Medicines', brand: 'Sun Pharmaceutical Industries Ltd', price: 160, discountPrice: 136, discountPercent: 15, packSize: 'Can of 55 g', image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Suncros Aqua Lotion', category: 'Wellness', brand: 'Sun Pharmaceutical Industries Ltd', price: 350, discountPrice: 300, discountPercent: 14, packSize: 'Bottle of 50ml', image: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?auto=format&fit=crop&w=400&q=80' },
+
+      // Micro Labs Ltd
+      { name: 'Dolo 650 Tablet', category: 'Medicines', brand: 'Micro Labs Ltd', price: 34, discountPrice: 28, discountPercent: 18, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Tenepride M 1000', category: 'Diabetes Care', brand: 'Micro Labs Ltd', price: 180, discountPrice: 150, discountPercent: 16, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Amlong 5 Tablet', category: 'Medicines', brand: 'Micro Labs Ltd', price: 65, discountPrice: 55, discountPercent: 15, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+
+      // Roche Diabetes Care
+      { name: 'Accu-Chek Active Test Strips', category: 'Health Devices', brand: 'Roche Diabetes Care', price: 975, discountPrice: 875, discountPercent: 10, packSize: 'Box of 50 strips', image: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Accu-Chek Instant Glucometer', category: 'Health Devices', brand: 'Roche Diabetes Care', price: 1500, discountPrice: 1250, discountPercent: 16, packSize: '1 Kit', image: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Accu-Chek Softclix Lancets', category: 'Health Devices', brand: 'Roche Diabetes Care', price: 200, discountPrice: 180, discountPercent: 10, packSize: 'Box of 25 lancets', image: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?auto=format&fit=crop&w=400&q=80' },
+
+      // Dabur India Ltd
+      { name: 'Chyawanprash Awaleha', category: 'Ayurveda', brand: 'Dabur India Ltd', price: 495, discountPrice: 420, discountPercent: 15, packSize: 'Tub of 1 kg', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Honey Squeezy', category: 'Ayurveda', brand: 'Dabur India Ltd', price: 250, discountPrice: 220, discountPercent: 12, packSize: 'Bottle of 400g', image: 'https://images.unsplash.com/photo-1587049352847-4d4b12630252?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Pudin Hara Pearls', category: 'Ayurveda', brand: 'Dabur India Ltd', price: 55, discountPrice: 48, discountPercent: 12, packSize: 'Strip of 10 pearls', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80' },
+
+      // Koye Pharmaceuticals
       { name: 'Celin 500 Vitamin C Tablet', category: 'Wellness', brand: 'Koye Pharmaceuticals', price: 45, discountPrice: 38, discountPercent: 15, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1626645738196-c2a792747f14?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Zincovit Tablet', category: 'Wellness', brand: 'Koye Pharmaceuticals', price: 105, discountPrice: 90, discountPercent: 14, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1626645738196-c2a792747f14?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Calcimax 500', category: 'Wellness', brand: 'Koye Pharmaceuticals', price: 135, discountPrice: 115, discountPercent: 14, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1626645738196-c2a792747f14?auto=format&fit=crop&w=400&q=80' },
+
+      // GlaxoSmithKline
       { name: 'Crocin Advance Tablet', category: 'Medicines', brand: 'GlaxoSmithKline', price: 42, discountPrice: 36, discountPercent: 14, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Sensodyne Repair & Protect', category: 'Wellness', brand: 'GlaxoSmithKline', price: 210, discountPrice: 185, discountPercent: 11, packSize: 'Tube of 100g', image: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Iodex Balm', category: 'Medicines', brand: 'GlaxoSmithKline', price: 75, discountPrice: 65, discountPercent: 13, packSize: 'Bottle of 40g', image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?auto=format&fit=crop&w=400&q=80' },
+
+      // Alkem Laboratories
       { name: 'Pan-D Tablet', category: 'Medicines', brand: 'Alkem Laboratories', price: 65, discountPrice: 55, discountPercent: 15, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Taxim O 200 Tablet', category: 'Medicines', brand: 'Alkem Laboratories', price: 110, discountPrice: 95, discountPercent: 13, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Clavam 625 Tablet', category: 'Medicines', brand: 'Alkem Laboratories', price: 200, discountPrice: 170, discountPercent: 15, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+
+      // Sanofi India Ltd
       { name: 'Allegra 120mg Tablet', category: 'Medicines', brand: 'Sanofi India Ltd', price: 95, discountPrice: 80, discountPercent: 16, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Combiflam Tablet', category: 'Medicines', brand: 'Sanofi India Ltd', price: 45, discountPrice: 38, discountPercent: 15, packSize: 'Strip of 20 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Dulcolax Tablet', category: 'Medicines', brand: 'Sanofi India Ltd', price: 50, discountPrice: 42, discountPercent: 16, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+
+      // Alembic Pharmaceuticals
       { name: 'Azithral 500mg Tablet', category: 'Medicines', brand: 'Alembic Pharmaceuticals', price: 85, discountPrice: 72, discountPercent: 15, packSize: 'Strip of 3 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Udiliv 300 Tablet', category: 'Medicines', brand: 'Alembic Pharmaceuticals', price: 480, discountPrice: 420, discountPercent: 12, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Wikoryl Tablet', category: 'Medicines', brand: 'Alembic Pharmaceuticals', price: 65, discountPrice: 55, discountPercent: 15, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+
+      // Himalaya Drug Company
       { name: 'Liv 52 Syrup', category: 'Ayurveda', brand: 'Himalaya Drug Company', price: 185, discountPrice: 158, discountPercent: 15, packSize: 'Bottle of 200ml', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Cystone Tablet', category: 'Ayurveda', brand: 'Himalaya Drug Company', price: 160, discountPrice: 135, discountPercent: 15, packSize: 'Bottle of 60 tablets', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Septilin Tablet', category: 'Ayurveda', brand: 'Himalaya Drug Company', price: 140, discountPrice: 120, discountPercent: 14, packSize: 'Bottle of 60 tablets', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80' },
+
+      // Lupin Ltd
       { name: 'Shelcal 500 Tablet', category: 'Wellness', brand: 'Lupin Ltd', price: 125, discountPrice: 106, discountPercent: 15, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1626645738196-c2a792747f14?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Tonact 20 Tablet', category: 'Medicines', brand: 'Lupin Ltd', price: 160, discountPrice: 140, discountPercent: 12, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Telekast L Tablet', category: 'Medicines', brand: 'Lupin Ltd', price: 210, discountPrice: 180, discountPercent: 14, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+
+      // Bayer India
       { name: 'Aspirin 500mg Tablet', category: 'Medicines', brand: 'Bayer India', price: 55, discountPrice: 46, discountPercent: 16, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
-      { name: 'Ibuprofen 400mg Tablet', category: 'Medicines', brand: 'Cipla Ltd', price: 48, discountPrice: 41, discountPercent: 15, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' }
+      { name: 'Saridon Advance', category: 'Medicines', brand: 'Bayer India', price: 35, discountPrice: 30, discountPercent: 14, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Supradyn Daily Multivitamin', category: 'Wellness', brand: 'Bayer India', price: 65, discountPrice: 55, discountPercent: 15, packSize: 'Strip of 15 tablets', image: 'https://images.unsplash.com/photo-1626645738196-c2a792747f14?auto=format&fit=crop&w=400&q=80' },
+
+      // Cipla Ltd
+      { name: 'Ibuprofen 400mg Tablet', category: 'Medicines', brand: 'Cipla Ltd', price: 48, discountPrice: 41, discountPercent: 15, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Foracort 200 Inhaler', category: 'Respiratory Care', brand: 'Cipla Ltd', price: 350, discountPrice: 310, discountPercent: 11, packSize: '1 Inhaler', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Montair LC Tablet', category: 'Medicines', brand: 'Cipla Ltd', price: 185, discountPrice: 160, discountPercent: 13, packSize: 'Strip of 10 tablets', image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80' }
     ];
 
     for (let cIdx = 0; cIdx < cities.length; cIdx++) {
@@ -288,7 +389,7 @@ const seedMockData = async () => {
           const expVal = 8 + (i * 2);
 
           doctorsToCreate.push({
-            id: `doc-${city.toLowerCase().slice(0, 3)}-${i + 1}`,
+            id: `doc-${city.toLowerCase().replace(/\s/g, '').slice(0, 4)}-${cIdx}-${i + 1}`,
             name,
             specialty: spec.name,
             subSpecialty: spec.sub,
@@ -392,6 +493,46 @@ const seedMockData = async () => {
       }
     }
 
+    // Seed Orders
+    const Order = require('./models/Order');
+    const orderCount = await Order.countDocuments();
+    if (orderCount === 0) {
+      await Order.create([
+        { id: 'EM-OD-9081', customerName: 'Ramesh Kumar', items: 'Organic Ashvagandha Daily Tablets x 2, Paracetamol 650mg x 1', totalAmount: 630, status: 'pending', date: '2026-05-26', email: 'ramesh@gmail.com', phone: '9876543201', address: '12, Garden View, Link Road, Bandra, Mumbai, MH - 400050', city: 'Mumbai', state: 'Maharashtra', pincode: '400001' },
+        { id: 'EM-OD-9065', customerName: 'Vijay Chawla', items: 'Chyawanprash Awaleha Immune x 1', totalAmount: 304, status: 'shipped', date: '2026-05-25', email: 'vijay@gmail.com', phone: '9876543204', address: 'Plot 45, Tech Park, Sector V, Salt Lake, New Delhi, DL - 110001', city: 'Delhi', state: 'Delhi', pincode: '110001' },
+        { id: 'EM-OD-8991', customerName: 'Anoop Singh', items: 'Amoxicillin 500mg Capsules x 2', totalAmount: 212, status: 'delivered', date: '2026-05-20', email: 'anoop@gmail.com', phone: '9876543202', address: '12, Garden View, Link Road, Bandra, Mumbai, MH - 400050', city: 'Mumbai', state: 'Maharashtra', pincode: '400001' },
+        { id: 'EM-OD-8772', customerName: 'Sunita Sharma', items: 'Multivitamins Daily Care x 1', totalAmount: 450, status: 'cancelled', date: '2026-05-18', email: 'sunita@gmail.com', phone: '9876543203', address: 'Apartment 34, City Heights, Sector 62, Gurgaon, HR - 122001', city: 'Delhi', state: 'Delhi', pincode: '110001' },
+        { id: 'EM-OD-7712', customerName: 'Indore Patient 1', items: 'Crocin Advance Tablet x 3', totalAmount: 120, status: 'delivered', date: '2026-06-01', email: 'indore1@gmail.com', phone: '9999900001', address: 'Scheme 54, Vijay Nagar, Indore, MP - 452010', city: 'Indore', state: 'Madhya Pradesh', pincode: '452010' },
+        { id: 'EM-OD-7713', customerName: 'Indore Patient 2', items: 'Revital H Capsule x 1', totalAmount: 310, status: 'pending', date: '2026-06-02', email: 'indore2@gmail.com', phone: '9999900002', address: 'Geeta Bhawan, Indore, MP - 452001', city: 'Indore', state: 'Madhya Pradesh', pincode: '452001' }
+      ]);
+      console.log('Seeded mock orders successfully.');
+    }
+
+    // Seed Appointments
+    const Appointment = require('./models/Appointment');
+    const appointmentCount = await Appointment.countDocuments();
+    if (appointmentCount === 0) {
+      await Appointment.create([
+        { id: 'APT-1001', doctorName: 'Dr. Ramesh Gupta', specialty: 'General Physician', patientName: 'Rajesh Kumar', date: '2026-06-03', timeSlot: '10:00 AM', type: 'Video', status: 'confirmed', city: 'Delhi', state: 'Delhi', pincode: '110001' },
+        { id: 'APT-1002', doctorName: 'Dr. Archana Sen', specialty: 'Dermatologist', patientName: 'Priya Patel', date: '2026-06-04', timeSlot: '11:00 AM', type: 'In-Clinic', status: 'pending', city: 'Mumbai', state: 'Maharashtra', pincode: '400001' },
+        { id: 'APT-1003', doctorName: 'Dr. Nitin Verma', specialty: 'Pediatrician', patientName: 'Anoop Singh', date: '2026-06-05', timeSlot: '02:00 PM', type: 'Video', status: 'completed', city: 'Pune', state: 'Maharashtra', pincode: '411001' },
+        { id: 'APT-1004', doctorName: 'Dr. Sameer Patel', specialty: 'General Physician', patientName: 'Indore Patient 1', date: '2026-06-06', timeSlot: '04:00 PM', type: 'Video', status: 'confirmed', city: 'Indore', state: 'Madhya Pradesh', pincode: '452010' }
+      ]);
+      console.log('Seeded mock appointments successfully.');
+    }
+
+    // Seed Lab Bookings
+    const LabBooking = require('./models/LabBooking');
+    const labBookingCount = await LabBooking.countDocuments();
+    if (labBookingCount === 0) {
+      await LabBooking.create([
+        { id: 'LAB-1001', packageName: 'Complete Blood Count', address: '12, Link Road, Mumbai', price: 499, status: 'confirmed', date: '2026-06-03', city: 'Mumbai', state: 'Maharashtra', pincode: '400001' },
+        { id: 'LAB-1002', packageName: 'Liver Function Test', address: 'Plot 45, Salt Lake, Delhi', price: 799, status: 'pending', date: '2026-06-04', city: 'Delhi', state: 'Delhi', pincode: '110001' },
+        { id: 'LAB-1003', packageName: 'Thyroid Profile', address: 'Vijay Nagar, Indore', price: 599, status: 'completed', date: '2026-06-05', city: 'Indore', state: 'Madhya Pradesh', pincode: '452010' }
+      ]);
+      console.log('Seeded mock lab bookings successfully.');
+    }
+
     console.log('Conditionally seeded mock data successfully.');
   } catch (err) {
     console.error(`Seed mock data error: ${err.message}`);
@@ -414,6 +555,7 @@ app.use('/api/location', locationRoutes);
 app.use('/api/doctors', doctorsRoutes);
 app.use('/api/labs', labsRoutes);
 app.use('/api/products', productsRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
 
 // Health check API
 app.get('/api/health', (req, res) => {
@@ -455,3 +597,5 @@ process.on('unhandledRejection', (err, promise) => {
   // Close server & exit process
   server.close(() => process.exit(1));
 });
+
+// trigger reload

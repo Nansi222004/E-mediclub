@@ -4,13 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiGrid, FiPlus, FiX, FiCheckCircle, FiInfo, FiUploadCloud } from 'react-icons/fi';
 import { addMedicineCategory, addNewMedicine } from '../../user/store/productSlice';
 
-export default function ProductManagement() {
+export default function ProductManagement({ autoOpenAdd = false }) {
   const dispatch = useDispatch();
   const { medicines, medicineCategories } = useSelector(state => state.products);
 
   // States
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(autoOpenAdd);
   const [successToast, setSuccessToast] = useState("");
 
   // Add Medicine Form Fields
@@ -117,7 +117,7 @@ export default function ProductManagement() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Medicines Registry</h1>
+          <div className="admin-medicines-page-title">Medicines Registry</div>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
             Register and manage pharmacological categories, classifications, and add new formulations.
           </p>
@@ -138,9 +138,10 @@ export default function ProductManagement() {
         {/* Left column: Categories List Card */}
         <div className="md:col-span-2 bg-white border border-slate-100 p-6 rounded-3xl shadow-premium">
           <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-2">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
-              <FiGrid className="text-teal" /> Category Registry Directory
-            </h3>
+            <div className="admin-section-heading-wrapper mb-0">
+              <FiGrid />
+              <span>Category Registry Directory</span>
+            </div>
             <span className="text-[10px] text-slate-400 font-bold uppercase">{medicineCategories.length} Categories</span>
           </div>
 
@@ -150,10 +151,10 @@ export default function ProductManagement() {
               return (
                 <div 
                   key={idx} 
-                  className="bg-slate-50 border border-slate-100 hover:border-teal/30 p-4.5 rounded-2xl transition-all duration-350 flex flex-col gap-1 hover:shadow-premium-hover"
+                  className="bg-slate-50 border border-slate-100 hover:border-teal/30 p-4.5 rounded-2xl transition-all duration-350 flex flex-col gap-1 hover:shadow-premium-hover admin-card"
                 >
-                  <span className="text-[11px] font-black text-slate-700 uppercase tracking-wide truncate">{cat}</span>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{count} active {count === 1 ? 'product' : 'products'}</span>
+                  <span className="admin-category-card-title truncate">{cat}</span>
+                  <span className="admin-category-card-count">{count} active {count === 1 ? 'product' : 'products'}</span>
                 </div>
               );
             })}
@@ -162,9 +163,9 @@ export default function ProductManagement() {
 
         {/* Right column: Add New Category Form */}
         <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium">
-          <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3">
+          <div className="admin-panel-title mb-3">
             Create Therapy Class
-          </h3>
+          </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-2 mb-4">
             Add a new therapeutic category tag.
           </p>
@@ -179,7 +180,7 @@ export default function ProductManagement() {
             />
             <button 
               type="submit"
-              className="py-3 bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1 tap-scale"
+              className="admin-btn-dark py-3 bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1 tap-scale"
             >
               <FiPlus /> Add Category Tag
             </button>
@@ -213,9 +214,9 @@ export default function ProductManagement() {
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-150 shrink-0">
                 <div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
                     <FiPlus className="text-teal" /> Register New Medicine Formulation
-                  </h3>
+                  </div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">
                     Add catalog entry with dosage, compositions, and pricing.
                   </p>

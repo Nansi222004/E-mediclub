@@ -268,11 +268,7 @@ export default function CartPage() {
               <div className="flex flex-col gap-2.5 text-xs text-slate-500 font-semibold">
                 <div className="flex items-center justify-between">
                   <span>Medicine Subtotal</span>
-                  <span className="text-slate-800">₹{subtotal + savings}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Product Savings</span>
-                  <span className="text-emerald-600 font-bold">-₹{savings}</span>
+                  <span className="text-slate-800">₹{subtotal}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Applied Coupon Discount</span>
@@ -289,6 +285,12 @@ export default function CartPage() {
                   <span>Grand Total</span>
                   <span className="text-base text-forest">₹{total}</span>
                 </div>
+                
+                {savings > 0 && (
+                  <div className="mt-2 bg-emerald-50 text-emerald-700 p-2.5 rounded-xl text-center text-xs font-bold border border-emerald-100">
+                    You save ₹{savings} on this order!
+                  </div>
+                )}
               </div>
 
               {/* Secure health checkout badge */}

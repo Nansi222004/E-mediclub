@@ -1,16 +1,51 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import ReusableTable from '../components/ReusableTable';
 import { toggleUserStatus } from '../store/adminSlice';
 import { FiUserCheck, FiSlash, FiCheck, FiUsers } from 'react-icons/fi';
+import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import apiClient from '../../../shared/services/apiClient';
+import { useAdminLocation } from '../context/AdminLocationContext';
+import { buildApiUrl } from '../utils/adminQueryHelper';
 
 export default function UsersManagement() {
   const dispatch = useDispatch();
-  const { users } = useSelector(state => state.admin);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { locationFilter, isFiltered } = useAdminLocation();
+  const [searchParams] = useSearchParams();
+
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
+  const timeframe = searchParams.get('timeframe') || '';
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const url = buildApiUrl('/api/admin/patients', locationFilter, timeframe);
+        const res = await apiClient.get(url);
+        setUsers(res.data.data || []);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
 
   const handleToggleBlock = (id) => {
     dispatch(toggleUserStatus(id));
+    setUsers(prev => prev.map(u => u.id === id || u._id === id ? { ...u, status: u.status === 'active' ? 'blocked' : 'active' } : u));
   };
+
+  const filteredUsers = users;
 
   // Define table column mappings
   const columns = [
@@ -30,20 +65,30 @@ export default function UsersManagement() {
       )
     },
     { key: 'phone', header: 'Contact Mobile' },
+    {
+      key: 'city',
+      header: 'City',
+      render: (row) => <span>{row.city || 'Mumbai'}</span>
+    },
+    {
+      key: 'pincode',
+      header: 'Pincode',
+      render: (row) => <span className="font-extrabold text-slate-500">{row.pincode || '400001'}</span>
+    },
     { 
       key: 'joinedDate', 
       header: 'Joined Date',
-      render: (row) => <span className="font-bold text-slate-500">{row.joinedDate}</span>
+      render: (row) => <span className="font-bold text-slate-500">{row.joinedDate || (row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '2026-05-26')}</span>
     },
     { 
       key: 'totalOrders', 
       header: 'Orders',
-      render: (row) => <span className="font-extrabold text-slate-700">{row.totalOrders} bookings</span>
+      render: (row) => <span className="font-extrabold text-slate-700">{row.totalOrders || 0} bookings</span>
     },
     { 
       key: 'spent', 
       header: 'Total Spent',
-      render: (row) => <span className="font-black text-slate-800">₹{row.spent.toLocaleString()}</span>
+      render: (row) => <span className="font-black text-slate-800">₹{(row.spent || 0).toLocaleString()}</span>
     },
     { 
       key: 'status', 
@@ -86,23 +131,47 @@ export default function UsersManagement() {
       {/* Page Header */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Customer Core Registry</h1>
-          <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
+          <div className="admin-page-title">Customer Core Registry</div>
+          <p className="admin-page-subtitle mt-2">
             Review active clients registries, spent history totals, and toggle platform access controls.
           </p>
         </div>
       </div>
 
-      {/* Main Table Grid */}
-      <ReusableTable 
-        columns={columns}
-        data={users}
-        searchPlaceholder="Search customer by name or email..."
-        searchKey="name"
-        filterOptions={{ key: 'status', label: 'Status', options: ['active', 'blocked'] }}
-        actions={tableActions}
-        fileName="emediclub-customer-base"
-      />
+      {/* Location Filter */}
+      <LocationFilter />
+      <LocationBanner />
+
+      {/* Main Table Grid or Empty State */}
+      {loading ? (
+        <div className="admin-skeleton-grid">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="admin-skeleton-card" />
+          ))}
+        </div>
+      ) : isFiltered && filteredUsers.length === 0 ? (
+        <LocationEmptyState 
+          locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ') || 'Selected Location'}
+          hasVendors={true}
+          hasOrders={false}
+        />
+      ) : !isFiltered && filteredUsers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[300px]">
+          <span className="text-3xl mb-3">👤</span>
+          <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Customers Yet</div>
+          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no customers registered in the system yet.</p>
+        </div>
+      ) : (
+        <ReusableTable 
+          columns={columns}
+          data={filteredUsers}
+          searchPlaceholder="Search customer by name or email..."
+          searchKey="name"
+          filterOptions={{ key: 'status', label: 'Status', options: ['active', 'blocked'] }}
+          actions={tableActions}
+          fileName="emediclub-customer-base"
+        />
+      )}
 
     </div>
   );

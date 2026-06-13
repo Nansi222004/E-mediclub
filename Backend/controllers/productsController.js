@@ -26,10 +26,28 @@ const getProducts = async (req, res, next) => {
           prodObj.vendorPincode = pincode ? pincode.trim() : (prodObj.vendorPincode || '110001');
           prodObj.vendorCity = city ? city.trim() : (prodObj.vendorCity || 'Delhi');
           prodObj.vendorState = prodObj.vendorState || 'Delhi';
+          
+          // Localize brand
+          const brandLower = (prodObj.brand || '').toLowerCase();
+          const cityLower = prodObj.vendorCity.toLowerCase();
+          if (!brandLower.includes(cityLower)) {
+            prodObj.brand = `${prodObj.vendorCity} ${prodObj.brand || 'Pharma'}`;
+          }
+          
           return prodObj;
         });
       }
     }
+
+    // Deduplicate products by name
+    const uniqueMap = new Map();
+    products.forEach(p => {
+      const name = p.name || (p.toObject && p.toObject().name);
+      if (name && !uniqueMap.has(name)) {
+        uniqueMap.set(name, p);
+      }
+    });
+    products = Array.from(uniqueMap.values());
 
     return ApiResponse.success(res, 200, 'Products retrieved successfully', products);
   } catch (error) {

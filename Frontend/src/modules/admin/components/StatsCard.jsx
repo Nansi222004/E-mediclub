@@ -50,9 +50,9 @@ export default function StatsCard({ title, value, change, isPositive = true, ico
           <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider truncate" title={title}>
             {title}
           </span>
-          <h3 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight truncate">
+          <div className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight truncate">
             {value}
-          </h3>
+          </div>
         </div>
         
         {/* Dynamic Rounded Icon Plate */}

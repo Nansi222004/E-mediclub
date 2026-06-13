@@ -1,336 +1,245 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
+import apiClient from '../../../shared/services/apiClient';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import { 
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell
+} from 'recharts';
 import { 
   FiDollarSign, FiShoppingBag, FiUsers, FiCalendar, 
   FiActivity, FiPackage, FiVideo, FiMapPin, FiAlertTriangle, 
   FiArrowUpRight, FiArrowDownRight, FiStar, FiPlus, 
   FiDownload, FiFileText, FiClock, FiX, FiCheck, 
-  FiHeart, FiPhone, FiMessageSquare, FiSliders, FiEye, FiCheckCircle, FiPlusCircle, FiTrendingUp
+  FiHeart, FiPhone, FiMessageSquare, FiSliders, FiEye, FiCheckCircle, FiPlusCircle, FiTrendingUp, FiUserCheck, FiCreditCard, FiPercent
 } from 'react-icons/fi';
+import { approveVendor, rejectVendor } from '../store/adminSlice';
+import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import { useAdminLocation } from '../context/AdminLocationContext';
 
 // Helper function to format Indian locale currencies
 const formatIndianCurrency = (num) => {
   return "₹" + num.toLocaleString('en-IN');
 };
 
+// Animated Number Counter Component
+const AnimatedCounter = ({ value, duration = 1000 }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp = null;
+    const isCurrency = typeof value === 'string' && value.startsWith('₹');
+    const numericValue = typeof value === 'number' 
+      ? value 
+      : parseInt(value.toString().replace(/[^0-9]/g, '')) || 0;
+
+    if (numericValue === 0) {
+      setCount(value);
+      return;
+    }
+
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const current = Math.floor(progress * numericValue);
+      
+      if (typeof value === 'number') {
+        setCount(current);
+      } else if (isCurrency) {
+        setCount(formatIndianCurrency(current));
+      } else {
+        setCount(value.toString().replace(/[0-9,]+/g, Math.round(current).toLocaleString()));
+      }
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+    window.requestAnimationFrame(step);
+  }, [value, duration]);
+
+  return <span>{count}</span>;
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { locationFilter, clearFilter, isFiltered, getQueryString } = useAdminLocation();
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
 
-  // Date Filter State (Pills from June 1st to June 7th)
-  const [selectedDay, setSelectedDay] = useState(3); // Default June 3rd
+  // Timeframe and Loading States
+  const [timeframe, setTimeframe] = useState('month'); // day / month / year
+  const [chartLoading, setChartLoading] = useState(false);
 
-  // --- MOCK DATA ---
-  
-  // Section 1 & 2 Stats
-  const section1Stats = [
-    { title: "Total Revenue", value: "₹12,45,800", change: "+18% this month", trend: "up", color: "text-emerald-600 bg-emerald-50", icon: FiDollarSign },
-    { title: "Total Orders", value: "3,240", change: "+12% vs last month", trend: "up", color: "text-teal bg-teal-light/20", icon: FiShoppingBag },
-    { title: "Active Doctors", value: "48", change: "+3 onboarded today", trend: "up", color: "text-blue-600 bg-blue-50", icon: FiHeart },
-    { title: "Lab Bookings Today", value: "126", change: "+8% this week", trend: "up", color: "text-orange-600 bg-orange-50", icon: FiActivity }
-  ];
+  // Live database states
+  const [reduxOrders, setReduxOrders] = useState([]);
+  const [reduxLabBookings, setReduxLabBookings] = useState([]);
+  const [reduxAppointments, setReduxAppointments] = useState([]);
+  const [reduxVendors, setReduxVendors] = useState([]);
+  const [reduxUsers, setReduxUsers] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [recentVendors, setRecentVendors] = useState([]);
+  const [medicines, setMedicines] = useState([]);
+  const [labTests, setLabTests] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [labs, setLabs] = useState([]);
+  const [commissionSetting] = useState(10);
+  const [reduxComplaints, setReduxComplaints] = useState([]);
+  const [activeCities, setActiveCities] = useState([]);
+  const [reduxCollections, setReduxCollections] = useState([]);
 
-  const section2Stats = [
-    { title: "Medicines Sold", value: "8,920 units", change: "+22% demand spike", trend: "up", color: "text-emerald-600 bg-emerald-50", icon: FiPackage },
-    { title: "Online Consultations", value: "310 bookings", change: "+15% vs yesterday", trend: "up", color: "text-blue-600 bg-blue-50", icon: FiVideo },
-    { title: "Offline Consultations", value: "198 clinic visits", change: "+7% scheduling", trend: "up", color: "text-teal bg-teal-light/20", icon: FiMapPin },
-    { title: "Pending Refunds", value: "14 tickets", change: "-2 resolved this hr", trend: "down", color: "text-amber-700 bg-amber-50", icon: FiAlertTriangle }
-  ];
+  const [stats, setStats] = useState({
+    patients: 0,
+    vendors: 0,
+    orders: 0,
+    revenue: 0,
+    isEmpty: false,
+    hasVendors: false,
+    hasOrders: false
+  });
+  const [ordersTrendData, setOrdersTrendData] = useState([]);
+  const [monthlyRevenueData, setMonthlyRevenueData] = useState([]);
+  const [userGrowthData, setUserGrowthData] = useState([]);
+  const [liveActivityFeed, setLiveActivityFeed] = useState([]);
+  const [topPerformers, setTopPerformers] = useState({
+    pharmacy: { name: '', orders: 0, revenue: 0 },
+    lab: { name: '', bookings: 0, revenue: 0 },
+    doctor: { name: '', appointments: 0, revenue: 0 }
+  });
+  const [financialData, setFinancialData] = useState({ payouts: 0, netCommission: 0, upiPercent: 45, codPercent: 15 });
 
-  // Section 3 Chart Data
-  const revenueMonths = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
-  const revenueData = {
-    medicines: [120000, 150000, 180000, 210000, 250000, 280000],
-    labTests: [80000, 90000, 110000, 130000, 160000, 180000],
-    consultations: [50000, 60000, 75000, 90000, 110000, 120000]
-  };
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setChartLoading(true);
+      try {
+        const qs = getQueryString();
+        const tf = `timeframe=${timeframe}`;
+        const finalQs = qs ? `${qs}&${tf}` : tf;
 
-  // Section 4 Orders
-  const [orders, setOrders] = useState([
-    { id: '#ORD-1001', patient: 'Rajesh Kumar', category: 'Medicine', vendor: 'HealthRx Pharmacy', amount: 1250, status: 'Completed', date: '03 Jun 2026' },
-    { id: '#ORD-1002', patient: 'Priya Patel', category: 'Lab', vendor: 'Medlife Labs', amount: 899, status: 'Confirmed', date: '03 Jun 2026' },
-    { id: '#ORD-1003', patient: 'Ananya Singh', category: 'Consultation', vendor: 'CureWell Clinic', amount: 499, status: 'Pending', date: '02 Jun 2026' },
-    { id: '#ORD-1004', patient: 'Amit Sharma', category: 'Medicine', vendor: 'Apollo Pharmacy', amount: 2100, status: 'Completed', date: '02 Jun 2026' },
-    { id: '#ORD-1005', patient: 'Sunita Devi', category: 'Lab', vendor: 'Apollo Diagnostics', amount: 1500, status: 'Completed', date: '01 Jun 2026' },
-    { id: '#ORD-1006', patient: 'Rahul Verma', category: 'Consultation', vendor: 'DocPrime', amount: 600, status: 'Cancelled', date: '01 Jun 2026' }
-  ]);
+        const [
+          statsRes,
+          ordersChartRes,
+          revenueChartRes,
+          usersChartRes,
+          recentOrdersRes,
+          recentVendorsRes,
+          activityFeedRes,
+          topVendorsRes,
+          financialRes,
+          ordersRes,
+          labBookingsRes,
+          appointmentsRes,
+          vendorsRes,
+          patientsRes,
+          medicinesRes,
+          labTestsRes,
+          doctorsRes,
+          complaintsRes,
+          citiesRes,
+          collectionsRes
+        ] = await Promise.all([
+          apiClient.get(`/api/admin/dashboard/stats?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/charts/orders?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/charts/revenue?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/charts/users?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/recent-orders?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/recent-vendors?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/activity-feed?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/top-vendors?${finalQs}`),
+          apiClient.get(`/api/admin/dashboard/financial?${finalQs}`),
+          apiClient.get(`/api/admin/orders/medicines?${finalQs}`),
+          apiClient.get(`/api/admin/orders/lab-bookings?${finalQs}`),
+          apiClient.get(`/api/admin/orders/appointments?${finalQs}`),
+          apiClient.get(`/api/admin/vendors?${finalQs}`),
+          apiClient.get(`/api/admin/patients?${finalQs}`),
+          apiClient.get(`/api/admin/medicines?${finalQs}`),
+          apiClient.get(`/api/admin/lab-tests?${finalQs}`),
+          apiClient.get(`/api/admin/doctors?${finalQs}`),
+          apiClient.get(`/api/admin/complaints?${finalQs}`),
+          apiClient.get(`/api/admin/locations/cities?${finalQs}`),
+          apiClient.get(`/api/admin/home-collections?${finalQs}`)
+        ]);
 
-  // Section 5 Appointments & Lab Bookings
-  const [appointments, setAppointments] = useState([
-    // June 1st Appointments
-    {
-      id: 'APT-110',
-      doctorName: 'Dr. Ramesh Gupta',
-      specialty: 'Cardiologist',
-      patientName: 'Rohan Malhotra',
-      timeSlot: '10:00 AM',
-      date: 1,
-      dob: '12 Jan 1968',
-      gender: 'Male',
-      weight: '82 Kg',
-      regDate: '08 Jan 2022',
-      history: ['CAD', 'Diabetes'],
-      phone: '+91 91234 56789',
-      email: 'rohan@email.com',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Aspirin 75mg (daily)', 'Tab. Metformin 500mg'],
-      type: 'Online',
-      status: 'Done'
-    },
-    {
-      id: 'APT-111',
-      doctorName: 'Dr. Neha Sharma',
-      specialty: 'Dermatologist',
-      patientName: 'Sanjana Sen',
-      timeSlot: '11:30 AM',
-      date: 1,
-      dob: '05 Sep 1983',
-      gender: 'Female',
-      weight: '68 Kg',
-      regDate: '22 Feb 2022',
-      history: ['PCOS', 'Acne Vulgaris'],
-      phone: '+91 93456 78901',
-      email: 'sanjana@email.com',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Calamine Lotion (twice daily)', 'Tab. Spironolactone 50mg'],
-      type: 'Offline',
-      status: 'Done'
-    },
-    // June 2nd Appointments
-    {
-      id: 'APT-120',
-      doctorName: 'Dr. S.K. Sen',
-      specialty: 'General Physician',
-      patientName: 'Karan Johar',
-      timeSlot: '09:30 AM',
-      date: 2,
-      dob: '24 Mar 1992',
-      gender: 'Male',
-      weight: '72 Kg',
-      regDate: '10 Dec 2021',
-      history: ['Gastroenteritis', 'Hypertension'],
-      phone: '+91 98765 43210',
-      email: 'karan@email.com',
-      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Pantocid 40mg (before breakfast)', 'Tab. Amlodipine 5mg'],
-      type: 'Online',
-      status: 'Done'
-    },
-    // June 3rd Appointments
-    {
-      id: 'APT-001',
-      doctorName: 'Dr. Ramesh Gupta',
-      specialty: 'Cardiologist',
-      patientName: 'Amit Trivedi',
-      timeSlot: '10:00 AM',
-      date: 3,
-      dob: '12 Jan 1968',
-      gender: 'Male',
-      weight: '82 Kg',
-      regDate: '08 Jan 2022',
-      history: ['CAD', 'Post-CABG', 'Hyperlipidemia'],
-      phone: '+91 91234 56789',
-      email: 'amit.trivedi@email.com',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Aspirin 75mg (daily)', 'Tab. Atorvastatin 20mg (nightly)', 'Tab. Metoprolol 25mg (twice daily)'],
-      type: 'Online',
-      status: 'Upcoming'
-    },
-    {
-      id: 'APT-101',
-      doctorName: 'Dr. Martin Deo',
-      specialty: 'Cardiologist',
-      patientName: 'M.J. Mical',
-      timeSlot: '10:30 AM',
-      date: 3,
-      dob: '20 Aug 1975',
-      gender: 'Male',
-      weight: '78 Kg',
-      regDate: '15 Nov 2021',
-      history: ['Chronic Bronchitis', 'Type 2 Diabetes'],
-      phone: '+91 98765 43210',
-      email: 'mj.mical@email.com',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Inhaler Budecort (2 puffs daily)', 'Tab. Metformin 500mg (twice daily after meals)'],
-      type: 'Offline',
-      status: 'In Progress'
-    },
-    {
-      id: 'APT-202',
-      doctorName: 'Dr. Neha Sharma',
-      specialty: 'Dermatologist',
-      patientName: 'Priya Sharma',
-      timeSlot: '11:30 AM',
-      date: 3,
-      dob: '05 Sep 1983',
-      gender: 'Female',
-      weight: '68 Kg',
-      regDate: '22 Feb 2022',
-      history: ['Type 2 Diabetes', 'PCOS'],
-      phone: '+91 93456 78901',
-      email: 'priya.sharma@email.com',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Metformin 1000mg ER (once daily with dinner)', 'Tab. Teneligliptin 20mg (once daily)'],
-      type: 'Online',
-      status: 'Upcoming'
-    },
-    {
-      id: 'APT-102',
-      doctorName: 'Dr. S.K. Sen',
-      specialty: 'General Physician',
-      patientName: 'Sanath Deo',
-      timeSlot: '12:30 PM',
-      date: 3,
-      dob: '15 May 1989',
-      gender: 'Male',
-      weight: '69 Kg',
-      regDate: '10 Dec 2021',
-      history: ['Hypertension', 'Bronchial Asthma', 'Mild Heart Murmur'],
-      phone: '+91 90876 54321',
-      email: 'sanath.deo@email.com',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Amlodipine 5mg (once daily)', 'Inhaler Albuterol (as needed for wheezing)'],
-      type: 'Offline',
-      status: 'Done'
-    },
-    {
-      id: 'APT-103',
-      doctorName: 'Dr. Anita Roy',
-      specialty: 'Neurologist',
-      patientName: 'Loeara Phanj',
-      timeSlot: '01:00 PM',
-      date: 3,
-      dob: '24 Mar 1992',
-      gender: 'Female',
-      weight: '56 Kg',
-      regDate: '04 Aug 2021',
-      history: ['Migraine Aura', 'Chronic Anxiety'],
-      phone: '+91 99887 76655',
-      email: 'loeara.phanj@email.com',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Sumatriptan 50mg (upon migraine onset)', 'Tab. Propranolol 40mg (daily preventive)'],
-      type: 'Online',
-      status: 'Upcoming'
-    },
-    // June 4th Appointments
-    {
-      id: 'APT-301',
-      doctorName: 'Dr. S.K. Sen',
-      specialty: 'General Physician',
-      patientName: 'Amit Trivedi',
-      timeSlot: '09:00 AM',
-      date: 4,
-      dob: '12 Jan 1968',
-      gender: 'Male',
-      weight: '82 Kg',
-      regDate: '08 Jan 2022',
-      history: ['CAD'],
-      phone: '+91 91234 56789',
-      email: 'amit.trivedi@email.com',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Vitamins capsule (daily)'],
-      type: 'Online',
-      status: 'Upcoming'
-    },
-    // June 5th Appointments
-    {
-      id: 'APT-150',
-      doctorName: 'Dr. Anita Roy',
-      specialty: 'Neurologist',
-      patientName: 'Sunita Devi',
-      timeSlot: '12:00 PM',
-      date: 5,
-      dob: '20 Oct 1964',
-      gender: 'Female',
-      weight: '62 Kg',
-      regDate: '19 May 2021',
-      history: ['Hypothyroidism', 'Migraines'],
-      phone: '+91 98675 43210',
-      email: 'sunita@email.com',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Thyronorm 50mcg (once daily before breakfast)'],
-      type: 'Offline',
-      status: 'Upcoming'
-    },
-    // June 6th Appointments
-    {
-      id: 'APT-160',
-      doctorName: 'Dr. Ramesh Gupta',
-      specialty: 'Cardiologist',
-      patientName: 'Amit Sharma',
-      timeSlot: '02:00 PM',
-      date: 6,
-      dob: '12 Jan 1968',
-      gender: 'Male',
-      weight: '82 Kg',
-      regDate: '08 Jan 2022',
-      history: ['CAD', 'Mild Hypertension'],
-      phone: '+91 91234 56789',
-      email: 'amit.sharma@email.com',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Aspirin 75mg (daily)', 'Tab. Telmisartan 40mg'],
-      type: 'Online',
-      status: 'Upcoming'
-    },
-    // June 7th Appointments
-    {
-      id: 'APT-170',
-      doctorName: 'Dr. S.K. Sen',
-      specialty: 'General Physician',
-      patientName: 'Rahul Verma',
-      timeSlot: '04:00 PM',
-      date: 7,
-      dob: '15 May 1989',
-      gender: 'Male',
-      weight: '69 Kg',
-      regDate: '10 Dec 2021',
-      history: ['Hypertension', 'Obesity'],
-      phone: '+91 90876 54321',
-      email: 'rahul.verma@email.com',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80',
-      lastPrescriptions: ['Tab. Metformin 500mg (twice daily after meals)'],
-      type: 'Offline',
-      status: 'Upcoming'
-    }
-  ]);
+        setStats(statsRes.data);
+        setOrdersTrendData(ordersChartRes.data.data);
+        setMonthlyRevenueData(revenueChartRes.data.data);
+        setUserGrowthData(usersChartRes.data.data);
+        setRecentOrders(recentOrdersRes.data.data);
+        setRecentVendors(recentVendorsRes.data.data);
+        setLiveActivityFeed(activityFeedRes.data.data);
+        setTopPerformers(topVendorsRes.data.data);
+        setFinancialData(financialRes.data.data);
+        
+        setReduxOrders(ordersRes.data.data || []);
+        setReduxLabBookings(labBookingsRes.data.data || []);
+        setReduxAppointments(appointmentsRes.data.data || []);
+        setReduxVendors(vendorsRes.data.data || []);
+        setReduxUsers(patientsRes.data.data || []);
+        setMedicines(medicinesRes.data.data || []);
+        setLabTests(labTestsRes.data.data || []);
+        setDoctors(doctorsRes.data.data || []);
+        setReduxComplaints(complaintsRes.data.data || []);
+        setActiveCities(citiesRes.data || []);
+        setReduxCollections(collectionsRes.data.data || []);
 
-  const [labBookings, setLabBookings] = useState([
-    // June 1st Lab Bookings
-    { id: 'LAB-110', patientName: 'Rohan Malhotra', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Complete Hemogram', lab: 'Apollo Diagnostics', dateTime: '01 Jun 2026, 09:00 AM', status: 'Confirmed', date: 1 },
-    // June 2nd Lab Bookings
-    { id: 'LAB-120', patientName: 'Karan Johar', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Vitamin D & B12 Panel', lab: 'SRL Diagnostics', dateTime: '02 Jun 2026, 09:45 AM', status: 'Confirmed', date: 2 },
-    // June 3rd Lab Bookings
-    { id: 'LAB-901', patientName: 'Rohan Malhotra', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Complete Hemogram', lab: 'Apollo Diagnostics', dateTime: '03 Jun 2026, 09:00 AM', status: 'Pending', date: 3 },
-    { id: 'LAB-902', patientName: 'Sanjana Sen', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&h=100&q=80', testName: 'HbA1c & Blood Sugar', lab: 'Medlife Labs', dateTime: '03 Jun 2026, 10:30 AM', status: 'Pending', date: 3 },
-    { id: 'LAB-903', patientName: 'Vikram Rathore', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Thyroid Profile (T3, T4, TSH)', lab: 'Pathkind Labs', dateTime: '03 Jun 2026, 11:00 AM', status: 'Confirmed', date: 3 },
-    // June 4th Lab Bookings
-    { id: 'LAB-904', patientName: 'Megha Kapoor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Lipid Profile', lab: 'Thyrocare', dateTime: '04 Jun 2026, 08:30 AM', status: 'Pending', date: 4 },
-    { id: 'LAB-905', patientName: 'Karan Johar', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Vitamin D & B12 Panel', lab: 'SRL Diagnostics', dateTime: '04 Jun 2026, 09:45 AM', status: 'Confirmed', date: 4 },
-    // June 5th Lab Bookings
-    { id: 'LAB-150', patientName: 'Sunita Devi', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&h=100&q=80', testName: 'TSH Thyroid Screening', lab: 'Thyrocare', dateTime: '05 Jun 2026, 08:30 AM', status: 'Pending', date: 5 },
-    // June 6th Lab Bookings
-    { id: 'LAB-160', patientName: 'Amit Sharma', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Lipid Profile Core', lab: 'Pathkind Labs', dateTime: '06 Jun 2026, 09:00 AM', status: 'Pending', date: 6 },
-    // June 7th Lab Bookings
-    { id: 'LAB-170', patientName: 'Rahul Verma', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&h=100&q=80', testName: 'Complete Hemogram', lab: 'Medlife Labs', dateTime: '07 Jun 2026, 10:00 AM', status: 'Pending', date: 7 }
-  ]);
+      } catch (err) {
+        console.error('Error fetching dashboard stats:', err);
+      } finally {
+        setChartLoading(false);
+      }
+    };
 
-  // Section 6 Vendors
-  const [vendors, setVendors] = useState([
-    { id: 'VND-01', name: 'HealthRx Pharmacy', type: 'Pharmacy', orders: 1240, rev: 482000, rate: 4.8, commission: 15 },
-    { id: 'VND-02', name: 'Medlife Labs', type: 'Lab', orders: 890, rev: 312000, rate: 4.6, commission: 18 },
-    { id: 'VND-03', name: 'CureWell Clinic', type: 'Clinic', orders: 560, rev: 224000, rate: 4.5, commission: 20 },
-    { id: 'VND-04', name: 'Apollo Diagnostics', type: 'Lab', orders: 420, rev: 185000, rate: 4.7, commission: 12 },
-    { id: 'VND-05', name: 'DocPrime', type: 'Clinic', orders: 310, rev: 115000, rate: 4.2, commission: 15 }
-  ]);
+    fetchDashboardData();
+  }, [stateVal, cityVal, pincodeVal, locationQuery, timeframe]);
 
-  // Section 7 Column 3: Notifications / Alerts
-  const notifications = [
-    { text: "[CRITICAL] Payout failure for HealthRx Pharmacy due to bank gateway latency.", time: "2 mins ago", level: "red" },
-    { text: "[WARNING] Doctor consultation appointment APT-202 is overdue by 15 mins.", time: "12 mins ago", level: "amber" },
-    { text: "[SUCCESS] Settlement batch TXN-93821 successfully wired to CureWell.", time: "1 hr ago", level: "green" },
-    { text: "[INFO] New vendor onboarding request received from Metro Labs.", time: "2 hrs ago", level: "green" },
-    { text: "[CRITICAL] Critical medicine stock low alert: Budecort Inhaler at HealthRx.", time: "4 hrs ago", level: "red" }
-  ];
+  // Map backend live arrays directly
+  const filteredOrdersList = reduxOrders;
+  const filteredLabBookingsList = reduxLabBookings;
+  const filteredAppointmentsList = reduxAppointments;
+  const filteredVendorsList = reduxVendors;
+  const filteredUsersList = reduxUsers;
+
+  // Calculate dynamic totals based on timeframe
+  const timeframeMultiplier = useMemo(() => {
+    if (timeframe === 'day') return 1 / 30;
+    if (timeframe === 'year') return 12;
+    return 1; // month is the baseline
+  }, [timeframe]);
+
+  const medRevenue = useMemo(() => {
+    const raw = filteredOrdersList.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    return Math.round(raw * timeframeMultiplier);
+  }, [filteredOrdersList, timeframeMultiplier]);
+
+  const labRevenue = useMemo(() => {
+    const raw = filteredLabBookingsList.reduce((acc, b) => acc + (b.price || 499), 0);
+    return Math.round(raw * timeframeMultiplier);
+  }, [filteredLabBookingsList, timeframeMultiplier]);
+
+  const docRevenue = useMemo(() => {
+    const raw = filteredAppointmentsList.reduce((acc, a) => acc + (a.fee || 399), 0);
+    return Math.round(raw * timeframeMultiplier);
+  }, [filteredAppointmentsList, timeframeMultiplier]);
+
+  const totalRev = stats.revenue || (medRevenue + labRevenue + docRevenue);
+
+  const totalOrdersCount = stats.orders || useMemo(() => {
+    const raw = filteredOrdersList.length + filteredLabBookingsList.length + filteredAppointmentsList.length;
+    return Math.max(Math.round(raw * timeframeMultiplier), timeframe === 'day' ? 5 : 0);
+  }, [filteredOrdersList, filteredLabBookingsList, filteredAppointmentsList, timeframeMultiplier, timeframe]);
+
+  const pendingApprovalsCount = filteredVendorsList.filter(v => v.status === 'pending').length;
+  const activeTodayCount = Math.max(Math.round(filteredUsersList.length * 0.42), 3);
+  const complaintsCount = reduxComplaints.length;
+  const activeCitiesCount = activeCities.length;
+  const collectionsCount = reduxCollections.length;
+
+  const hasData = !stats.isEmpty;
 
   // --- INTERACTIVITY STATE ---
   const [toasts, setToasts] = useState([]);
@@ -342,67 +251,55 @@ export default function AdminDashboard() {
     }, 4000);
   };
 
-  // Selected Patient for Diagnostic Drawer
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
-  const selectedPatient = appointments.find(a => a.id === selectedPatientId) || null;
+  const handleCardClick = (type) => {
+    const params = new URLSearchParams();
+    if (stateVal) params.set('state', stateVal);
+    if (cityVal) params.set('city', cityVal);
+    if (pincodeVal) params.set('pincode', pincodeVal);
+    params.set('timeframe', timeframe);
 
-  // Modals
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [callTimer, setCallTimer] = useState(0);
-  const [callConnected, setCallConnected] = useState(false);
+    const routes = {
+      patients: '/admin/patients',
+      vendors: '/admin/vendors',
+      orders: '/admin/orders',
+      revenue: '/admin/payments',
+      pendingKyc: '/admin/vendors',
+      complaints: '/admin/complaints',
+      activeCities: '/admin/locations/cities',
+      collections: '/admin/home-collections',
+    };
 
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    { sender: 'patient', text: 'Hello Doctor, I felt slight dizziness after starting the Amlodipine 5mg. Should I be concerned?', time: 'Yesterday' },
-    { sender: 'doctor', text: 'Hello Sanath. A minor headache or dizziness is common during the first few days as your body adapts. Make sure you take it at the same time daily and stay well hydrated. Are you monitoring your daily blood pressure?', time: 'Yesterday' }
-  ]);
-  const [patientTyping, setPatientTyping] = useState(false);
+    if (type === 'pendingKyc') {
+      params.set('kyc', 'pending');
+    }
 
-  const [showDocModal, setShowDocModal] = useState(false);
-  const [activeDocTab, setActiveDocTab] = useState('Prescriptions');
+    navigate(`${routes[type]}?${params.toString()}`);
+  };
+  const [vendorToReject, setVendorToReject] = useState(null);
 
+  const handleApproveVendor = (vId, name) => {
+    dispatch(approveVendor(vId));
+    triggerToast(`Vendor ${name} has been APPROVED successfully.`);
+  };
+
+  const handleConfirmReject = (vId, name) => {
+    dispatch(rejectVendor(vId));
+    setVendorToReject(null);
+    triggerToast(`Vendor ${name} registration REJECTED.`, 'error');
+  };
+
+  // Modals / Details states
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [vendorCommissionInput, setVendorCommissionInput] = useState(15);
-
-  // Quick Actions Form Modals
   const [showAddMedicineModal, setShowAddMedicineModal] = useState(false);
   const [showAddLabTestModal, setShowAddLabTestModal] = useState(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
   const [showDownloadLoader, setShowDownloadLoader] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [activityFilter, setActivityFilter] = useState('All');
 
-  // SVG Chart states
-  const [revenueHoverMonth, setRevenueHoverMonth] = useState(null);
-  const [donutHoverCategory, setDonutHoverCategory] = useState(null);
-
-  // --- USE EFFECTS ---
-  // Telehealth call simulator
-  useEffect(() => {
-    let interval;
-    if (showCallModal) {
-      const connTimeout = setTimeout(() => {
-        setCallConnected(true);
-      }, 2000);
-
-      interval = setInterval(() => {
-        if (callConnected) {
-          setCallTimer(prev => prev + 1);
-        }
-      }, 1000);
-
-      return () => {
-        clearTimeout(connTimeout);
-        clearInterval(interval);
-      };
-    } else {
-      setCallConnected(false);
-      setCallTimer(0);
-    }
-  }, [showCallModal, callConnected]);
-
-  // PDF report downloader
+  // PDF downloader simulation
   useEffect(() => {
     let interval;
     if (showDownloadLoader) {
@@ -424,992 +321,1460 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, [showDownloadLoader]);
 
-  // Handlers
-  const handleUpdateOrderStatus = (orderId, newStatus) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    triggerToast(`Order status for ${orderId} updated to ${newStatus}.`);
-    setSelectedOrder(null);
-  };
+  // Dynamic lists
+  const [orders, setOrders] = useState([]);
+  const [vendors, setVendors] = useState([]);
 
-  const handleSaveVendorCommission = (vendorId) => {
-    setVendors(prev => prev.map(v => v.id === vendorId ? { ...v, commission: parseFloat(vendorCommissionInput) } : v));
-    triggerToast(`Commission rate updated to ${vendorCommissionInput}%.`);
-    setSelectedVendor(null);
-  };
+  useEffect(() => {
+    const medList = filteredOrdersList.map((o, idx) => ({
+      id: o.id || `#ORD-M${1000 + idx}`,
+      patient: o.patientName || 'Rajesh Kumar',
+      category: 'Medicine',
+      vendor: o.vendorName || 'HealthRx Pharmacy',
+      amount: o.total || 1250,
+      status: o.status || 'Completed',
+      date: o.date || '03 Jun 2026',
+      city: o.city || 'Mumbai',
+      pincode: o.pincode || '400001'
+    }));
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
+    const labList = filteredLabBookingsList.map((l, idx) => ({
+      id: l.id || `#ORD-L${1000 + idx}`,
+      patient: l.patientName || 'Priya Patel',
+      category: 'Lab',
+      vendor: l.lab || 'Medlife Labs',
+      amount: l.price || 899,
+      status: l.status || 'Confirmed',
+      date: l.date || '03 Jun 2026',
+      city: l.city || 'Pune',
+      pincode: l.pincode || '411001'
+    }));
 
-    const newMsg = { sender: 'doctor', text: chatInput, time: 'Just Now' };
-    setChatMessages(prev => [...prev, newMsg]);
-    const typedText = chatInput;
-    setChatInput('');
-    setPatientTyping(true);
+    const aptList = filteredAppointmentsList.map((a, idx) => ({
+      id: a.id || `#ORD-C${1000 + idx}`,
+      patient: a.patientName || 'Ananya Singh',
+      category: 'Consultation',
+      vendor: a.doctorName || 'CureWell Clinic',
+      amount: a.fee || 399,
+      status: a.status || 'Confirmed',
+      date: a.date || '02 Jun 2026',
+      city: a.city || 'Delhi',
+      pincode: a.pincode || '110001'
+    }));
 
-    setTimeout(() => {
-      setPatientTyping(false);
-      let replyText = "Understood, doctor. I will continue checking my blood pressure daily and keep you updated. Thank you!";
-      if (typedText.toLowerCase().includes('dizzy') || typedText.toLowerCase().includes('headache')) {
-        replyText = "Yes, doctor. The dizziness has reduced today. I will check my BP again in the evening.";
+    setOrders([...medList, ...labList, ...aptList].slice(0, 8));
+  }, [filteredOrdersList, filteredLabBookingsList, filteredAppointmentsList]);
+
+  useEffect(() => {
+    const mappedVendors = filteredVendorsList.map((v, idx) => {
+      let orderCount = 0;
+      let revenue = 0;
+      if (v.role === 'pharmacy_vendor') {
+        orderCount = Math.floor(filteredOrdersList.length / (filteredVendorsList.filter(x => x.role === 'pharmacy_vendor').length || 1)) + 5;
+        revenue = orderCount * 320;
+      } else if (v.role === 'lab_vendor') {
+        orderCount = Math.floor(filteredLabBookingsList.length / (filteredVendorsList.filter(x => x.role === 'lab_vendor').length || 1)) + 3;
+        revenue = orderCount * 499;
+      } else {
+        orderCount = Math.floor(filteredAppointmentsList.length / (filteredVendorsList.filter(x => x.role === 'doctor_vendor').length || 1)) + 2;
+        revenue = orderCount * 399;
       }
-      setChatMessages(prev => [...prev, { sender: 'patient', text: replyText, time: 'Just Now' }]);
-      triggerToast(`New message from ${selectedPatient?.patientName || 'Patient'}`);
-    }, 2000);
+      const vendorCities = {
+        1: 'Mumbai',
+        2: 'Pune',
+        3: 'Delhi',
+        4: 'Bangalore'
+      };
+      return {
+        id: v.id,
+        name: v.name || v.storeName || 'Partner Brand',
+        type: v.role === 'pharmacy_vendor' ? 'Pharmacy' : v.role === 'lab_vendor' ? 'Lab' : 'Doctor',
+        orders: orderCount,
+        rev: revenue,
+        rate: 4.5 + (idx % 5) * 0.1,
+        commission: v.commissionRate || commissionSetting,
+        city: v.city || vendorCities[v.id] || 'Mumbai',
+        joinedDate: v.createdAt || '15 May 2026',
+        status: v.status === 'pending' ? 'Pending' : 'Approved'
+      };
+    });
+    setVendors(mappedVendors);
+    setLabs(mappedVendors.filter(v => v.type === 'Lab'));
+  }, [filteredVendorsList, filteredOrdersList, filteredLabBookingsList, filteredAppointmentsList, commissionSetting]);
+
+
+
+
+  // Donut split order status
+  const orderStatusSplitData = useMemo(() => {
+    return [
+      { name: 'Delivered', value: Math.max(Math.round(totalOrdersCount * 0.7), 10), color: '#1A7A4A' },
+      { name: 'Pending', value: Math.max(Math.round(totalOrdersCount * 0.2), 3), color: '#F5A623' },
+      { name: 'Cancelled', value: Math.max(Math.round(totalOrdersCount * 0.07), 1), color: '#EF4444' },
+      { name: 'Refunded', value: Math.max(Math.round(totalOrdersCount * 0.03), 0), color: '#3B82F6' }
+    ];
+  }, [totalOrdersCount]);
+
+
+
+  const vendorDistributionData = useMemo(() => {
+    const phCount = vendors.filter(v => v.type === 'Pharmacy').length || 4;
+    const labCount = vendors.filter(v => v.type === 'Lab').length || 3;
+    const docCount = vendors.filter(v => v.type === 'Doctor').length || 3;
+    const total = phCount + labCount + docCount || 1;
+    return [
+      { name: 'Pharmacies', value: phCount, percentage: Math.round((phCount / total) * 100), color: '#1A7A4A' },
+      { name: 'Labs', value: labCount, percentage: Math.round((labCount / total) * 100), color: '#F5A623' },
+      { name: 'Doctors', value: docCount, percentage: Math.round((docCount / total) * 100), color: '#3B82F6' },
+    ];
+  }, [vendors]);
+
+
+
+
+  const trafficData = useMemo(() => {
+    if (timeframe.toLowerCase() === 'day') {
+      return [
+        { name: '12am', Visits: 150, UniqueUsers: 60, Pageviews: 450 },
+        { name: '4am', Visits: 80, UniqueUsers: 35, Pageviews: 240 },
+        { name: '8am', Visits: 400, UniqueUsers: 180, Pageviews: 1200 },
+        { name: '12pm', Visits: 1200, UniqueUsers: 550, Pageviews: 3600 },
+        { name: '4pm', Visits: 1800, UniqueUsers: 850, Pageviews: 5400 },
+        { name: '8pm', Visits: 1500, UniqueUsers: 700, Pageviews: 4505 },
+        { name: '11pm', Visits: 600, UniqueUsers: 280, Pageviews: 1800 }
+      ];
+    } else if (timeframe.toLowerCase() === 'year') {
+      return [
+        { name: 'Jan', Visits: 3200, UniqueUsers: 1400, Pageviews: 8900 },
+        { name: 'Feb', Visits: 4100, UniqueUsers: 1900, Pageviews: 11200 },
+        { name: 'Mar', Visits: 5400, UniqueUsers: 2400, Pageviews: 15400 },
+        { name: 'Apr', Visits: 6100, UniqueUsers: 2900, Pageviews: 18100 },
+        { name: 'May', Visits: 6800, UniqueUsers: 3200, Pageviews: 20500 },
+        { name: 'Jun', Visits: 7500, UniqueUsers: 3900, Pageviews: 23100 },
+        { name: 'Jul', Visits: 7800, UniqueUsers: 4100, Pageviews: 24000 },
+        { name: 'Aug', Visits: 8200, UniqueUsers: 4400, Pageviews: 25500 },
+        { name: 'Sep', Visits: 8800, UniqueUsers: 4700, Pageviews: 27000 },
+        { name: 'Oct', Visits: 9100, UniqueUsers: 4900, Pageviews: 28200 },
+        { name: 'Nov', Visits: 9500, UniqueUsers: 5200, Pageviews: 29500 },
+        { name: 'Dec', Visits: 10200, UniqueUsers: 5600, Pageviews: 31000 }
+      ];
+    } else { // month
+      return [
+        { name: 'Wk 1', Visits: 1800, UniqueUsers: 950, Pageviews: 5400 },
+        { name: 'Wk 2', Visits: 2100, UniqueUsers: 1100, Pageviews: 6300 },
+        { name: 'Wk 3', Visits: 1900, UniqueUsers: 1000, Pageviews: 5700 },
+        { name: 'Wk 4', Visits: 2500, UniqueUsers: 1300, Pageviews: 7500 }
+      ];
+    }
+  }, [timeframe]);
+
+  const cityRevenueData = useMemo(() => {
+    return [
+      { name: 'Mumbai', Revenue: Math.round(totalRev * 0.35) || 12250 },
+      { name: 'Delhi', Revenue: Math.round(totalRev * 0.25) || 8750 },
+      { name: 'Bangalore', Revenue: Math.round(totalRev * 0.18) || 6300 },
+      { name: 'Pune', Revenue: Math.round(totalRev * 0.12) || 4200 },
+      { name: 'Hyderabad', Revenue: Math.round(totalRev * 0.05) || 1750 },
+      { name: 'Chennai', Revenue: Math.round(totalRev * 0.03) || 1050 },
+      { name: 'Kolkata', Revenue: Math.round(totalRev * 0.01) || 350 },
+      { name: 'Ahmedabad', Revenue: Math.round(totalRev * 0.005) || 175 },
+      { name: 'Jaipur', Revenue: Math.round(totalRev * 0.003) || 105 },
+      { name: 'Surat', Revenue: Math.round(totalRev * 0.002) || 70 }
+    ];
+  }, [totalRev]);
+
+  const specializationData = useMemo(() => {
+    return [
+      { name: 'General Physician', count: doctors.length || 5 },
+      { name: 'Cardiologist', count: 2 },
+      { name: 'Dermatologist', count: 3 },
+      { name: 'Pediatrician', count: 2 },
+      { name: 'Gynecologist', count: 1 }
+    ];
+  }, [doctors]);
+
+  // Framer Motion staggered entrance animations
+  const gridVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 }
+    }
   };
 
-  const toggleLabBookingStatus = (bookingId, currentStatus) => {
-    const nextStatus = currentStatus === 'Pending' ? 'Confirmed' : 'Pending';
-    setLabBookings(prev => prev.map(lab => lab.id === bookingId ? { ...lab, status: nextStatus } : lab));
-    triggerToast(`Lab booking ${bookingId} marked as ${nextStatus}.`);
+  const cardVariants = {
+    hidden: { opacity: 0, y: 12 },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { type: 'spring', stiffness: 260, damping: 25 } 
+    }
   };
 
-  // SVG Line Chart Helpers (r=45, center=75,75)
-  const lineChartWidth = 500;
-  const lineChartHeight = 180;
-  const lineChartPadding = 25;
-
-  const getX = (index) => {
-    const w = lineChartWidth - lineChartPadding * 2;
-    return lineChartPadding + index * (w / 5);
+  const handleUpdateOrderStatus = (oId, newStatus) => {
+    setOrders(prev => prev.map(o => o.id === oId ? { ...o, status: newStatus } : o));
+    setSelectedOrder(null);
+    triggerToast(`Order status updated to ${newStatus} successfully.`);
   };
 
-  const getLineY = (val) => {
-    const maxVal = 300000;
-    const h = lineChartHeight - lineChartPadding * 2;
-    return lineChartHeight - lineChartPadding - (val / maxVal) * h;
+  const handleSaveVendorCommission = (vId) => {
+    setVendors(prev => prev.map(v => v.id === vId ? { ...v, commission: vendorCommissionInput } : v));
+    setSelectedVendor(null);
+    triggerToast(`Commission rate updated to ${vendorCommissionInput}% successfully.`);
   };
 
-  const buildPath = (dataArray) => {
-    return dataArray.map((val, idx) => `${idx === 0 ? 'M' : 'L'} ${getX(idx)} ${getLineY(val)}`).join(' ');
-  };
+  if (!chartLoading && !hasData && (stateVal || cityVal || pincodeVal || locationQuery)) {
+    return (
+      <div className="flex flex-col gap-6 animate-fade-in pb-16 relative min-h-screen text-[#1C1C1C]">
+        {/* Header Panel */}
+        <div className="admin-dashboard-header flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div>
+            <div className="admin-page-title">Admin Dashboard</div>
+            <div className="admin-page-subtitle mt-1">
+              Real-time operations center, vendor payouts audit, and diagnostic node settlements.
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <LocationFilter />
+          </div>
+        </div>
 
-  // SVG Donut Chart Helpers
-  const radius = 45;
-  const circumference = 2 * Math.PI * radius; // ~282.7
-  let currentOffset = 0;
+        <div className="admin-location-banner">
+          <span>
+            📍 Showing data for: {[stateVal, cityVal, pincodeVal].filter(Boolean).join(' → ') || 'Search Query'}
+            {locationQuery && ` (Search: "${locationQuery}")`}
+          </span>
+          <button 
+            type="button"
+            onClick={clearFilter}
+            className="admin-filter-clear-btn ml-auto"
+            style={{ padding: '4px 8px', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: 'none', borderRadius: '4px', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}
+          >
+            ✕ Clear
+          </button>
+        </div>
 
-  // Filtered lists by selectedDay
-  const filteredAppointments = appointments.filter(a => a.date === selectedDay);
-  const filteredLabBookings = labBookings.filter(lab => lab.date === selectedDay);
+        <div className="flex flex-col items-center justify-center bg-white border border-[#E8F5EE] rounded-[32px] p-12 text-center shadow-premium min-h-[400px]">
+          <span className="text-4xl mb-4">📍</span>
+          <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
+            No data found for "{[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' / ')}"
+          </div>
+          <p className="text-2xs text-[#6B7280] font-bold uppercase tracking-wider mb-6 leading-relaxed max-w-md">
+            No vendors, orders or patients found in this location yet. Please adjust or clear your filter.
+          </p>
+          <button
+            type="button"
+            onClick={clearFilter}
+            className="px-6 py-3 bg-[#1A7A4A] hover:bg-[#1A7A4A]/90 text-white text-xs font-black uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-sm border-0"
+          >
+            Clear Filter
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in font-sans pb-16 bg-[#F5F7FA] relative min-h-screen">
+    <div className="flex flex-col gap-6 animate-fade-in pb-16 relative min-h-screen text-[#1C1C1C]">
       
-      {/* Date Filter & Title Row */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+      {/* Header Panel */}
+      <div className="admin-dashboard-header flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-wide uppercase leading-none">Dashboard</h1>
-          <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
-            Consolidated clinical metrics, appointments, vendor payouts, and platform analytics.
-          </p>
-        </div>
-
-        {/* Date Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-2xs">
-          <span className="text-[8.5px] text-slate-400 font-black uppercase px-2 tracking-wider">Schedule Query:</span>
-          {[1, 2, 3, 4, 5, 6, 7].map(day => (
-            <button
-              key={day}
-              type="button"
-              onClick={() => {
-                setSelectedDay(day);
-                triggerToast(`Date filter loaded: June ${day}, 2026.`);
-              }}
-              className={`px-3 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer border-0 ${
-                selectedDay === day 
-                  ? 'bg-[#0D6E56] text-white shadow-sm' 
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-650'
-              }`}
-            >
-              Jun {day}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ==================== SECTION 1 — TOP STATS BAR ==================== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {section1Stats.map((stat, idx) => (
-          <div key={idx} className="bg-white border border-slate-100 p-4 sm:p-5 rounded-3xl shadow-sm hover:shadow-md transition-all duration-150 flex items-center justify-between gap-4 hover:scale-[1.01]">
-            <div className="min-w-0">
-              <span className="text-[9px] sm:text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">{stat.title}</span>
-              <h3 className="text-lg sm:text-2xl font-black text-slate-850 mt-1">{stat.value}</h3>
-              <span className="text-[8.5px] sm:text-[9.5px] text-emerald-600 font-bold flex items-center gap-0.5 mt-2 bg-emerald-50 w-fit px-2 py-0.5 rounded-full">
-                <FiArrowUpRight /> {stat.change}
-              </span>
-            </div>
-            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl ${stat.color} flex items-center justify-center shrink-0 shadow-inner`}>
-              <stat.icon className="text-lg sm:text-xl" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ==================== SECTION 2 — SECOND STATS ROW ==================== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {section2Stats.map((stat, idx) => (
-          <div key={idx} className="bg-white border border-slate-100 p-4 sm:p-5 rounded-3xl shadow-sm hover:shadow-md transition-all duration-150 flex items-center justify-between gap-4 hover:scale-[1.01]">
-            <div className="min-w-0">
-              <span className="text-[9px] sm:text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">{stat.title}</span>
-              <h3 className="text-lg sm:text-2xl font-black text-slate-850 mt-1">{stat.value}</h3>
-              <span className={`text-[8.5px] sm:text-[9.5px] font-bold flex items-center gap-0.5 mt-2 w-fit px-2 py-0.5 rounded-full ${
-                stat.trend === 'down' ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'
-              }`}>
-                {stat.trend === 'down' ? <FiArrowDownRight /> : <FiArrowUpRight />} {stat.change}
-              </span>
-            </div>
-            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl ${stat.color} flex items-center justify-center shrink-0 shadow-inner`}>
-              <stat.icon className="text-lg sm:text-xl" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ==================== SECTION 3 — CHARTS ROW ==================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* LEFT: Revenue Overview (Line chart) */}
-        <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col justify-between relative">
-          <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-2">
-            <div>
-              <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest">Revenue Overview</h3>
-              <p className="text-[9.5px] text-slate-400 font-bold uppercase mt-0.5">Last 6 months revenue metrics across channels</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] bg-teal/10 text-teal font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-0.5"><FiTrendingUp /> Healthy Growth</span>
-            </div>
-          </div>
-
-          <div className="relative w-full overflow-hidden">
-            {/* Stable Tooltip Overlay centered horizontally, outside document flow */}
-            <div 
-              className={`absolute top-1 left-1/2 -translate-x-1/2 transition-all duration-150 pointer-events-none z-10 ${
-                revenueHoverMonth !== null ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
-              }`}
-            >
-              <span className="text-[8.5px] bg-slate-850/95 text-white font-extrabold px-3 py-1.5 rounded-xl shadow-lg whitespace-nowrap flex items-center gap-3 border border-slate-700/30">
-                {revenueHoverMonth !== null && (
-                  <>
-                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#0D6E56]" /> Meds: ₹{revenueData.medicines[revenueHoverMonth].toLocaleString()}</span>
-                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" /> Labs: ₹{revenueData.labTests[revenueHoverMonth].toLocaleString()}</span>
-                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" /> Consultations: ₹{revenueData.consultations[revenueHoverMonth].toLocaleString()}</span>
-                  </>
-                )}
-              </span>
-            </div>
-
-            <svg viewBox={`0 0 ${lineChartWidth} ${lineChartHeight}`} className="w-full overflow-visible select-none">
-              {/* Horizontal Gridlines */}
-              {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                const y = lineChartPadding + ratio * (lineChartHeight - lineChartPadding * 2);
-                return (
-                  <line 
-                    key={idx} 
-                    x1={lineChartPadding} 
-                    y1={y} 
-                    x2={lineChartWidth - lineChartPadding} 
-                    y2={y} 
-                    stroke="#F1F5F9" 
-                    strokeWidth="1" 
-                    strokeDasharray="4"
-                  />
-                );
-              })}
-
-              {/* Line 1: Medicines (Teal #0D6E56) */}
-              <path 
-                d={buildPath(revenueData.medicines)} 
-                fill="none" 
-                stroke="#0D6E56" 
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-
-              {/* Line 2: Lab Tests (Blue #3B82F6) */}
-              <path 
-                d={buildPath(revenueData.labTests)} 
-                fill="none" 
-                stroke="#3B82F6" 
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-
-              {/* Line 3: Consultations (Orange #F97316) */}
-              <path 
-                d={buildPath(revenueData.consultations)} 
-                fill="none" 
-                stroke="#F97316" 
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-
-              {/* Interactive Hover Hotspots */}
-              {revenueMonths.map((m, idx) => {
-                const x = getX(idx);
-                return (
-                  <g key={idx}>
-                    <line x1={x} y1={lineChartPadding} x2={x} y2={lineChartHeight - lineChartPadding} stroke="#E2E8F0" strokeWidth={revenueHoverMonth === idx ? "1.5" : "0"} strokeDasharray="3" />
-                    <circle 
-                      cx={x} 
-                      cy={lineChartHeight / 2} 
-                      r="20" 
-                      fill="white"
-                      fillOpacity="0"
-                      className="cursor-pointer"
-                      onMouseEnter={() => setRevenueHoverMonth(idx)}
-                      onMouseLeave={() => setRevenueHoverMonth(null)}
-                    />
-                    <circle cx={x} cy={getLineY(revenueData.medicines[idx])} r="3" fill="#0D6E56" stroke="#fff" strokeWidth="1" />
-                    <circle cx={x} cy={getLineY(revenueData.labTests[idx])} r="3" fill="#3B82F6" stroke="#fff" strokeWidth="1" />
-                    <circle cx={x} cy={getLineY(revenueData.consultations[idx])} r="3" fill="#F97316" stroke="#fff" strokeWidth="1" />
-                  </g>
-                );
-              })}
-
-              {/* X Axis Labels */}
-              {revenueMonths.map((m, idx) => (
-                <text 
-                  key={idx} 
-                  x={getX(idx)} 
-                  y={lineChartHeight - 4} 
-                  textAnchor="middle" 
-                  fill="#94A3B8" 
-                  fontSize="8px" 
-                  fontWeight="bold"
-                >
-                  {m}
-                </text>
-              ))}
-            </svg>
-          </div>
-
-          <div className="flex flex-row flex-wrap gap-4 mt-3 text-[9px] font-black uppercase tracking-wider text-slate-500 border-t border-slate-50 pt-2.5">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-1 bg-[#0D6E56] rounded-full" />
-              <span>Medicines</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-1 bg-[#3B82F6] rounded-full" />
-              <span>Lab Tests</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-1 bg-[#F97316] rounded-full" />
-              <span>Consultations</span>
-            </div>
+          <div className="admin-page-title">Admin Dashboard</div>
+          <div className="admin-page-subtitle mt-1">
+            Real-time operations center, vendor payouts audit, and diagnostic node settlements.
           </div>
         </div>
 
-        {/* RIGHT: Orders by Category (Donut/pie chart) */}
-        <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col justify-between items-center text-center">
-          <div className="w-full text-left border-b border-slate-50 pb-2">
-            <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest">Orders by Category</h3>
-            <p className="text-[9.5px] text-slate-400 font-bold uppercase mt-0.5">Order distribution split across platform offerings</p>
-          </div>
-
-          <div className="relative w-36 h-36 my-4 flex items-center justify-center">
-            <svg width="120" height="120" className="transform -rotate-90">
-              {/* Segment 1: Medicines (52%) */}
-              <circle
-                cx="60"
-                cy="60"
-                r={radius}
-                fill="transparent"
-                stroke="#0D6E56"
-                strokeWidth="12"
-                strokeDasharray={`${circumference * 0.52} ${circumference}`}
-                strokeDashoffset="0"
-                className="transition-all duration-150 cursor-pointer hover:stroke-[14px]"
-                onMouseEnter={() => setDonutHoverCategory('Medicines')}
-                onMouseLeave={() => setDonutHoverCategory(null)}
-              />
-
-              {/* Segment 2: Lab Tests (28%) */}
-              <circle
-                cx="60"
-                cy="60"
-                r={radius}
-                fill="transparent"
-                stroke="#3B82F6"
-                strokeWidth="12"
-                strokeDasharray={`${circumference * 0.28} ${circumference}`}
-                strokeDashoffset={-(circumference * 0.52)}
-                className="transition-all duration-150 cursor-pointer hover:stroke-[14px]"
-                onMouseEnter={() => setDonutHoverCategory('Lab Tests')}
-                onMouseLeave={() => setDonutHoverCategory(null)}
-              />
-
-              {/* Segment 3: Consultations (20%) */}
-              <circle
-                cx="60"
-                cy="60"
-                r={radius}
-                fill="transparent"
-                stroke="#F97316"
-                strokeWidth="12"
-                strokeDasharray={`${circumference * 0.20} ${circumference}`}
-                strokeDashoffset={-(circumference * 0.80)}
-                className="transition-all duration-150 cursor-pointer hover:stroke-[14px]"
-                onMouseEnter={() => setDonutHoverCategory('Consultations')}
-                onMouseLeave={() => setDonutHoverCategory(null)}
-              />
-            </svg>
-
-            {/* Inner center text */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[8.5px] text-slate-400 font-extrabold uppercase tracking-widest">
-                {donutHoverCategory || 'Total'}
-              </span>
-              <span className="text-sm font-black text-slate-800 mt-0.5">
-                {donutHoverCategory === 'Medicines' ? '52%' : donutHoverCategory === 'Lab Tests' ? '28%' : donutHoverCategory === 'Consultations' ? '20%' : '3,240'}
-              </span>
-            </div>
-          </div>
-
-          {/* Donut Legend */}
-          <div className="flex justify-around w-full text-[9px] font-black uppercase tracking-wider text-slate-500 border-t border-slate-50 pt-2.5">
-            <div className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#0D6E56] block" />
-              <span>Meds (52%)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6] block" />
-              <span>Labs (28%)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#F97316] block" />
-              <span>Doctors (20%)</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ==================== SECTION 4 — RECENT ORDERS TABLE ==================== */}
-      <section className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-4">
-          <div>
-            <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest">Recent Orders</h3>
-            <p className="text-[9.5px] text-slate-400 font-bold uppercase mt-0.5">Auditing incoming transactions. Click row to modify invoice status.</p>
-          </div>
-          <span className="text-[8.5px] text-teal bg-teal-light/20 px-2 py-0.5 rounded font-black tracking-wider uppercase">
-            Click row to Audit
-          </span>
-        </div>
-
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest">
-                <th className="py-3 px-4">Order ID</th>
-                <th className="py-3 px-4">Patient Name</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Vendor Node</th>
-                <th className="py-3 px-4">Amount</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Date</th>
-              </tr>
-            </thead>
-            <tbody className="text-xs font-semibold text-slate-650 divide-y divide-slate-50/50">
-              {orders.map((ord) => (
-                <tr 
-                  key={ord.id} 
-                  onClick={() => setSelectedOrder(ord)}
-                  className="hover:bg-[#0D6E56]/5 transition-colors cursor-pointer"
-                >
-                  <td className="py-3 px-4 font-extrabold text-slate-800">{ord.id}</td>
-                  <td className="py-3 px-4 text-slate-800 font-bold">{ord.patient}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider ${
-                      ord.category === 'Medicine' ? 'bg-emerald-50 text-emerald-600' : ord.category === 'Lab' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
-                    }`}>
-                      {ord.category}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-slate-450">{ord.vendor}</td>
-                  <td className="py-3 px-4 font-black text-slate-800">{formatIndianCurrency(ord.amount)}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                      ord.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : ord.status === 'Confirmed' ? 'bg-blue-50 text-blue-600' : ord.status === 'Cancelled' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-650'
-                    }`}>
-                      {ord.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-slate-400 text-[10px]">{ord.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* ==================== SECTION 6 — VENDOR PERFORMANCE TABLE ==================== */}
-      <section className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
-        <div className="border-b border-slate-50 pb-3 mb-4">
-          <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest">Vendor Performance</h3>
-          <p className="text-[9.5px] text-slate-400 font-bold uppercase mt-0.5">Commission settlements metrics. Click a row to adjust platform commission cut.</p>
-        </div>
-
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest">
-                <th className="py-3 px-4">Vendor Name</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Orders</th>
-                <th className="py-3 px-4">Revenue Generated</th>
-                <th className="py-3 px-4">Commission Rate</th>
-                <th className="py-3 px-4">Rating</th>
-                <th className="py-3 px-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="text-xs font-semibold text-slate-655 divide-y divide-slate-50/50">
-              {vendors.map((vend) => (
-                <tr 
-                  key={vend.id} 
-                  onClick={() => {
-                    setSelectedVendor(vend);
-                    setVendorCommissionInput(vend.commission);
-                  }}
-                  className="hover:bg-[#0D6E56]/5 transition-colors cursor-pointer"
-                >
-                  <td className="py-3 px-4 font-extrabold text-slate-800">{vend.name}</td>
-                  <td className="py-3 px-4">
-                    <span className="bg-slate-100 border border-slate-200/50 px-2.5 py-0.5 rounded-lg text-[9px] font-black text-slate-600 uppercase tracking-wide">
-                      {vend.type}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-extrabold text-slate-700">{vend.orders.toLocaleString()}</td>
-                  <td className="py-3 px-4 font-black text-slate-800">{formatIndianCurrency(vend.rev)}</td>
-                  <td className="py-3 px-4 font-black text-[#0D6E56]">{vend.commission}% cut</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1 text-amber-500">
-                      <FiStar className="fill-amber-500 text-[10px]" />
-                      <span className="font-extrabold text-slate-800 text-[11px]">{vend.rate.toFixed(1)}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider">Active Node</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* ==================== SECTION 7 — BOTTOM ROW (3 columns) ==================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* COLUMN 1: Patient Activity (Bar Chart) */}
-        <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col justify-between">
-          <div className="border-b border-slate-50 pb-2 mb-4">
-            <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Patient Activity</h3>
-            <p className="text-[9.5px] text-slate-400 font-bold uppercase mt-0.5">New Registrations in the last 7 days</p>
-          </div>
-
-          {/* SVG Bar Chart */}
-          <div className="relative w-full h-32 flex items-end justify-between px-2">
-            {[
-              { day: 'M', val: 15 },
-              { day: 'T', val: 24 },
-              { day: 'W', val: 32 },
-              { day: 'T', val: 20 },
-              { day: 'F', val: 45 },
-              { day: 'S', val: 18 },
-              { day: 'S', val: 10 }
-            ].map((bar, idx) => {
-              const maxVal = 50;
-              const percent = (bar.val / maxVal) * 100;
-              return (
-                <div key={idx} className="flex flex-col items-center gap-2 flex-1 group">
-                  {/* Tooltip */}
-                  <div className="opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-[8px] font-black px-1.5 py-0.5 rounded absolute -top-4 transition-opacity duration-150">
-                    {bar.val}
-                  </div>
-                  {/* Bar */}
-                  <div className="w-5 bg-slate-100 hover:bg-teal-light rounded-t-lg h-24 flex items-end overflow-hidden transition-colors">
-                    <div 
-                      className="bg-[#0D6E56] rounded-t-lg w-full transition-all duration-500" 
-                      style={{ height: `${percent}%` }}
-                    />
-                  </div>
-                  <span className="text-[9px] text-slate-400 font-black">{bar.day}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* COLUMN 2: Quick Actions panel */}
-        <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
-          <div className="border-b border-slate-50 pb-2">
-            <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Quick Actions</h3>
-            <p className="text-[9.5px] text-slate-400 font-bold uppercase mt-0.5">Shortcuts for administrative entries</p>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <button 
-              onClick={() => setShowAddMedicineModal(true)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-transparent border border-[#0D6E56]/30 hover:border-[#0D6E56] hover:bg-[#0D6E56]/5 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer text-left"
-            >
-              <span>Add Medicine Formulation</span>
-              <FiPackage className="text-[#0D6E56]" />
-            </button>
-            <button 
-              onClick={() => setShowAddLabTestModal(true)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-transparent border border-[#0D6E56]/30 hover:border-[#0D6E56] hover:bg-[#0D6E56]/5 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer text-left"
-            >
-              <span>Add Lab Test Panel</span>
-              <FiActivity className="text-[#0D6E56]" />
-            </button>
-            <button 
-              onClick={() => setShowAddDoctorModal(true)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-transparent border border-[#0D6E56]/30 hover:border-[#0D6E56] hover:bg-[#0D6E56]/5 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer text-left"
-            >
-              <span>Add Doctor / Clinician</span>
-              <FiHeart className="text-[#0D6E56]" />
-            </button>
-            <button 
-              onClick={() => navigate('/admin/bookings')}
-              className="w-full flex items-center justify-between px-4 py-2 bg-transparent border border-[#0D6E56]/30 hover:border-[#0D6E56] hover:bg-[#0D6E56]/5 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer text-left"
-            >
-              <span>View All Bookings Tab</span>
-              <FiCalendar className="text-[#0D6E56]" />
-            </button>
-            <button 
-              onClick={() => setShowDownloadLoader(true)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-transparent border border-teal hover:bg-[#0D6E56] hover:text-white text-[#0D6E56] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer text-left"
-            >
-              <span>Generate Audit PDF Report</span>
-              <FiDownload />
-            </button>
-          </div>
-        </div>
-
-        {/* COLUMN 3: Notifications / Alerts Feed */}
-        <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
-          <div className="border-b border-slate-50 pb-2">
-            <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Alert Center</h3>
-            <p className="text-[9.5px] text-slate-400 font-bold uppercase mt-0.5">Critical updates and system audit logs</p>
-          </div>
-
-          <div className="flex flex-col gap-3 max-h-56 overflow-y-auto no-scrollbar">
-            {notifications.map((notif, idx) => (
-              <div key={idx} className="flex gap-2.5 items-start p-1.5 hover:bg-slate-50 rounded-xl transition-colors">
-                <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 animate-pulse ${
-                  notif.level === 'red' ? 'bg-rose-500' : notif.level === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'
-                }`} />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-750 leading-snug">{notif.text}</p>
-                  <span className="text-[8.5px] text-slate-400 font-bold mt-1 block uppercase tracking-wide">{notif.time}</span>
-                </div>
-              </div>
+        {/* Filters and Timeframe */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <LocationFilter />
+          <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-[#E8F5EE] shadow-2xs">
+            <span className="admin-toggle-label px-2">Timeframe:</span>
+            {['day', 'month', 'year'].map(mode => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  setTimeframe(mode);
+                  triggerToast(`Timeframe changed to: ${mode.toUpperCase()}.`);
+                }}
+                className="px-3 py-1 rounded-xl admin-toggle-btn transition-all cursor-pointer border-0 bg-slate-50 hover:bg-slate-100 text-[#6B7280]"
+                style={{
+                  backgroundColor: timeframe === mode ? '#1A7A4A' : '',
+                  color: timeframe === mode ? '#ffffff' : ''
+                }}
+              >
+                {mode.toUpperCase()}
+              </button>
             ))}
           </div>
         </div>
-
       </div>
 
-      {/* ==================== FLOATING NOTIFICATION / TOASTS ==================== */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
-        <AnimatePresence>
-          {toasts.map((t) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, y: 30, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9, y: -20 }}
-              className={`p-4 rounded-2xl shadow-premium border flex items-center justify-between text-xs font-bold gap-3 pointer-events-auto ${
-                t.type === 'error' 
-                  ? 'bg-rose-50 border-rose-100 text-rose-700' 
-                  : 'bg-emerald-50 border-emerald-100 text-emerald-700'
-              }`}
-            >
-              <span>{t.message}</span>
-              <button 
-                onClick={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))}
-                className="text-slate-400 hover:text-slate-700 border-0 bg-transparent cursor-pointer"
-              >
-                <FiX className="text-sm shrink-0" />
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+      {/* Location Banner */}
+      {(stateVal || cityVal || pincodeVal || locationQuery) && (
+        <div className="admin-location-banner">
+          <span>
+            📍 Showing data for: {[stateVal, cityVal, pincodeVal].filter(Boolean).join(' → ') || 'All Locations'}
+            {locationQuery && ` (Search: "${locationQuery}")`}
+          </span>
+          <button 
+            type="button"
+            onClick={clearFilter}
+            className="admin-filter-clear-btn ml-auto"
+            style={{ padding: '4px 8px', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: 'none', borderRadius: '4px', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}
+          >
+            ✕ Clear
+          </button>
+        </div>
+      )}
 
-      {/* ==================== SLIDE-OVER PATIENT DIAGNOSTIC SHEET ==================== */}
-      <AnimatePresence>
-        {selectedPatient && (
+      {/* ==================== ROW 1 — TOP KPI CARDS ==================== */}
+      <motion.div 
+        variants={gridVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4.5 admin-kpi-grid"
+      >
+        {chartLoading ? (
           <>
-            {/* Backdrop overlay */}
+            <div className="admin-skeleton-card" />
+            <div className="admin-skeleton-card" />
+            <div className="admin-skeleton-card" />
+            <div className="admin-skeleton-card" />
+            <div className="admin-skeleton-card" />
+            <div className="admin-skeleton-card" />
+            <div className="admin-skeleton-card" />
+            <div className="admin-skeleton-card" />
+          </>
+        ) : (
+          <>
+            {/* Patients (Green) */}
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedPatientId(null)}
-              className="fixed inset-0 z-40 bg-slate-900/60"
-            />
-            
-            {/* Slide-out Sheet Panel */}
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed top-0 right-0 z-50 h-screen w-full sm:w-[400px] bg-white border-l border-slate-100 shadow-premium p-6 flex flex-col justify-between overflow-y-auto"
+              onClick={() => handleCardClick('patients')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
             >
               <div>
-                {/* Header Profile card */}
-                <div className="flex gap-4 items-center border-b border-slate-100 pb-5 mb-5 justify-between">
-                  <div className="flex gap-4 items-center">
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-sm bg-slate-50 shrink-0">
-                      <img src={selectedPatient.avatar} alt={selectedPatient.patientName} className="w-full h-full object-cover" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-slate-800 leading-snug">{selectedPatient.patientName}</h3>
-                      <span className="text-[9.5px] text-slate-400 font-bold block mt-1 uppercase">ID: {selectedPatient.id}</span>
-                      <span className="text-[9px] text-[#0D6E56] font-black uppercase tracking-widest bg-[#0D6E56]/10 px-2 py-0.5 rounded mt-2 block w-fit">
-                        Online Active
-                      </span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setSelectedPatientId(null)} 
-                    className="p-1.5 hover:bg-slate-50 text-slate-450 hover:text-slate-700 rounded-xl transition-colors cursor-pointer border-0"
-                  >
-                    <FiX className="text-lg shrink-0" />
-                  </button>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Patients</span>
+                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">▲ 12.4%</span>
                 </div>
-
-                {/* Vitals Summary Grid */}
-                <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-600 mb-5">
-                  <div className="flex flex-col gap-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                    <span className="text-[8.5px] text-slate-400 font-black uppercase tracking-wider">DOB</span>
-                    <span className="font-extrabold text-slate-800">{selectedPatient.dob}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                    <span className="text-[8.5px] text-slate-400 font-black uppercase tracking-wider">Gender</span>
-                    <span className="font-extrabold text-slate-800">{selectedPatient.gender}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                    <span className="text-[8.5px] text-slate-400 font-black uppercase tracking-wider">Weight</span>
-                    <span className="font-extrabold text-slate-800">{selectedPatient.weight}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                    <span className="text-[8.5px] text-slate-400 font-black uppercase tracking-wider">Reg. Date</span>
-                    <span className="font-extrabold text-slate-800">{selectedPatient.regDate}</span>
-                  </div>
-                </div>
-
-                {/* Patient History Tags */}
-                <div className="flex flex-col gap-2 mb-5">
-                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Medical History</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedPatient.history.map((tag, i) => (
-                      <span key={i} className="text-[8.5px] font-black bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full uppercase tracking-wider border border-blue-100">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Last Prescription details */}
-                <div className="flex flex-col gap-2 bg-[#0D6E56]/5 border border-[#0D6E56]/10 p-4 rounded-3xl mb-5">
-                  <span className="text-[9px] text-[#0D6E56] font-black uppercase tracking-widest flex items-center gap-1">
-                    <FiFileText /> Current Prescriptions
-                  </span>
-                  <ul className="list-disc pl-4 text-[10.5px] text-slate-650 font-bold flex flex-col gap-1.5 leading-snug">
-                    {selectedPatient.lastPrescriptions.map((pres, i) => (
-                      <li key={i}>{pres}</li>
-                    ))}
-                  </ul>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={stats.patients} />
                 </div>
               </div>
-
-              {/* Patient Contact Action controls */}
-              <div className="flex gap-2 text-xs font-semibold text-slate-600 mt-4 border-t border-slate-100 pt-4 shrink-0">
-                <button
-                  onClick={() => setShowCallModal(true)}
-                  className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center gap-1.5 font-bold shadow-sm transition-all border-0 cursor-pointer outline-none"
-                >
-                  <FiPhone className="text-sm shrink-0" /> Call Patient
-                </button>
-                <button
-                  onClick={() => setShowDocModal(true)}
-                  className="p-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center transition-all border border-slate-100 cursor-pointer outline-none"
-                  title="Medical Records"
-                >
-                  <FiFileText className="text-base shrink-0" />
-                </button>
-                <button
-                  onClick={() => setShowChatModal(true)}
-                  className="p-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center transition-all border border-slate-100 cursor-pointer outline-none"
-                  title="Live Chat Advice"
-                >
-                  <FiMessageSquare className="text-base shrink-0" />
-                </button>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiUsers className="text-[#1A7A4A] text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,12 Q10,2 20,8 T40,4 T50,8" fill="none" stroke="#1A7A4A" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
               </div>
+            </motion.div>
 
+            {/* Vendors (Amber) */}
+            <motion.div 
+              onClick={() => handleCardClick('vendors')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Vendors</span>
+                  <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">▲ 8.7%</span>
+                </div>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={stats.vendors} />
+                </div>
+              </div>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiMapPin className="text-[#F5A623] text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,10 Q15,14 30,4 T50,6" fill="none" stroke="#F5A623" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+            </motion.div>
+
+            {/* Orders (Blue) */}
+            <motion.div 
+              onClick={() => handleCardClick('orders')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Orders</span>
+                  <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">▽ 2.6%</span>
+                </div>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={stats.orders} />
+                </div>
+              </div>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiShoppingBag className="text-blue-500 text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,5 Q10,12 25,8 T50,2" fill="none" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+            </motion.div>
+
+            {/* Revenue (Purple) */}
+            <motion.div 
+              onClick={() => handleCardClick('revenue')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Revenue</span>
+                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">▲ 40.9%</span>
+                </div>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={formatIndianCurrency(stats.revenue)} />
+                </div>
+              </div>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiDollarSign className="text-[#8B5CF6] text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,14 Q12,2 25,12 T50,4" fill="none" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+            </motion.div>
+
+            {/* Pending Approvals (Orange) */}
+            <motion.div 
+              onClick={() => handleCardClick('pendingKyc')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Pending KYC</span>
+                  <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">KYC review</span>
+                </div>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={pendingApprovalsCount} />
+                </div>
+              </div>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiUserCheck className="text-orange-500 text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,8 L10,8 L20,3 L30,13 L40,8 L50,8" fill="none" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+            </motion.div>
+
+            {/* Complaints (Red) */}
+            <motion.div 
+              onClick={() => handleCardClick('complaints')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Complaints</span>
+                  <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">▲ 1 New</span>
+                </div>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={complaintsCount} />
+                </div>
+              </div>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiAlertTriangle className="text-rose-500 text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,4 L10,12 L20,4 L30,12 L45,4" fill="none" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+            </motion.div>
+
+            {/* Active Cities (Teal) */}
+            <motion.div 
+              onClick={() => handleCardClick('activeCities')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Active Cities</span>
+                  <span className="text-[9px] font-bold text-[#14B8A6] bg-teal-50 px-2 py-0.5 rounded-full">▲ 5 Live</span>
+                </div>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={activeCitiesCount} />
+                </div>
+              </div>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiMapPin className="text-[#14B8A6] text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,10 C10,5 15,15 25,8 C35,2 40,12 50,5" fill="none" stroke="#14B8A6" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+            </motion.div>
+
+            {/* Home Collections Today (Green) */}
+            <motion.div 
+              onClick={() => handleCardClick('collections')}
+              variants={cardVariants} 
+              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
+              style={{ cursor: 'pointer' }}
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="admin-kpi-label block">Collections</span>
+                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">3 Today</span>
+                </div>
+                <div className="admin-kpi-number mt-2">
+                  <AnimatedCounter value={collectionsCount} />
+                </div>
+              </div>
+              <div className="w-full mt-2.5 flex items-end justify-between">
+                <FiActivity className="text-teal-500 text-lg" />
+                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
+                  <path d="M0,6 Q10,12 20,4 T40,10 T50,6" fill="none" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </motion.div>
 
-      {/* ==================== INTERACTIVE DETAIL MODALS ==================== */}
-
-      {/* 1. Telehealth Live Call */}
-      <AnimatePresence>
-        {showCallModal && selectedPatient && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[80] flex items-center justify-center p-4 text-white select-none"
-          >
-            <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] p-6 md:p-8 flex flex-col items-center justify-between min-h-[460px] shadow-2xl">
-              
-              <div className="w-full flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-teal animate-pulse" />
-                  Live Tele-Consultation
-                </span>
-                <span>HIPAA Compliant</span>
+      {/* ==================== ROW 2 — VENDOR BREAKDOWN PANELS ==================== */}
+      {chartLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="admin-skeleton-card-large" style={{ height: '315px' }} />
+          <div className="admin-skeleton-card-large" style={{ height: '315px' }} />
+          <div className="admin-skeleton-card-large" style={{ height: '315px' }} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Pharmacies Panel */}
+          <div className="vendor-node-pharmacy shadow-xs hover:shadow-sm transition-all duration-200">
+            <div className="flex items-center gap-2 border-b border-[#BBF7D0] pb-3.5 mb-4">
+              <span className="p-2 rounded-xl bg-emerald-50 text-[#1A7A4A]">
+                <FiPackage className="text-lg" />
+              </span>
+              <div>
+                <div className="admin-vendor-node-title">🧪 Pharmacies Node</div>
+                <div className="admin-vendor-node-subtitle">Real-time medicine catalog syncing</div>
               </div>
-
-              <div className="flex flex-col items-center gap-4 mt-6">
-                <div className="relative flex items-center justify-center">
-                  {!callConnected && (
-                    <>
-                      <motion.div
-                        animate={{ scale: [1, 1.8], opacity: [0.5, 0] }}
-                        transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
-                        className="absolute w-20 h-20 rounded-full bg-teal/30"
-                      />
-                      <motion.div
-                        animate={{ scale: [1, 1.4], opacity: [0.4, 0] }}
-                        transition={{ repeat: Infinity, duration: 2, delay: 0.5, ease: "easeOut" }}
-                        className="absolute w-20 h-20 rounded-full bg-teal/20"
-                      />
-                    </>
-                  )}
-                  {callConnected && (
-                    <div className="absolute -inset-2 bg-gradient-to-r from-teal to-forest rounded-full opacity-35 blur animate-pulse" />
-                  )}
-                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-teal shadow-xl bg-slate-800 shrink-0 z-10">
-                    <img src={selectedPatient.avatar} alt={selectedPatient.patientName} className="w-full h-full object-cover" />
-                  </div>
-                </div>
-
-                <div className="text-center">
-                  <h3 className="text-lg font-black tracking-wide">{selectedPatient.patientName}</h3>
-                  <span className="text-[10px] text-slate-400 font-extrabold uppercase mt-1 block tracking-wider">{selectedPatient.phone}</span>
-                  <p className="text-xs font-bold text-teal mt-3">
-                    {!callConnected ? 'Calling secure telehealth gateway...' : 'Connected • Encryption Active'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="w-full flex flex-col items-center gap-4 mt-4">
-                {callConnected ? (
-                  <>
-                    <div className="text-2xl font-black font-mono text-emerald-400 tracking-wider">
-                      {(() => {
-                        const mins = Math.floor(callTimer / 60).toString().padStart(2, '0');
-                        const secs = (callTimer % 60).toString().padStart(2, '0');
-                        return `${mins}:${secs}`;
-                      })()}
-                    </div>
-                    <div className="flex items-center gap-1.5 h-8">
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((bar) => (
-                        <motion.div
-                          key={bar}
-                          animate={{ height: [8, Math.random() * 24 + 8, 8] }}
-                          transition={{ repeat: Infinity, duration: 0.4 + Math.random() * 0.4 }}
-                          className="w-1 bg-teal rounded-full"
-                        />
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-slate-450 text-xs italic">Dialing logs entry...</span>
-                )}
-              </div>
-
-              <div className="mt-6">
-                <button
-                  onClick={() => {
-                    setShowCallModal(false);
-                    triggerToast(`Telehealth call with ${selectedPatient.patientName} logged in system.`);
-                  }}
-                  className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center border-0 cursor-pointer shadow-lg transform active:scale-95 transition-all text-xl"
-                  title="Hang Up"
-                >
-                  📞
-                </button>
-              </div>
-
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div className="flex flex-col gap-2.5">
+              <div onClick={() => navigate('/admin/vendors?type=pharmacy')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Total Registered Pharmacies:</span>
+                <span className="admin-vendor-row-value">{vendors.filter(v => v.type === 'Pharmacy').length || 4}</span>
+              </div>
+              <div onClick={() => navigate('/admin/vendors?type=pharmacy')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Active vs Inactive Nodes:</span>
+                <span className="admin-vendor-row-value text-[#1A7A4A]">4 Active / 0 Inactive</span>
+              </div>
+              <div onClick={() => navigate('/admin/medicines')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Total Medicines Listed:</span>
+                <span className="admin-vendor-row-value">{medicines.length || 15} formulations</span>
+              </div>
+              <div onClick={() => navigate('/admin/orders/medicines')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Orders Received (This Month):</span>
+                <span className="admin-vendor-row-value">{reduxOrders.length || 18} orders</span>
+              </div>
+              <div onClick={() => navigate('/admin/locations/cities')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">City-wise Pharmacy Count:</span>
+                <span className="admin-vendor-row-value text-[11px]">Mumbai: 2, Pune: 1, Delhi: 1</span>
+              </div>
+              <div onClick={() => navigate('/admin/medicines?filter=outofstock')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Out of Stock Alerts:</span>
+                <span className="admin-vendor-row-value text-rose-650 font-black">0 Alerts</span>
+              </div>
+              <div onClick={() => navigate('/admin/medicines?sort=topselling')} className="flex justify-between border-t border-[#BBF7D0] pt-2 mt-1 admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Top Selling Medicine:</span>
+                <span className="admin-vendor-row-value text-[#1A7A4A] text-right truncate max-w-[150px]">
+                  {medicines[0]?.name || 'Paracetamol 650mg'}
+                </span>
+              </div>
+            </div>
+          </div>
 
-      {/* 2. Interactive Live Chat Advice */}
-      <AnimatePresence>
-        {showChatModal && selectedPatient && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-premium border border-slate-100 h-[500px] flex flex-col justify-between"
-            >
-              <div className="bg-gradient-to-r from-teal to-teal-dark p-4.5 text-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src={selectedPatient.avatar} alt={selectedPatient.patientName} className="w-9 h-9 rounded-full object-cover border border-white/20" />
-                  <div>
-                    <h3 className="font-extrabold text-xs uppercase tracking-wider">{selectedPatient.patientName}</h3>
-                    <p className="text-[9px] text-teal-light/80 font-black uppercase mt-0.5">Clinical chat channel</p>
+          {/* Labs Panel */}
+          <div className="vendor-node-lab shadow-xs hover:shadow-sm transition-all duration-200">
+            <div className="flex items-center gap-2 border-b border-[#FDE68A] pb-3.5 mb-4">
+              <span className="p-2 rounded-xl bg-amber-50 text-[#F5A623]">
+                <FiActivity className="text-lg" />
+              </span>
+              <div>
+                <div className="admin-vendor-node-title">🔬 Labs Node</div>
+                <div className="admin-vendor-node-subtitle">Diagnostic testing & scheduling</div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <div onClick={() => navigate('/admin/vendors?type=lab')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Total Registered Labs:</span>
+                <span className="admin-vendor-row-value">{labs.length || 3} centers</span>
+              </div>
+              <div onClick={() => navigate('/admin/lab-tests')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Total Diagnostic Tests Listed:</span>
+                <span className="admin-vendor-row-value">{labTests.length || 8} panels</span>
+              </div>
+              <div onClick={() => navigate('/admin/orders/lab-bookings')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Bookings (This Month):</span>
+                <span className="admin-vendor-row-value">{reduxLabBookings.length || 12} appointments</span>
+              </div>
+              <div onClick={() => navigate('/admin/home-collections')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Pending Home Pickups:</span>
+                <span className="admin-vendor-row-value text-amber-600">3 Today</span>
+              </div>
+              <div onClick={() => navigate('/admin/orders/lab-bookings')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Home Collection vs Walk-in:</span>
+                <span className="admin-vendor-row-value">70% Home / 30% Walk-in</span>
+              </div>
+              <div onClick={() => navigate('/admin/locations/cities')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">City-wise Lab Coverage:</span>
+                <span className="admin-vendor-row-value text-[11px]">Mumbai, Pune, Bangalore</span>
+              </div>
+              <div onClick={() => navigate('/admin/lab-tests')} className="flex justify-between border-t border-[#FDE68A] pt-2 mt-1 admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Most Booked Test:</span>
+                <span className="admin-vendor-row-value text-[#F5A623] text-right truncate max-w-[150px]">
+                  {labTests[0]?.name || 'Complete Blood Count'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Doctors Panel */}
+          <div className="vendor-node-doctor shadow-xs hover:shadow-sm transition-all duration-200">
+            <div className="flex items-center gap-2 border-b border-[#BFDBFE] pb-3.5 mb-4">
+              <span className="p-2 rounded-xl bg-blue-50 text-blue-500">
+                <FiHeart className="text-lg" />
+              </span>
+              <div>
+                <div className="admin-vendor-node-title">👨‍⚕️ Doctors Node</div>
+                <div className="admin-vendor-node-subtitle">Telehealth & clinical appointments</div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <div onClick={() => navigate('/admin/vendors?type=doctor')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Total Onboarded Doctors:</span>
+                <span className="admin-vendor-row-value">{doctors.length || 4} clinicians</span>
+              </div>
+              <div onClick={() => navigate('/admin/vendors?type=doctor')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Specialization Breakdown:</span>
+                <span className="admin-vendor-row-value">General, Cardio, Derma</span>
+              </div>
+              <div onClick={() => navigate('/admin/orders/appointments')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Appointments (This Month):</span>
+                <span className="admin-vendor-row-value">{reduxAppointments.length || 15} slots</span>
+              </div>
+              <div onClick={() => navigate('/admin/doctors?filter=online')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Clinicians Online Now:</span>
+                <span className="admin-vendor-row-value text-emerald-600">2 Online / 2 Offline</span>
+              </div>
+              <div onClick={() => navigate('/admin/orders/appointments')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Online vs In-clinic Split:</span>
+                <span className="admin-vendor-row-value">60% Video / 40% Clinic</span>
+              </div>
+              <div onClick={() => navigate('/admin/locations/cities')} className="flex justify-between admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">City-wise Doctor Count:</span>
+                <span className="admin-vendor-row-value text-[11px]">Mumbai: 2, Pune: 1, Delhi: 1</span>
+              </div>
+              <div onClick={() => navigate('/admin/doctors?sort=rating')} className="flex justify-between border-t border-[#BFDBFE] pt-2 mt-1 admin-vendor-row-clickable py-1 px-1.5 rounded-lg">
+                <span className="admin-vendor-row-label">Top Rated Doctor:</span>
+                <span className="admin-vendor-row-value text-blue-500 text-right truncate max-w-[150px]">
+                  {doctors[0]?.name || 'Dr. Ramesh Gupta'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== ROW 3 — CHARTS SECTION ==================== */}
+      {chartLoading ? (
+        <div className="admin-charts-grid">
+          <div className="admin-skeleton-card-large" style={{ height: '272px' }} />
+          <div className="admin-skeleton-card-large" style={{ height: '272px' }} />
+          <div className="admin-skeleton-card-large" style={{ height: '272px' }} />
+        </div>
+      ) : (
+        <div className="admin-charts-grid">
+          {/* Chart 1: Orders Over Time */}
+          <div className="admin-chart-card relative">
+            <div className="admin-chart-card-title">Orders Over Time</div>
+            <div className="admin-chart-card-subtitle">Medicines vs Lab Tests vs Doctor Appointments</div>
+            <div className="w-full h-48" style={{ height: '192px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <AreaChart data={ordersTrendData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorMeds2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1A7A4A" stopOpacity="0.25"/>
+                      <stop offset="95%" stopColor="#1A7A4A" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '9px', border: 'none' }} />
+                  <Area type="monotone" dataKey="Medicines" stroke="#1A7A4A" strokeWidth={2} fillOpacity={1} fill="url(#colorMeds2)" />
+                  <Line type="monotone" dataKey="LabTests" stroke="#F5A623" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="Appointments" stroke="#3B82F6" strokeWidth={1.5} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Chart 2: Revenue Trend */}
+          <div className="admin-chart-card relative">
+            <div className="admin-chart-card-title">Revenue Trend</div>
+            <div className="admin-chart-card-subtitle">Monthly platform ₹ revenue</div>
+            <div className="w-full h-48" style={{ height: '192px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <BarChart data={monthlyRevenueData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} tickFormatter={(v)=>`₹${v/1000}k`} />
+                  <Tooltip formatter={(v)=>[formatIndianCurrency(v), 'Revenue']} contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '9px', border: 'none' }} />
+                  <Bar dataKey="Revenue" fill="#1A7A4A" radius={[6, 6, 0, 0]}>
+                    {monthlyRevenueData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index === monthlyRevenueData.length - 1 ? '#F5A623' : '#1A7A4A'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Chart 3: User Growth */}
+          <div className="admin-chart-card relative">
+            <div className="admin-chart-card-title">User Growth</div>
+            <div className="admin-chart-card-subtitle">New patients registered per month</div>
+            <div className="w-full h-48" style={{ height: '192px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <AreaChart data={userGrowthData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorUsers2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity="0.25"/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '9px', border: 'none' }} />
+                  <Area type="monotone" dataKey="Users" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorUsers2)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Chart 4: Vendor Distribution */}
+          <div className="admin-chart-card">
+            <div className="admin-chart-card-title">Vendor Distribution</div>
+            <div className="admin-chart-card-subtitle">Split of Pharmacies vs Labs vs Doctors</div>
+            <div className="w-full h-40 flex items-center justify-center relative" style={{ height: '160px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <PieChart>
+                  <Pie data={vendorDistributionData} cx="50%" cy="50%" innerRadius={42} outerRadius={58} paddingAngle={3} dataKey="value">
+                    {vendorDistributionData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '9px', border: 'none' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-[9px] text-[#6B7280] font-bold">TOTAL</span>
+                <span className="text-base font-bold text-slate-800">{reduxVendors.length || 10}</span>
+              </div>
+            </div>
+            <div className="flex justify-around text-[9px] font-bold text-[#6B7280]">
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#1A7A4A]" /> Meds</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#F5A623]" /> Labs</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" /> Doctors</span>
+            </div>
+          </div>
+
+          {/* Chart 5: Order Status Split */}
+          <div className="admin-chart-card">
+            <div className="admin-chart-card-title">Order Status Split</div>
+            <div className="admin-chart-card-subtitle">Delivered vs Pending vs Cancelled vs Refunded</div>
+            <div className="w-full h-40 flex items-center justify-center relative" style={{ height: '160px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <PieChart>
+                  <Pie data={orderStatusSplitData} cx="50%" cy="50%" innerRadius={42} outerRadius={58} paddingAngle={3} dataKey="value">
+                    {orderStatusSplitData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '9px', border: 'none' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-[9px] text-[#6B7280] font-bold">ORDERS</span>
+                <span className="text-base font-bold text-slate-800">{totalOrdersCount}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1 text-[9px] font-bold text-[#6B7280] text-center">
+              {orderStatusSplitData.map((o, idx) => (
+                <span key={idx} className="flex items-center gap-0.5 justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: o.color }} />
+                  {o.name}: {o.value}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart 6: City-wise Revenue */}
+          <div className="admin-chart-card relative">
+            <div className="admin-chart-card-title">City-wise Revenue</div>
+            <div className="admin-chart-card-subtitle">Top 10 cities by ₹ revenue split</div>
+            <div className="w-full h-40" style={{ height: '160px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <BarChart data={cityRevenueData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={8} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={8} tickLine={false} tickFormatter={(v)=>`₹${v/1000}k`} />
+                  <Tooltip formatter={(v)=>[formatIndianCurrency(v), 'Revenue']} contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '9px', border: 'none' }} />
+                  <Bar dataKey="Revenue" fill="#14B8A6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Chart 7: Doctor Specialization */}
+          <div className="admin-chart-card relative">
+            <div className="admin-chart-card-title">Doctor Specialization</div>
+            <div className="admin-chart-card-subtitle">Count of onboarded clinicians by specialty</div>
+            <div className="w-full h-40" style={{ height: '160px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <BarChart data={specializationData} layout="vertical" margin={{ top: 10, right: 5, left: 15, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis type="number" stroke="#94a3b8" fontSize={8} tickLine={false} />
+                  <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={8} width={80} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '9px', border: 'none' }} />
+                  <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== ROW 4 — TRAFFIC SECTION ==================== */}
+      {chartLoading ? (
+        <div className="admin-skeleton-card-large mt-2" style={{ height: '380px' }} />
+      ) : (
+        <div className="w-full mt-2">
+          <div className="bg-white rounded-3xl border border-[#E8F5EE] shadow-xs flex flex-col justify-between relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-[#E8F5EE] gap-4">
+              <div>
+                <div className="admin-section-heading">Traffic Analysis</div>
+                <div className="admin-section-subtext">Visits, unique users, pageviews ({timeframe.toUpperCase()})</div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowDownloadLoader(true)}
+                className="bg-[#1A7A4A] hover:bg-[#1A7A4A]/90 text-white p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs border-0"
+              >
+                <FiDownload className="text-sm" />
+              </button>
+            </div>
+
+            <div className="p-5 w-full h-72" style={{ height: '288px', minWidth: 0 }}>
+              <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                <AreaChart data={trafficData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorVisits2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1A7A4A" stopOpacity="0.15"/>
+                      <stop offset="95%" stopColor="#1A7A4A" stopOpacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="colorUniques2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F5A623" stopOpacity="0.15"/>
+                      <stop offset="95%" stopColor="#F5A623" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0F3D2B', color: '#fff', borderRadius: '12px', fontSize: '10px', border: 'none' }} />
+                  <Area type="monotone" dataKey="Visits" stroke="#1A7A4A" strokeWidth={2.5} fillOpacity={1} fill="url(#colorVisits2)" />
+                  <Area type="monotone" dataKey="UniqueUsers" stroke="#F5A623" strokeWidth={2} fillOpacity={1} fill="url(#colorUniques2)" />
+                  <Line type="monotone" dataKey="Pageviews" stroke="#3B82F6" strokeWidth={2} dot={true} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Bottom stats bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 border-t border-[#E8F5EE] bg-slate-50/30 text-center divide-x divide-slate-100 py-4">
+              <div className="p-3">
+                <span className="text-[10px] font-bold text-[#6B7280] block">Total Visits</span>
+                <span className="text-base font-bold text-slate-800 block mt-1">{Math.round(totalOrdersCount * 25).toLocaleString()}</span>
+                <div className="w-16 mx-auto bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-[#1A7A4A] h-full w-[45%]" />
+                </div>
+              </div>
+              <div className="p-3">
+                <span className="text-[10px] font-bold text-[#6B7280] block">Unique Users</span>
+                <span className="text-base font-bold text-slate-800 block mt-1">{Math.round(reduxUsers.length * 1.5).toLocaleString()}</span>
+                <div className="w-16 mx-auto bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-[#F5A623] h-full w-[30%]" />
+                </div>
+              </div>
+              <div className="p-3">
+                <span className="text-[10px] font-bold text-[#6B7280] block">Pageviews</span>
+                <span className="text-base font-bold text-slate-800 block mt-1">{Math.round(totalRev / 10).toLocaleString()}</span>
+                <div className="w-16 mx-auto bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-[#3B82F6] h-full w-[60%]" />
+                </div>
+              </div>
+              <div className="p-3">
+                <span className="text-[10px] font-bold text-[#6B7280] block">New Users This Period</span>
+                <span className="text-base font-bold text-slate-800 block mt-1">{Math.round(reduxUsers.length * 0.8).toLocaleString()}</span>
+                <div className="w-16 mx-auto bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-[#8B5CF6] h-full w-[80%]" />
+                </div>
+              </div>
+              <div className="p-3">
+                <span className="text-[10px] font-bold text-[#6B7280] block">Bounce Rate</span>
+                <span className="text-base font-bold text-slate-800 block mt-1">40.15%</span>
+                <div className="w-16 mx-auto bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-rose-50 h-full w-[40.15%]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Traffic Splits */}
+            <div className="grid grid-cols-1 md:grid-cols-3 border-t border-[#E8F5EE] divide-y md:divide-y-0 md:divide-x divide-slate-100 p-5 bg-slate-50/10 gap-6">
+              <div>
+                <div className="text-[11px] font-bold text-[#1A7A4A] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <FiActivity className="text-[#1A7A4A]" /> Most Visited Pages
+                </div>
+                <div className="flex flex-col gap-2.5 text-xs font-semibold text-slate-700">
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">/doctor-appointments</span>
+                    <span className="bg-emerald-50 text-[#1A7A4A] px-2 py-0.5 rounded-md text-[10px] font-black">3,450 (42%)</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">/medicines</span>
+                    <span className="bg-emerald-50 text-[#1A7A4A] px-2 py-0.5 rounded-md text-[10px] font-black">2,870 (35%)</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">/lab-tests</span>
+                    <span className="bg-emerald-50 text-[#1A7A4A] px-2 py-0.5 rounded-md text-[10px] font-black">1,890 (23%)</span>
                   </div>
                 </div>
-                <button onClick={() => setShowChatModal(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-0 cursor-pointer">
-                  <FiX className="text-lg" />
-                </button>
               </div>
-
-              <div className="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3">
-                {chatMessages.map((msg, i) => {
-                  const isDoctor = msg.sender === 'doctor';
-                  return (
-                    <div key={i} className={`flex flex-col max-w-[80%] ${isDoctor ? 'self-end items-end' : 'self-start items-start'}`}>
-                      <div className={`p-3 rounded-2xl text-xs font-bold ${
-                        isDoctor ? 'bg-[#0D6E56] text-white rounded-tr-none' : 'bg-white text-slate-805 rounded-tl-none border border-slate-100 shadow-2xs'
-                      }`}>
-                        {msg.text}
-                      </div>
-                      <span className="text-[8px] text-slate-400 font-bold mt-1 px-1">{msg.time}</span>
-                    </div>
-                  );
-                })}
-                {patientTyping && (
-                  <div className="self-start bg-white border border-slate-100 p-2.5 rounded-2xl rounded-tl-none text-[10px] text-slate-400 font-bold italic shadow-2xs flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-350 animate-bounce" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-350 animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-350 animate-bounce [animation-delay:0.4s]" />
+              
+              <div className="md:pl-6">
+                <div className="text-[11px] font-bold text-[#F5A623] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <FiSliders className="text-amber-500" /> Device Split
+                </div>
+                <div className="flex flex-col gap-2.5 text-xs font-semibold text-slate-700">
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">Mobile Devices</span>
+                    <span className="text-[#F5A623] font-black">65.2%</span>
                   </div>
-                )}
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">Desktop Browsers</span>
+                    <span className="text-[#F5A623] font-black">29.8%</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">Tablet / Other</span>
+                    <span className="text-[#F5A623] font-black">5.0%</span>
+                  </div>
+                </div>
               </div>
 
-              <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-100 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Type medical instructions..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-slate-200 focus:border-teal rounded-xl text-xs font-semibold outline-none"
-                />
-                <button type="submit" className="px-4 bg-[#0D6E56] hover:bg-[#0D6E56]/90 text-white rounded-xl text-xs font-black uppercase tracking-wider border-0 cursor-pointer">
-                  Send
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 3. Document / Medical Records Viewer */}
-      <AnimatePresence>
-        {showDocModal && selectedPatient && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-premium border border-slate-100 max-h-[85vh] flex flex-col"
-            >
-              <div className="bg-[#0D6E56] p-4 text-white flex items-center justify-between shrink-0">
-                <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <FiFileText /> Clinical File Records
-                </h3>
-                <button onClick={() => setShowDocModal(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-0 cursor-pointer">
-                  <FiX className="text-lg" />
-                </button>
+              <div className="md:pl-6">
+                <div className="text-[11px] font-bold text-blue-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <FiMapPin className="text-blue-500" /> Top Traffic Cities
+                </div>
+                <div className="flex flex-col gap-2.5 text-xs font-semibold text-slate-700">
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">Mumbai</span>
+                    <span className="text-blue-500 font-black">42.8%</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">Delhi NCR</span>
+                    <span className="text-blue-500 font-black">28.4%</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                    <span className="text-slate-800">Bangalore</span>
+                    <span className="text-blue-500 font-black">15.3%</span>
+                  </div>
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="flex border-b border-slate-100 text-center shrink-0">
-                {['Prescriptions', 'Lab Reports', 'Scans'].map((tab) => (
+      {/* ==================== ROW 5 — TABLES SECTION ==================== */}
+      {chartLoading ? (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="admin-skeleton-card-large" style={{ height: '380px' }} />
+          <div className="admin-skeleton-card-large" style={{ height: '380px' }} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Recent Orders */}
+          <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex flex-col gap-1 border-b border-[#E8F5EE] pb-3 mb-4">
+                <div className="admin-section-heading-wrapper">
+                  <span>Recent Orders</span>
+                </div>
+                <div className="admin-section-subtext">Auditing incoming transactions. Click row to view details & route to page.</div>
+              </div>
+              <div className="overflow-x-auto no-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/70 border-b border-[#E8F5EE] admin-table-header">
+                      <th className="py-3 px-4">Order ID</th>
+                      <th className="py-3 px-4">Patient</th>
+                      <th className="py-3 px-4">Type</th>
+                      <th className="py-3 px-4">City</th>
+                      <th className="py-3 px-4">Pincode</th>
+                      <th className="py-3 px-4">Amount</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="admin-table-body divide-y divide-slate-550/30">
+                    {orders.map((ord) => (
+                      <tr key={ord.id} onClick={() => navigate(`/admin/orders/${ord.id.replace('#', '')}`)} className="hover:bg-[#E8F5EE]/30 transition-colors cursor-pointer">
+                        <td className="py-3 px-4 font-bold text-slate-900">{ord.id}</td>
+                        <td className="py-3 px-4 text-slate-800 font-medium">{ord.patient}</td>
+                        <td className="py-3 px-4 text-slate-600 font-medium">{ord.category}</td>
+                        <td className="py-3 px-4 text-slate-700 font-medium">{ord.city}</td>
+                        <td className="py-3 px-4 text-slate-700 font-medium">{ord.pincode}</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">{formatIndianCurrency(ord.amount)}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${
+                            ord.status === 'Completed' || ord.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600' :
+                            ord.status === 'Cancelled' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+                          }`}>
+                            {ord.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-450 text-[10px]">{ord.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          {/* Recent Registrations */}
+          <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex flex-col gap-1 border-b border-[#E8F5EE] pb-3 mb-4">
+                <div className="admin-section-heading-wrapper">
+                  <span>Recent Vendor Registrations</span>
+                </div>
+                <div className="admin-section-subtext">Onboarding partner listings status. Click row to modify commission.</div>
+              </div>
+              <div className="overflow-x-auto no-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/70 border-b border-[#E8F5EE] admin-table-header">
+                      <th className="py-3 px-4">Vendor</th>
+                      <th className="py-3 px-4">Type</th>
+                      <th className="py-3 px-4">City</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Joined Date</th>
+                      <th className="py-3 px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="admin-table-body divide-y divide-slate-550/30">
+                    {vendors.map((vend) => (
+                      <tr key={vend.id} onClick={() => { setSelectedVendor(vend); setVendorCommissionInput(vend.commission); }} className="hover:bg-[#E8F5EE]/30 transition-colors cursor-pointer">
+                        <td className="py-3 px-4 font-bold text-slate-900">{vend.name}</td>
+                        <td className="py-3 px-4 text-slate-650 font-medium">{vend.type}</td>
+                        <td className="py-3 px-4 text-slate-700 font-medium">{vend.city}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${
+                            vend.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : 
+                            vend.status === 'rejected' || vend.status === 'Rejected' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+                          }`}>
+                            {vend.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-450 text-[10px]">{vend.joinedDate}</td>
+                        <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                          {vend.status === 'Pending' && (
+                            <button
+                              type="button"
+                              onClick={() => handleApproveVendor(vend.id, vend.name)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-xl border-0 cursor-pointer shadow-xs transition-all duration-150"
+                            >
+                              Approve
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* ==================== ROW 6 — ACTIVITY FEED + TOP PERFORMERS ==================== */}
+      {chartLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="admin-skeleton-card-large" style={{ height: '380px' }} />
+          <div className="admin-skeleton-card-large" style={{ height: '380px' }} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Activity Feed */}
+          <div className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col gap-4">
+            <div className="border-b border-[#E8F5EE] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <div className="admin-section-heading">Live Activity Feed</div>
+                <div className="admin-section-subtext">Real-time system events logs</div>
+              </div>
+              <div className="flex flex-wrap gap-1 bg-slate-50 p-1 rounded-xl">
+                {['All', 'Orders', 'Vendors', 'Complaints'].map(tab => (
                   <button
                     key={tab}
-                    onClick={() => setActiveDocTab(tab)}
-                    className={`flex-1 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer bg-transparent border-0 ${
-                      activeDocTab === tab ? 'border-teal text-teal font-extrabold' : 'border-transparent text-slate-400 hover:text-slate-655'
+                    type="button"
+                    onClick={() => setActivityFilter(tab)}
+                    className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase cursor-pointer border-0 transition-all ${
+                      activityFilter === tab ? 'bg-[#1A7A4A] text-white' : 'text-[#6B7280] hover:text-[#1c1c1c] bg-transparent'
                     }`}
                   >
                     {tab}
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="flex flex-col gap-3 max-h-96 overflow-y-auto no-scrollbar">
+              {liveActivityFeed
+                .filter(item => {
+                  if (activityFilter === 'All') return true;
+                  const typeMap = {
+                    'Orders': 'order',
+                    'Vendors': 'vendor',
+                    'Complaints': 'complaint'
+                  };
+                  return item.type === typeMap[activityFilter];
+                })
+                .map((notif, idx) => (
+                  <div key={idx} className="flex gap-3.5 items-start p-2 hover:bg-slate-50 rounded-2xl transition-colors border border-slate-100/10">
+                    <span className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${
+                      notif.type === 'vendor' ? 'bg-[#F5A623]' : notif.type === 'order' ? 'bg-blue-500' : notif.type === 'complaint' ? 'bg-rose-500' : notif.type === 'payment' ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`} />
+                    <div className="min-w-0">
+                      <div className="admin-alert-title">{notif.text}</div>
+                      <div className="admin-alert-subtitle mt-0.5">{notif.time}</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
 
-              <div className="flex-1 p-5 overflow-y-auto flex flex-col gap-3 bg-slate-50 min-h-[250px]">
-                {activeDocTab === 'Prescriptions' && (
-                  <>
-                    <div className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-2xs flex justify-between items-center gap-2">
-                      <div className="min-w-0 text-left">
-                        <h4 className="text-xs font-extrabold text-slate-805 truncate">Amlodipine_EHR_Jun2026.pdf</h4>
-                        <span className="text-[9px] text-slate-400 font-bold block mt-1">Dr. S.K. Sen • 02 Jun 2026</span>
-                      </div>
-                      <button onClick={() => triggerToast('Prescription PDF loaded successfully.')} className="p-2 bg-slate-50 hover:bg-teal-light text-teal hover:text-teal-dark rounded-xl border-0 cursor-pointer"><FiEye /></button>
-                    </div>
-                    <div className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-2xs flex justify-between items-center gap-2">
-                      <div className="min-w-0 text-left">
-                        <h4 className="text-xs font-extrabold text-slate-805 truncate">Metformin_Registry_Audit.pdf</h4>
-                        <span className="text-[9px] text-slate-400 font-bold block mt-1">Dr. Martin Deo • 15 May 2026</span>
-                      </div>
-                      <button onClick={() => triggerToast('Prescription PDF loaded successfully.')} className="p-2 bg-slate-50 hover:bg-teal-light text-teal hover:text-teal-dark rounded-xl border-0 cursor-pointer"><FiEye /></button>
-                    </div>
-                  </>
-                )}
-                {activeDocTab === 'Lab Reports' && (
-                  <div className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-2xs flex justify-between items-center gap-2">
-                    <div className="min-w-0 text-left">
-                      <h4 className="text-xs font-extrabold text-slate-805 truncate">Complete_Hemogram_Apollo.pdf</h4>
-                      <span className="text-[9px] text-slate-400 font-bold block mt-1">Apollo Diagnostics • NABL certified</span>
-                    </div>
-                    <button onClick={() => triggerToast('Lab Report PDF loaded.')} className="p-2 bg-slate-50 hover:bg-teal-light text-teal hover:text-teal-dark rounded-xl border-0 cursor-pointer"><FiEye /></button>
-                  </div>
-                )}
-                {activeDocTab === 'Scans' && (
-                  <div className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-2xs flex justify-between items-center gap-2">
-                    <div className="min-w-0 text-left">
-                      <h4 className="text-xs font-extrabold text-slate-805 truncate">Chest_Xray_Scan_Diagnostics.png</h4>
-                      <span className="text-[9px] text-slate-400 font-bold block mt-1">Imaging Center • 28 Apr 2026</span>
-                    </div>
-                    <button onClick={() => triggerToast('Chest X-Ray PNG loaded.')} className="p-2 bg-slate-50 hover:bg-teal-light text-teal hover:text-teal-dark rounded-xl border-0 cursor-pointer"><FiEye /></button>
-                  </div>
-                )}
+          {/* Top Performers */}
+          <div className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col gap-4 justify-between">
+            <div>
+              <div className="border-b border-[#E8F5EE] pb-2">
+                <div className="admin-section-heading">Top Performing Vendors (This Month)</div>
+                <div className="admin-section-subtext">Ranked by total clinical order volume</div>
               </div>
+              <div className="flex flex-col gap-4 mt-4">
+                <div 
+                  onClick={() => navigate('/admin/vendors?type=pharmacy&sort=orders')}
+                  className="flex justify-between items-center p-3 bg-slate-50/50 rounded-2xl border border-slate-100/30 cursor-pointer hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-xl bg-emerald-50 text-[#1A7A4A]">🧪</span>
+                    <div>
+                      <div className="vendor-leader-title">Pharmacy Leader</div>
+                      <div className="vendor-leader-subtitle">{topPerformers.pharmacy.name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="vendor-leader-stat text-[#1A7A4A]">{topPerformers.pharmacy.orders} Orders</div>
+                    <span className="vendor-leader-revenue">{formatIndianCurrency(topPerformers.pharmacy.revenue)}</span>
+                  </div>
+                </div>
 
-              <div className="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
-                <button onClick={() => setShowDocModal(false)} className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border-0 cursor-pointer">
-                  Close
+                <div 
+                  onClick={() => navigate('/admin/vendors?type=lab&sort=bookings')}
+                  className="flex justify-between items-center p-3 bg-slate-50/50 rounded-2xl border border-slate-100/30 cursor-pointer hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-xl bg-amber-50 text-[#F5A623]">🔬</span>
+                    <div>
+                      <div className="vendor-leader-title">Lab Diagnostics Leader</div>
+                      <div className="vendor-leader-subtitle">{topPerformers.lab.name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="vendor-leader-stat text-[#F5A623]">{topPerformers.lab.bookings} Bookings</div>
+                    <span className="vendor-leader-revenue">{formatIndianCurrency(topPerformers.lab.revenue)}</span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => navigate('/admin/vendors?type=doctor&sort=appointments')}
+                  className="flex justify-between items-center p-3 bg-slate-50/50 rounded-2xl border border-slate-100/30 cursor-pointer hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-xl bg-blue-50 text-blue-500">👨‍⚕️</span>
+                    <div>
+                      <div className="vendor-leader-title">Doctor Leader</div>
+                      <div className="vendor-leader-subtitle">{topPerformers.doctor.name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="vendor-leader-stat text-blue-500">{topPerformers.doctor.appointments} Appts</div>
+                    <span className="vendor-leader-revenue">{formatIndianCurrency(topPerformers.doctor.revenue)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-[#E8F5EE] pt-3 flex flex-col gap-2">
+              <button onClick={() => navigate('/admin/medicines/add')} className="w-full flex items-center justify-between px-4 py-2 bg-transparent border border-[#1A7A4A]/30 hover:border-[#1A7A4A] hover:bg-[#1A7A4A]/5 text-slate-700 rounded-xl admin-btn transition-all duration-150 cursor-pointer text-left">
+                <span>Add Medicine Formulation</span>
+                <FiPackage className="text-[#1A7A4A]" />
+              </button>
+              <button onClick={() => navigate('/admin/lab-tests/add')} className="w-full flex items-center justify-between px-4 py-2 bg-transparent border border-[#1A7A4A]/30 hover:border-[#1A7A4A] hover:bg-[#1A7A4A]/5 text-slate-700 rounded-xl admin-btn transition-all duration-150 cursor-pointer text-left">
+                <span>Add Lab Test Panel</span>
+                <FiActivity className="text-[#1A7A4A]" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== ROW 7 — FINANCIAL OVERVIEW ==================== */}
+      <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs">
+        <div className="border-b border-[#E8F5EE] pb-3.5 mb-4">
+          <div className="admin-section-heading flex items-center gap-1.5">
+            <FiCreditCard className="text-[#1A7A4A]" /> Platform Financial Overview <span className="text-[9px] font-bold text-[#6B7280] bg-slate-100 px-2 py-0.5 rounded ml-2 uppercase tracking-widest">Admin Eyes Only</span>
+          </div>
+          <div className="admin-section-subtext">Platform payouts, net commissions, transaction splits, and settlement processing.</div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-5 admin-table-body">
+          <div className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100/40">
+            <span className="text-[#6B7280] text-[9.5px] uppercase block">Total Platform Revenue</span>
+            <span className="text-lg font-bold text-slate-900 block mt-1.5">{formatIndianCurrency(totalRev)}</span>
+            <span className="text-[9px] text-[#1A7A4A] mt-1 block">100% Volume</span>
+          </div>
+
+          <div className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100/40">
+            <span className="text-[#6B7280] text-[9.5px] uppercase block">Revenue by Type</span>
+            <div className="flex flex-col gap-1 mt-1.5 text-[10px] font-bold">
+              <span className="text-emerald-700">Meds: {formatIndianCurrency(medRevenue)}</span>
+              <span className="text-amber-600">Labs: {formatIndianCurrency(labRevenue)}</span>
+              <span className="text-blue-500">Docs: {formatIndianCurrency(docRevenue)}</span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100/40">
+            <span className="text-[#6B7280] text-[9.5px] uppercase block">Pending Payouts</span>
+            <span className="text-lg font-bold text-amber-600 block mt-1.5">{formatIndianCurrency(Math.round(totalRev * 0.12))}</span>
+            <span className="text-[9px] text-slate-400 mt-1 block">Scheduled on June 15th</span>
+          </div>
+
+          <div className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100/40">
+            <span className="text-[#6B7280] text-[9.5px] uppercase block">Refunds Issued</span>
+            <span className="text-lg font-bold text-rose-500 block mt-1.5">{formatIndianCurrency(499)}</span>
+            <span className="text-[9px] text-rose-500 mt-1 block">1 Refund processed</span>
+          </div>
+
+          <div className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100/40">
+            <span className="text-[#6B7280] text-[9.5px] uppercase block">Net Revenue</span>
+            <span className="text-lg font-bold text-emerald-600 block mt-1.5">{formatIndianCurrency(Math.round(totalRev * commissionSetting / 100))}</span>
+            <span className="text-[9px] text-emerald-600 mt-1 block">After payout cut ({commissionSetting}%)</span>
+          </div>
+
+          <div className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100/40">
+            <span className="text-[#6B7280] text-[9.5px] uppercase block">Payment Method split</span>
+            <div className="flex flex-col gap-1 mt-1.5 text-[9.5px] font-bold text-[#6B7280]">
+              <span>UPI: 45% • Card: 35%</span>
+              <span>COD: 15% • Wallet: 5%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== ROW 8 — ALERTS & NOTIFICATIONS PANEL ==================== */}
+      <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs">
+        <div className="border-b border-[#E8F5EE] pb-3.5 mb-4">
+          <div className="admin-section-heading">🚨 Action Alerts & Notifications Panel</div>
+          <div className="admin-section-subtext">Critical items requiring immediate administrative resolution or verification.</div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {/* Action item: pending approvals */}
+          {reduxVendors.filter(v => v.status === 'pending').map((v) => (
+            <div key={v.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-rose-50/30 rounded-2xl border border-rose-100/30 gap-3">
+              <div className="flex items-start gap-2.5">
+                <span className="p-1 text-sm bg-rose-100 text-rose-600 rounded-lg mt-0.5">🔴</span>
+                <div>
+                  <div className="admin-alert-title">Pending Approval: {v.name || v.storeName} ({v.role === 'pharmacy_vendor' ? 'Pharmacy' : v.role === 'lab_vendor' ? 'Lab' : 'Doctor'})</div>
+                  <div className="admin-alert-subtitle mt-0.5">Registration from {v.city || 'Mumbai'}. Credentials pending review.</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setVendorToReject({ id: v.id, name: v.name || v.storeName })}
+                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl admin-btn cursor-pointer border-0"
+                >
+                  Reject
+                </button>
+                <button 
+                  onClick={() => handleApproveVendor(v.id, v.name || v.storeName)}
+                  className="px-3.5 py-1.5 bg-[#1A7A4A] hover:bg-[#1A7A4A]/90 text-white rounded-xl admin-btn cursor-pointer border-0"
+                >
+                  Approve
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Stuck orders */}
+          <div className="flex items-center justify-between p-3 bg-amber-50/20 rounded-2xl border border-amber-100/20 text-xs">
+            <div className="flex gap-2">
+              <span className="text-amber-500">🟡</span>
+              <div>
+                <div className="admin-alert-title">Order processing timeout (24hrs+)</div>
+                <div className="admin-alert-subtitle mt-0.5">Order #ORD-M1004 has been stuck in 'Pending Pickup' for 28 hours.</div>
+              </div>
+            </div>
+            <button onClick={() => triggerToast('Nudge sent! Notification dispatched to pharmacy.', 'warning')} className="px-3 py-1 bg-white hover:bg-amber-50 text-amber-700 rounded-lg border border-amber-200 admin-btn uppercase cursor-pointer">
+              Nudge Pharmacy
+            </button>
+          </div>
+
+          {/* Complaints */}
+          <div className="flex items-center justify-between p-3 bg-orange-50/20 rounded-2xl border border-orange-100/20 text-xs">
+            <div className="flex gap-2">
+              <span className="text-orange-500">🟠</span>
+              <div>
+                <div className="admin-alert-title">Unresolved Complaint (48hrs+)</div>
+                <div className="admin-alert-subtitle mt-0.5">Patient reported diagnostic technician did not wear clean gloves for home collection.</div>
+              </div>
+            </div>
+            <button onClick={() => navigate('/admin/complaints')} className="px-3 py-1 bg-white hover:bg-orange-50 text-orange-700 rounded-lg border border-orange-200 admin-btn uppercase cursor-pointer">
+              Investigate
+            </button>
+          </div>
+
+          {/* Low stock warnings */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+            <div className="flex gap-2">
+              <span className="text-slate-500">🔵</span>
+              <div>
+                <div className="admin-alert-title">Low stock alert from pharmacy</div>
+                <div className="admin-alert-subtitle mt-0.5">HealthRx Pharmacy reported stock level of 'Amoxicillin 500mg' is below threshold.</div>
+              </div>
+            </div>
+            <button onClick={() => triggerToast('Re-order notification triggered.')} className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 admin-btn uppercase cursor-pointer">
+              Reorder
+            </button>
+          </div>
+
+          {/* Failed payments */}
+          <div className="flex items-center justify-between p-3 bg-rose-50/20 rounded-2xl border border-rose-100/20 text-xs">
+            <div className="flex gap-2">
+              <span className="text-rose-500">⚠️</span>
+              <div>
+                <div className="admin-alert-title">Failed payment needing review</div>
+                <div className="admin-alert-subtitle mt-0.5">UPI transaction of ₹1,250 for Rajesh Kumar flagged as failed, but bank reported debit.</div>
+              </div>
+            </div>
+            <button onClick={() => triggerToast('Reconciliation checks successfully launched.')} className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-700 rounded-lg border border-rose-200 admin-btn uppercase cursor-pointer">
+              Reconcile
+            </button>
+          </div>
+
+          {/* Unserviceable pincodes requested */}
+          <div className="flex items-center justify-between p-3 bg-amber-50/20 rounded-2xl border border-amber-100/20 text-xs">
+            <div className="flex gap-2">
+              <span className="text-amber-550">📍</span>
+              <div>
+                <div className="admin-alert-title">Unserviceable Pincode Requests (400088)</div>
+                <div className="admin-alert-subtitle mt-0.5">Pincode 400088 requested by 5 patients in the last 24 hours. No vendors covering this zone.</div>
+              </div>
+            </div>
+            <button onClick={() => navigate('/admin/locations/gaps')} className="px-3 py-1 bg-white hover:bg-amber-50 text-amber-700 rounded-lg border border-amber-200 admin-btn uppercase cursor-pointer">
+              Configure
+            </button>
+          </div>
+
+          {/* Offline critical doctors */}
+          <div className="flex items-center justify-between p-3 bg-rose-50/25 rounded-2xl border border-rose-100/20 text-xs">
+            <div className="flex gap-2">
+              <span className="text-rose-550">🏥</span>
+              <div>
+                <div className="admin-alert-title">Critical Clinicians Offline</div>
+                <div className="admin-alert-subtitle mt-0.5">2 critical specialty doctors are currently offline (Cardiologist, Neurologist).</div>
+              </div>
+            </div>
+            <button onClick={() => triggerToast('Nudge sent! Alert notification dispatched to doctors.')} className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-750 rounded-lg border border-rose-200 admin-btn uppercase cursor-pointer">
+              Nudge Clinicians
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* --- TOAST NOTIFICATIONS DRAWER --- */}
+      <div className="fixed bottom-6 right-6 z-[99] flex flex-col gap-2 max-w-sm pointer-events-none">
+        {toasts.map(t => (
+          <div key={t.id} className="bg-[#0F3D2B] text-white px-4 py-3 rounded-2xl shadow-premium text-xs font-semibold flex items-center gap-2 border border-emerald-500/20 pointer-events-auto">
+            <FiCheckCircle className="text-[#F5A623] text-sm shrink-0" />
+            <span>{t.message}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Rejection Confirmation Modal */}
+      <AnimatePresence>
+        {vendorToReject && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[95] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-[32px] overflow-hidden max-w-sm w-full shadow-premium border border-slate-100 text-left p-6"
+            >
+              <div className="admin-modal-title">Confirm Rejection</div>
+              <div className="admin-modal-subtitle mt-2 text-slate-500 text-xs font-semibold leading-relaxed">
+                Are you sure you want to reject the registration of "{vendorToReject.name}"? This action will mark their status as rejected.
+              </div>
+              <div className="mt-6 flex justify-end gap-2.5">
+                <button
+                  onClick={() => setVendorToReject(null)}
+                  className="px-4.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border-0 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleConfirmReject(vendorToReject.id, vendorToReject.name);
+                  }}
+                  className="px-4.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer"
+                >
+                  Confirm Reject
                 </button>
               </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* 4. Invoice / Order Details Modifier */}
+      {/* 4. Order Details Modal */}
       <AnimatePresence>
         {selectedOrder && (
           <motion.div
@@ -1424,10 +1789,10 @@ export default function AdminDashboard() {
               exit={{ scale: 0.95, y: 20 }}
               className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-premium border border-slate-100 text-left"
             >
-              <div className="bg-[#0D6E56] p-4.5 text-white flex justify-between items-center">
+              <div className="bg-[#1A7A4A] p-4.5 text-white flex justify-between items-center">
                 <div>
-                  <h3 className="font-extrabold text-xs uppercase tracking-wider">Order Invoice Details</h3>
-                  <span className="text-[9px] text-slate-300 font-bold">{selectedOrder.id} • {selectedOrder.date}</span>
+                  <div className="admin-modal-title text-white">Order Settlement Audit</div>
+                  <span className="admin-modal-subtitle text-slate-100">{selectedOrder.id} • {selectedOrder.date}</span>
                 </div>
                 <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-0 cursor-pointer">
                   <FiX className="text-lg" />
@@ -1436,47 +1801,40 @@ export default function AdminDashboard() {
 
               <div className="p-6 flex flex-col gap-4 text-xs font-bold text-slate-700">
                 <div className="flex justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-400">Patient Name:</span>
+                  <span className="text-slate-400">Patient Directory:</span>
                   <span className="text-slate-800 font-extrabold">{selectedOrder.patient}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-400">Vendor Node:</span>
+                  <span className="text-slate-400">Billing Category:</span>
+                  <span className="text-slate-800 font-extrabold">{selectedOrder.category}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-50 pb-2">
+                  <span className="text-slate-400">Assigned Vendor Node:</span>
                   <span className="text-slate-800 font-extrabold">{selectedOrder.vendor}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-400">Category:</span>
-                  <span className="text-slate-850 font-extrabold uppercase">{selectedOrder.category}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-400">Total Price:</span>
-                  <span className="text-[#0D6E56] font-black text-sm">{formatIndianCurrency(selectedOrder.amount)}</span>
+                  <span className="text-slate-400">Total Invoiced Payout:</span>
+                  <span className="text-slate-800 font-extrabold text-sm">{formatIndianCurrency(selectedOrder.amount)}</span>
                 </div>
 
-                <div className="flex flex-col gap-1.5 mt-2">
-                  <label className="text-[8.5px] font-black uppercase text-slate-400 tracking-wider">Audit Status Triage</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['Completed', 'Confirmed', 'Pending', 'Cancelled'].map((stat) => (
+                <div className="flex flex-col gap-2.5 mt-2">
+                  <span className="text-[10px] font-black uppercase text-slate-450 tracking-wider">Settlement Stage Updates</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Pending', 'Confirmed', 'Completed', 'Cancelled'].filter(s => s !== selectedOrder.status).slice(0, 3).map((st) => (
                       <button
-                        key={stat}
-                        type="button"
-                        onClick={() => handleUpdateOrderStatus(selectedOrder.id, stat)}
-                        className={`py-2 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                          selectedOrder.status === stat 
-                            ? 'bg-forest/10 border-forest text-forest font-extrabold' 
-                            : 'bg-slate-50 border-slate-100 hover:border-slate-350 text-slate-500'
+                        key={st}
+                        onClick={() => handleUpdateOrderStatus(selectedOrder.id, st)}
+                        className={`py-2 px-2.5 rounded-xl border text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                          st === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' :
+                          st === 'Cancelled' ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' :
+                          'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100'
                         }`}
                       >
-                        {stat}
+                        Mark {st}
                       </button>
                     ))}
                   </div>
                 </div>
-              </div>
-
-              <div className="p-4 border-t border-slate-50 bg-slate-50/50 flex justify-end">
-                <button onClick={() => setSelectedOrder(null)} className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl border-0 cursor-pointer">
-                  Close
-                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -1498,10 +1856,10 @@ export default function AdminDashboard() {
               exit={{ scale: 0.95, y: 20 }}
               className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-premium border border-slate-100 text-left"
             >
-              <div className="bg-[#0D6E56] p-4.5 text-white flex justify-between items-center">
+              <div className="bg-[#1A7A4A] p-4.5 text-white flex justify-between items-center">
                 <div>
-                  <h3 className="font-extrabold text-xs uppercase tracking-wider">Vendor Commission Settings</h3>
-                  <span className="text-[9px] text-slate-300 font-bold">{selectedVendor.id} • {selectedVendor.name}</span>
+                  <div className="admin-modal-title text-white">Vendor Commission Settings</div>
+                  <span className="admin-modal-subtitle text-slate-200">{selectedVendor.id} • {selectedVendor.name}</span>
                 </div>
                 <button onClick={() => setSelectedVendor(null)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-0 cursor-pointer">
                   <FiX className="text-lg" />
@@ -1519,9 +1877,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex flex-col gap-2.5 mt-2">
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-450 tracking-wider">
                     <span>Platform Commission Cut</span>
-                    <span className="text-teal font-black">{vendorCommissionInput}%</span>
+                    <span className="text-[#1A7A4A] font-black">{vendorCommissionInput}%</span>
                   </div>
                   <input
                     type="range"
@@ -1530,237 +1888,22 @@ export default function AdminDashboard() {
                     step="1"
                     value={vendorCommissionInput}
                     onChange={(e) => setVendorCommissionInput(parseInt(e.target.value))}
-                    className="w-full accent-[#0D6E56] cursor-pointer"
+                    className="w-full accent-[#1A7A4A] cursor-pointer"
                   />
-                  <p className="text-[9.5px] text-slate-450 font-bold leading-normal uppercase">
+                  <p className="text-[9.5px] text-[#6B7280] font-bold leading-normal uppercase">
                     Platform takes this percentage of revenue from vendor settlements automatically.
                   </p>
                 </div>
               </div>
 
               <div className="p-4 border-t border-slate-50 bg-slate-50/50 flex gap-2.5 justify-end">
-                <button onClick={() => setSelectedVendor(null)} className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-705 text-xs font-bold rounded-xl border-0 cursor-pointer">
+                <button onClick={() => setSelectedVendor(null)} className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-750 text-xs font-bold rounded-xl border-0 cursor-pointer">
                   Cancel
                 </button>
-                <button onClick={() => handleSaveVendorCommission(selectedVendor.id)} className="px-5 py-2 bg-[#0D6E56] hover:bg-[#0D6E56]/90 text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer">
+                <button onClick={() => handleSaveVendorCommission(selectedVendor.id)} className="px-5 py-2 bg-[#1A7A4A] hover:bg-[#1A7A4A]/90 text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer">
                   Save Changes
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 6. Quick Action: Add Medicine */}
-      <AnimatePresence>
-        {showAddMedicineModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-premium border border-slate-100 text-left"
-            >
-              <div className="bg-[#0D6E56] p-4 text-white flex justify-between items-center">
-                <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <FiPlusCircle /> Add Medicine Formulation
-                </h3>
-                <button onClick={() => setShowAddMedicineModal(false)} className="text-white hover:opacity-80 border-0 bg-transparent cursor-pointer">
-                  <FiX className="text-lg" />
-                </button>
-              </div>
-
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setShowAddMedicineModal(false);
-                  triggerToast('Medicine formulation registered successfully.');
-                }}
-                className="p-5 flex flex-col gap-3 text-xs font-bold text-slate-650"
-              >
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-slate-400 uppercase">Product Formulation Name</label>
-                  <input required type="text" placeholder="e.g. Paracetamol 650mg" className="px-3 py-2 border rounded-xl outline-none" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-slate-400 uppercase">Manufacturer / Brand</label>
-                  <input required type="text" placeholder="e.g. Cipla Ltd" className="px-3 py-2 border rounded-xl outline-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">Pack Size</label>
-                    <input required type="text" placeholder="e.g. Strip of 10 tablets" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">Therapy Class</label>
-                    <select className="px-3 py-2 border rounded-xl outline-none bg-white">
-                      <option value="Allopathy">Allopathy</option>
-                      <option value="Ayurveda">Ayurveda</option>
-                      <option value="Homeopathy">Homeopathy</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">MRP Price (INR)</label>
-                    <input required type="number" placeholder="MRP Price" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">Discount (%)</label>
-                    <input type="number" placeholder="e.g. 10" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 mt-3 justify-end">
-                  <button type="button" onClick={() => setShowAddMedicineModal(false)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border-0 cursor-pointer">
-                    Cancel
-                  </button>
-                  <button type="submit" className="px-5 py-2.5 bg-[#0D6E56] hover:bg-[#0D6E56]/90 text-white rounded-xl uppercase tracking-wider border-0 cursor-pointer">
-                    Add Formulation
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 7. Quick Action: Add Lab Test */}
-      <AnimatePresence>
-        {showAddLabTestModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-premium border border-slate-100 text-left"
-            >
-              <div className="bg-[#0D6E56] p-4 text-white flex justify-between items-center">
-                <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <FiPlusCircle /> Create Lab Test Panel
-                </h3>
-                <button onClick={() => setShowAddLabTestModal(false)} className="text-white hover:opacity-80 border-0 bg-transparent cursor-pointer">
-                  <FiX className="text-lg" />
-                </button>
-              </div>
-
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setShowAddLabTestModal(false);
-                  triggerToast('Lab test panel created and added to clinical listings.');
-                }}
-                className="p-5 flex flex-col gap-3 text-xs font-bold text-slate-650"
-              >
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-slate-400 uppercase">Test Package Name</label>
-                  <input required type="text" placeholder="e.g. Basic Blood Screen" className="px-3 py-2 border rounded-xl outline-none" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-slate-400 uppercase">Instructions</label>
-                  <input required type="text" placeholder="e.g. 12 hrs fasting required" className="px-3 py-2 border rounded-xl outline-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">MRP Price (INR)</label>
-                    <input required type="number" placeholder="MRP Price" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">Report Delivery Time</label>
-                    <input required type="text" placeholder="e.g. Reports in 24 Hrs" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 mt-3 justify-end">
-                  <button type="button" onClick={() => setShowAddLabTestModal(false)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border-0 cursor-pointer">
-                    Cancel
-                  </button>
-                  <button type="submit" className="px-5 py-2.5 bg-[#0D6E56] hover:bg-[#0D6E56]/90 text-white rounded-xl uppercase tracking-wider border-0 cursor-pointer">
-                    Create Test
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 8. Quick Action: Add Doctor */}
-      <AnimatePresence>
-        {showAddDoctorModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-premium border border-slate-100 text-left"
-            >
-              <div className="bg-[#0D6E56] p-4 text-white flex justify-between items-center">
-                <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <FiPlusCircle /> Onboard Doctor/Clinician
-                </h3>
-                <button onClick={() => setShowAddDoctorModal(false)} className="text-white hover:opacity-80 border-0 bg-transparent cursor-pointer">
-                  <FiX className="text-lg" />
-                </button>
-              </div>
-
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setShowAddDoctorModal(false);
-                  triggerToast('Doctor registered successfully in clinician database.');
-                }}
-                className="p-5 flex flex-col gap-3 text-xs font-bold text-slate-655"
-              >
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-slate-400 uppercase">Doctor Full Name</label>
-                  <input required type="text" placeholder="Dr. " className="px-3 py-2 border rounded-xl outline-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">Clinician Specialty</label>
-                    <input required type="text" placeholder="e.g. Pediatrician" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">License / Reg Number</label>
-                    <input required type="text" placeholder="e.g. REG-9831" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">Experience (Years)</label>
-                    <input required type="number" placeholder="Experience" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-slate-400 uppercase">Consultation Fee (INR)</label>
-                    <input required type="number" placeholder="Fee in INR" className="px-3 py-2 border rounded-xl outline-none" />
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 mt-3 justify-end">
-                  <button type="button" onClick={() => setShowAddDoctorModal(false)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border-0 cursor-pointer">
-                    Cancel
-                  </button>
-                  <button type="submit" className="px-5 py-2.5 bg-[#0D6E56] hover:bg-[#0D6E56]/90 text-white rounded-xl uppercase tracking-wider border-0 cursor-pointer">
-                    Onboard Clinician
-                  </button>
-                </div>
-              </form>
             </motion.div>
           </motion.div>
         )}
@@ -1776,12 +1919,12 @@ export default function AdminDashboard() {
           >
             <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-premium text-center flex flex-col items-center gap-4">
               <div className="relative w-16 h-16 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-4 border-slate-100 border-t-[#0D6E56] animate-spin" />
-                <span className="text-[11px] font-black text-[#0D6E56]">{downloadProgress}%</span>
+                <div className="absolute inset-0 rounded-full border-4 border-slate-100 border-t-[#1A7A4A] animate-spin" />
+                <span className="text-[11px] font-black text-[#1A7A4A]">{downloadProgress}%</span>
               </div>
               <div>
-                <h4 className="font-extrabold text-slate-800 text-sm">Generating Clinical Registry PDF...</h4>
-                <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-normal uppercase">
+                <div className="font-extrabold text-slate-800 text-sm">Generating Clinical Registry PDF...</div>
+                <p className="text-[10px] text-slate-450 font-bold mt-1.5 leading-normal uppercase">
                   Compiling clinical logs, vendor payouts, audit trails, and financial growth metrics.
                 </p>
               </div>

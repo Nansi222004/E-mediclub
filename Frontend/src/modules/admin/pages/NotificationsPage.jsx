@@ -19,7 +19,7 @@ export default function NotificationsPage() {
           <FiArrowLeft className="text-lg" />
         </button>
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Notifications Center</h1>
+          <div className="text-xl font-extrabold text-slate-800 leading-none">Notifications Center</div>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
             Monitor real-time system alerts, transactions, and audit logs.
           </p>

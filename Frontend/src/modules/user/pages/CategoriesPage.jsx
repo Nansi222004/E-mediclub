@@ -55,7 +55,7 @@ export default function CategoriesPage() {
   const [showReviewModal, setShowReviewModal] = useState(false);
 
   // Selectors
-  const { medicines, selectedCategory, selectedLocation, location: locationState, isPrescriptionFilterActive, orders = [] } = useSelector(state => state.products);
+  const { medicines, selectedCategory, selectedLocation, location: locationState, isPrescriptionFilterActive, orders = [], isLoading } = useSelector(state => state.products);
   const { isAuthenticated } = useSelector(state => state.auth || {});
 
   const [showLocationPopup, setShowLocationPopup] = useState(false);
@@ -184,9 +184,20 @@ export default function CategoriesPage() {
 
   const hasNoResultsForCity = (pincode || city) && medicinesInCity.length === 0;
 
-  const baseMedicines = ((pincode || city) && !hasNoResultsForCity && !isBrowsingAll)
+  const rawBaseMedicines = ((pincode || city) && !hasNoResultsForCity && !isBrowsingAll)
     ? medicinesInCity
     : medicines;
+
+  // Defensive deduplication to ensure absolutely no repeated data on the page
+  const baseMedicines = React.useMemo(() => {
+    const unique = new Map();
+    rawBaseMedicines.forEach(med => {
+      if (!unique.has(med.name)) {
+        unique.set(med.name, med);
+      }
+    });
+    return Array.from(unique.values());
+  }, [rawBaseMedicines]);
 
   // Dynamic brands list derived from current listing medicines
   const uniqueBrands = React.useMemo(() => {
@@ -604,24 +615,35 @@ export default function CategoriesPage() {
          filters.availability === 'All' && (
           <div className="flex flex-col gap-4 select-none my-1 animate-fade-in">
             {/* Prescription Upload Banner inside Medicines Section */}
-            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-100 rounded-3xl p-4.5 flex items-center justify-between gap-4 shadow-sm select-none">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-teal/10 flex items-center justify-center text-teal">
-                  <FiUploadCloud className="w-5.5 h-5.5" />
+            <div 
+              onClick={() => setShowUploadModal(true)}
+              className="bg-gradient-to-r from-teal-50 to-emerald-50 border-2 border-teal-200 hover:border-teal-400 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row items-center md:justify-between gap-4 shadow-md hover:shadow-lg cursor-pointer transition-all w-full select-none transform active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="w-14 h-14 md:w-16 md:h-16 shrink-0 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 shadow-inner">
+                  <FiUploadCloud className="w-7 h-7 md:w-8 md:h-8" />
                 </div>
-                <div className="text-left">
-                  <h3 className="text-xs md:text-sm font-black text-slate-805">Order with Prescription</h3>
-                  <p className="text-[10px] md:text-xs text-slate-500 font-semibold leading-normal">
+                <div className="text-left flex-1">
+                  <h3 className="text-base md:text-lg font-black text-slate-800">📋 Got a prescription? Upload now!</h3>
+                  <p className="text-xs md:text-sm text-slate-600 font-bold mt-1">
                     Upload prescription and we will map the medicines for you.
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="px-4 py-2 bg-teal hover:bg-teal-dark text-white font-extrabold text-[10px] md:text-xs uppercase tracking-wider rounded-xl cursor-pointer shadow-sm border-0 transition-colors shrink-0"
-              >
-                Upload Rx
-              </button>
+              <div className="flex items-center gap-3 w-full md:w-auto justify-end mt-2 md:mt-0">
+                <div className="text-teal-600 font-black text-xl animate-pulse flex items-center justify-center hidden md:flex">
+                  →
+                </div>
+                <div className="text-teal-600 font-black text-xl animate-pulse flex items-center justify-center md:hidden">
+                  ↓
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowUploadModal(true); }}
+                  className="px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs md:text-sm uppercase tracking-widest rounded-2xl cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.5)] border-0 transition-all w-full md:w-auto animate-pulse-subtle"
+                >
+                  Upload Rx
+                </button>
+              </div>
             </div>
             {[
               {
@@ -710,7 +732,18 @@ export default function CategoriesPage() {
           </div>
         </div>
 
-        {medicines.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <div key={i} className="animate-pulse bg-white border border-slate-100 rounded-[20px] p-4 flex flex-col gap-3 min-h-[220px]">
+                <div className="w-full h-[100px] bg-slate-100 rounded-xl" />
+                <div className="w-3/4 h-3 bg-slate-100 rounded-full" />
+                <div className="w-1/2 h-3 bg-slate-100 rounded-full" />
+                <div className="mt-auto w-1/3 h-4 bg-slate-100 rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : medicines.length === 0 ? (
           <div className="bg-white rounded-3xl p-16 text-center border border-slate-100 shadow-premium flex flex-col items-center gap-4.5 select-none">
             <span className="text-5xl animate-pulse font-black">📦</span>
             <h4 className="font-black text-slate-805 text-sm">No Medicines Found in {locationState?.city || 'this area'}</h4>
@@ -733,7 +766,7 @@ export default function CategoriesPage() {
             </div>
           </div>
         ) : prioritizedFilteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 transition-opacity duration-300 ease-in-out opacity-100">
             {prioritizedFilteredProducts.map((med) => (
               <ProductCard key={med.id || med._id} product={med} />
             ))}

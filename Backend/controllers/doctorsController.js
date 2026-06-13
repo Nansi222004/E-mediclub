@@ -27,6 +27,8 @@ const getDoctors = async (req, res, next) => {
           docObj.city = city ? city.trim() : (docObj.city || 'Delhi');
           docObj.state = docObj.state || 'Delhi';
           docObj.address = `${docObj.city} General Hospital, ${docObj.city}`;
+          docObj.hospital = `${docObj.city} City Hospital`;
+          docObj.bio = `${docObj.name} is a dedicated ${docObj.specialty} specialist in ${docObj.city}.`;
           return docObj;
         });
       }

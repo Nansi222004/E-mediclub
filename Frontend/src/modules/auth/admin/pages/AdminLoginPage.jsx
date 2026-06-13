@@ -8,6 +8,7 @@ import PasswordInput from '../components/PasswordInput';
 import LoadingButton from '../components/LoadingButton';
 import { adminLoginStart, adminLoginFailure, adminSendOtpSuccess } from '../store/adminAuthSlice';
 import { FiMail, FiCheckCircle, FiShield } from 'react-icons/fi';
+import apiClient from '../../../../shared/services/apiClient';
 
 export default function AdminLoginPage() {
   const dispatch = useDispatch();
@@ -53,24 +54,35 @@ export default function AdminLoginPage() {
     return isValid;
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!handleValidation()) return;
 
     dispatch(adminLoginStart());
 
-    // Simulate API delay
-    setTimeout(() => {
-      // Check dummy admin credentials
-      if (email === "admin@emediclub.com" && password === "Admin@123") {
-        // Redirection to OTP two-factor verification
-        dispatch(adminSendOtpSuccess(email));
-        navigate('/admin/verify-otp');
-      } else {
-        dispatch(adminLoginFailure("Invalid administrator email or password"));
-        setGeneralError("Invalid administrator credentials (Email: admin@emediclub.com, Pass: Admin@123)");
+    try {
+      // Map the dummy frontend credential 'Admin@123' to seeded DB password 'admin123'
+      const loginPassword = password === 'Admin@123' ? 'admin123' : password;
+      const response = await apiClient.post('/api/auth/login', {
+        email,
+        password: loginPassword
+      });
+
+      const { accessToken, user } = response.data.data;
+
+      if (user.role !== 'admin') {
+        dispatch(adminLoginFailure("Access denied: Not an administrator"));
+        setGeneralError("Access denied: Not an administrator");
+        return;
       }
-    }, 1200);
+
+      dispatch(adminSendOtpSuccess({ email, tempToken: accessToken, tempUser: user }));
+      navigate('/admin/verify-otp');
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Invalid administrator credentials";
+      dispatch(adminLoginFailure(errMsg));
+      setGeneralError(errMsg);
+    }
   };
 
   return (
@@ -80,7 +92,7 @@ export default function AdminLoginPage() {
         {/* Title branding */}
         <div>
           <h2 className="text-xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-            <FiShield className="text-teal" /> Super Admin Portal
+            <FiShield className="text-teal" /> Admin Portal
           </h2>
           <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">
             Sign in to access your administrative workspace.

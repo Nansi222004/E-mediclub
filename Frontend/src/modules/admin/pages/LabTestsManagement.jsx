@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addNewLabTest, deleteLabTest, editLabTest } from '../../user/store/productSlice';
 import { 
@@ -7,10 +8,26 @@ import {
   FiFilter, FiDollarSign, FiClock, FiAlertTriangle, 
   FiCheck, FiX, FiCheckCircle, FiShield
 } from 'react-icons/fi';
+import LocationFilter from '../components/LocationFilter';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import { useAdminLocation } from '../context/AdminLocationContext';
+import apiClient from '../../../shared/services/apiClient';
+import { buildApiUrl } from '../utils/adminQueryHelper';
 
-export default function LabTestsManagement() {
+export default function LabTestsManagement({ autoOpenAdd = false }) {
   const dispatch = useDispatch();
-  const { labTests, labCategories, labs } = useSelector(state => state.products);
+  const { labCategories, labs } = useSelector(state => state.products);
+  const [labTestsList, setLabTestsList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { locationFilter, isFiltered } = useAdminLocation();
+  const [searchParams] = useSearchParams();
+
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
+  const timeframe = searchParams.get('timeframe') || 'month';
 
   // Search & Filter local states
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,8 +36,24 @@ export default function LabTestsManagement() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
 
+  useEffect(() => {
+    const fetchTests = async () => {
+      setLoading(true);
+      try {
+        const url = buildApiUrl('/api/admin/lab-tests', locationFilter, timeframe);
+        const res = await apiClient.get(url);
+        setLabTestsList(res.data.data || []);
+      } catch (err) {
+        console.error('Error fetching lab tests:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTests();
+  }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
+
   // Modal States
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(autoOpenAdd);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
@@ -51,26 +84,28 @@ export default function LabTestsManagement() {
   };
 
   // Filter Logic
-  const filteredTests = labTests.filter(test => {
-    const matchesSearch = test.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLab = selectedLab === "all" ? true : (test.labName === selectedLab || test.labId === selectedLab);
-    const matchesNabl = selectedNabl === "all" ? true :
-                        selectedNabl === "yes" ? isNablCertified(test) === true :
-                        selectedNabl === "no" ? isNablCertified(test) === false : true;
-    const matchesCategory = selectedCategory === "all" ? true : test.category === selectedCategory;
-    
-    const priceVal = test.discountPrice || test.price;
-    const matchesPrice = selectedPriceRange === "all" ? true :
-                         selectedPriceRange === "under500" ? priceVal < 500 :
-                         selectedPriceRange === "500to1000" ? (priceVal >= 500 && priceVal <= 1000) :
-                         selectedPriceRange === "1000to2000" ? (priceVal >= 1000 && priceVal <= 2000) :
-                         selectedPriceRange === "over2000" ? priceVal > 2000 : true;
+  const filteredTests = useMemo(() => {
+    return labTestsList.filter(test => {
+      const matchesSearch = test.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesLab = selectedLab === "all" ? true : (test.labName === selectedLab || test.labId === selectedLab);
+      const matchesNabl = selectedNabl === "all" ? true :
+                          selectedNabl === "yes" ? isNablCertified(test) === true :
+                          selectedNabl === "no" ? isNablCertified(test) === false : true;
+      const matchesCategory = selectedCategory === "all" ? true : test.category === selectedCategory;
+      
+      const priceVal = test.discountPrice || test.price;
+      const matchesPrice = selectedPriceRange === "all" ? true :
+                           selectedPriceRange === "under500" ? priceVal < 500 :
+                           selectedPriceRange === "500to1000" ? (priceVal >= 500 && priceVal <= 1000) :
+                           selectedPriceRange === "1000to2000" ? (priceVal >= 1000 && priceVal <= 2000) :
+                           selectedPriceRange === "over2000" ? priceVal > 2000 : true;
 
-    return matchesSearch && matchesLab && matchesNabl && matchesCategory && matchesPrice;
-  });
+      return matchesSearch && matchesLab && matchesNabl && matchesCategory && matchesPrice;
+    });
+  }, [labTestsList, searchQuery, selectedLab, selectedNabl, selectedCategory, selectedPriceRange]);
 
   // Extract unique lab list for filter
-  const uniqueLabs = Array.from(new Set(labTests.map(t => t.labName).filter(Boolean)));
+  const uniqueLabs = Array.from(new Set(labTestsList.map(t => t.labName).filter(Boolean)));
 
   // Handle Add Form Submission
   const handleAddSubmit = (e) => {
@@ -164,7 +199,7 @@ export default function LabTestsManagement() {
       {/* Page Header */}
       <div className="flex flex-row items-center justify-between gap-2 border-b border-slate-100 pb-2 shrink-0">
         <div>
-          <h1 className="text-base font-extrabold text-slate-800 leading-none">Diagnostic Catalog Directory</h1>
+          <div className="text-base font-extrabold text-slate-800 leading-none">Diagnostic Catalog Directory</div>
           <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider leading-tight">
             Browse and manage diagnostic checkup panels, parameter counts, pricing structures, and test preps.
           </p>
@@ -177,6 +212,10 @@ export default function LabTestsManagement() {
           <span>Add Lab Test</span>
         </button>
       </div>
+
+      {/* Location Filter Bar */}
+      <LocationFilter />
+      <LocationBanner />
 
       {/* Filter Deck */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 bg-white p-3 rounded-2xl border border-slate-100 shadow-premium shrink-0">
@@ -257,7 +296,25 @@ export default function LabTestsManagement() {
 
       {/* Main Listings */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
-        {filteredTests.length > 0 ? (
+        {loading ? (
+          <div className="admin-skeleton-grid">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="admin-skeleton-card" />
+            ))}
+          </div>
+        ) : isFiltered && labTestsList.length === 0 ? (
+          <LocationEmptyState 
+            locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ')}
+            hasVendors={false}
+            hasOrders={false}
+          />
+        ) : !isFiltered && labTestsList.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[300px]">
+            <span className="text-3xl mb-3">🔬</span>
+            <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Lab Tests Yet</div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no diagnostic test packages registered in the system yet.</p>
+          </div>
+        ) : filteredTests.length > 0 ? (
           <>
             {/* Desktop Table View */}
             <div className="hidden md:block bg-white border border-slate-100 rounded-3xl shadow-premium overflow-hidden">
@@ -380,7 +437,7 @@ export default function LabTestsManagement() {
                   <div key={test.id} className="bg-white border border-slate-100 p-4.5 rounded-[24px] shadow-premium flex flex-col gap-3.5 hover-lift">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
-                        <h3 className="font-extrabold text-slate-800 text-sm leading-tight truncate">{test.name}</h3>
+                        <div className="font-extrabold text-slate-800 text-sm leading-tight truncate">{test.name}</div>
                         <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 truncate">🏢 {test.labName}</p>
                       </div>
                       <div>
@@ -462,7 +519,7 @@ export default function LabTestsManagement() {
               className="bg-white rounded-[32px] border border-slate-100 shadow-premium max-w-lg w-full p-6 sm:p-8 z-20 relative overflow-y-auto max-h-[90vh]"
             >
               <div className="flex items-center justify-between border-b border-slate-100 pb-4.5 mb-5">
-                <h2 className="text-base font-black text-slate-800 uppercase tracking-wider leading-none">Add New Diagnostic Test</h2>
+                <div className="text-base font-black text-slate-800 uppercase tracking-wider leading-none">Add New Diagnostic Test</div>
                 <button 
                   onClick={() => setShowAddModal(false)}
                   className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700"
@@ -621,7 +678,7 @@ export default function LabTestsManagement() {
               className="bg-white rounded-[32px] border border-slate-100 shadow-premium max-w-lg w-full p-6 sm:p-8 z-20 relative overflow-y-auto max-h-[90vh]"
             >
               <div className="flex items-center justify-between border-b border-slate-100 pb-4.5 mb-5">
-                <h2 className="text-base font-black text-slate-800 uppercase tracking-wider leading-none">Modify Diagnostic Test</h2>
+                <div className="text-base font-black text-slate-800 uppercase tracking-wider leading-none">Modify Diagnostic Test</div>
                 <button 
                   onClick={() => setShowEditModal(false)}
                   className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700"
@@ -775,7 +832,7 @@ export default function LabTestsManagement() {
               <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
                 <div>
                   <span className="text-[8px] font-black bg-teal-light text-teal px-2 py-0.5 rounded-full uppercase tracking-wider">{testToView.category}</span>
-                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1">{testToView.name}</h2>
+                  <div className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1">{testToView.name}</div>
                 </div>
                 <button 
                   onClick={() => setShowViewModal(false)}
@@ -883,9 +940,9 @@ export default function LabTestsManagement() {
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
                 <FiTrash2 className="text-xl" />
               </div>
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-wider mb-2 text-center">
+              <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2 text-center">
                 Delete Test Package?
-              </h3>
+              </div>
               <p className="text-2xs text-slate-400 font-bold uppercase tracking-wider mb-6 leading-relaxed text-center">
                 Are you sure you want to permanently delete <strong className="text-slate-600">{testToDelete.name}</strong>?
               </p>

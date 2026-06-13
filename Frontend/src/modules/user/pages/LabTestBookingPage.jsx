@@ -4,9 +4,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiFileText, 
-  FiUploadCloud, FiTrash2, FiShield, FiUser, FiInfo, FiActivity, FiMapPin, FiCreditCard
+  FiUploadCloud, FiTrash2, FiShield, FiUser, FiInfo, FiActivity, FiMapPin, FiCreditCard, FiAlertCircle
 } from 'react-icons/fi';
-import { bookLabPackage } from '../store/productSlice';
+import { bookLabPackage, normalizeCity } from '../store/productSlice';
+import apiClient from '../../shared/services/apiClient';
 
 export default function LabTestBookingPage() {
   const { testId } = useParams();
@@ -14,9 +15,20 @@ export default function LabTestBookingPage() {
   const dispatch = useDispatch();
 
   // Selectors
-  const { labTests, labs = [] } = useSelector(state => state.products);
+  const { labTests, labs = [], location: locationState } = useSelector(state => state.products);
   const { addresses = [], isAuthenticated } = useSelector(state => state.auth);
   const test = labTests.find(t => t.id === testId);
+
+  const city = locationState?.city ? normalizeCity(locationState.city) : '';
+
+  const localAddresses = React.useMemo(() => {
+    if (!city) return addresses;
+    return addresses.filter(addr => {
+      const addrCity = normalizeCity(addr.city).toLowerCase();
+      const currentCityLower = city.toLowerCase();
+      return addrCity === currentCityLower || addrCity.includes(currentCityLower.split(',')[0]) || currentCityLower.includes(addrCity.split(',')[0]);
+    });
+  }, [addresses, city]);
 
   // Booking Flow Steps: 
   // 1: Review Test details
@@ -186,14 +198,12 @@ export default function LabTestBookingPage() {
   };
 
   // Commit booking *after* payment success
-  const handleProcessPayment = (e) => {
+  const handleProcessPayment = async (e) => {
     e.preventDefault();
     setValidationError('');
     setIsPaying(true);
 
-    setTimeout(() => {
-      setIsPaying(false);
-      
+    try {
       const bookingRef = `LBB-${Date.now().toString().slice(-5)}`;
       setGeneratedRefId(bookingRef);
 
@@ -207,6 +217,22 @@ export default function LabTestBookingPage() {
       }
 
       const associatedLab = labs.find(l => l.id === test.labId || l.name === test.labName);
+      
+      const formData = new FormData();
+      formData.append('id', bookingRef);
+      formData.append('packageName', test.name);
+      formData.append('address', selectedAddrStr);
+      formData.append('price', test.discountPrice || test.price);
+      formData.append('date', preferredDate);
+      formData.append('city', associatedLab ? associatedLab.city : '');
+      formData.append('pincode', associatedLab ? associatedLab.pincode : '');
+      formData.append('state', associatedLab ? associatedLab.state : '');
+
+      if (prescriptionFile) {
+        formData.append('file', prescriptionFile);
+      }
+
+      // We still update Redux for optimistic local state or other components relying on it
       const newBooking = {
         id: bookingRef,
         testId: test.id,
@@ -222,7 +248,7 @@ export default function LabTestBookingPage() {
         doctorRegNo: doctorRegNo.trim() || 'N/A',
         hasPrescription: !!prescriptionFile,
         prescriptionFileName: prescriptionFile ? prescriptionFile.name : null,
-        status: 'Scheduled', // Automatically confirmed after payment
+        status: 'Scheduled',
         paymentMethod: paymentMethod,
         paymentStatus: 'Paid',
         amountPaid: test.discountPrice || test.price,
@@ -230,9 +256,25 @@ export default function LabTestBookingPage() {
         pincode: associatedLab ? associatedLab.pincode : ''
       };
 
+      const response = await apiClient.post('/api/labs/book', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // If the backend returns a reportUrl, we can add it to the Redux state
+      if (response.data?.data?.reportUrl) {
+        newBooking.reportUrl = response.data.data.reportUrl;
+      }
+
       dispatch(bookLabPackage(newBooking));
+      setIsPaying(false);
       setCurrentStep(6);
-    }, 2000);
+    } catch (error) {
+      console.error('Failed to book lab test:', error);
+      setIsPaying(false);
+      alert('Failed to process booking. Please try again.');
+    }
   };
 
   const renderProgressSteps = () => {
@@ -468,11 +510,11 @@ export default function LabTestBookingPage() {
             {test.homeCollection ? (
               <div className="flex flex-col gap-4">
                 {/* 1. Saved Addresses (Active if authenticated) */}
-                {isAuthenticated && addresses.length > 0 ? (
+                {isAuthenticated && localAddresses.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Select Saved Address</label>
                     <div className="grid grid-cols-1 gap-2.5">
-                      {addresses.map((addr) => (
+                      {localAddresses.map((addr) => (
                         <button
                           key={addr.id}
                           type="button"
@@ -497,7 +539,7 @@ export default function LabTestBookingPage() {
                 {/* 2. Custom Address Textbox */}
                 <div className="flex flex-col gap-2 border-t border-slate-50 pt-4">
                   <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
-                    {isAuthenticated && addresses.length > 0 ? 'Or Enter New Address' : 'Enter Collection Address'}
+                    {isAuthenticated && localAddresses.length > 0 ? 'Or Enter New Address' : 'Enter Collection Address'}
                   </label>
                   <textarea
                     rows="3"

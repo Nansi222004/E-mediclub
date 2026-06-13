@@ -12,8 +12,8 @@ import AnimatedBanner from '../components/AnimatedBanner';
 import PrescriptionUpload from '../components/PrescriptionUpload';
 import LocationSelectorModal, { getStateAbbreviation } from '../components/LocationSelectorModal';
 import { logout } from '../../modules/auth/store/authSlice';
-import { setSelectedLocation, setLocation, setSearchTerm, setPrescriptionFilterActive, fetchDoctors, fetchLabs, fetchProducts } from '../../modules/user/store/productSlice';
-import { updateQuantity, removeFromCart } from '../../modules/user/store/cartSlice';
+import { setSelectedLocation, setLocation, setSearchTerm, setPrescriptionFilterActive, fetchDoctors, fetchLabs, fetchProducts, clearCityData } from '../../modules/user/store/productSlice';
+import { updateQuantity, removeFromCart, clearCart } from '../../modules/user/store/cartSlice';
 
 const getPageTitle = (pathname) => {
   if (pathname.startsWith('/medicines') || pathname.startsWith('/categories')) return 'Medicines';
@@ -213,6 +213,8 @@ export default function MainLayout() {
 
   // Fetch doctors, labs, and products on mount or when location changes
   useEffect(() => {
+    dispatch(clearCityData());
+    dispatch(clearCart());
     const params = {};
     if (locationState?.pincode) {
       params.pincode = locationState.pincode;

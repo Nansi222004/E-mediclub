@@ -1,16 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ReusableTable from '../components/ReusableTable';
 import { deleteMedicine } from '../../user/store/productSlice';
 import { FiPackage, FiTrash2, FiSearch, FiFilter } from 'react-icons/fi';
+import LocationFilter from '../components/LocationFilter';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import { useAdminLocation } from '../context/AdminLocationContext';
+import apiClient from '../../../shared/services/apiClient';
+import { buildApiUrl } from '../utils/adminQueryHelper';
 
 export default function MedicinesPage() {
   const dispatch = useDispatch();
-  const { medicines, medicineCategories } = useSelector(state => state.products);
+  const { medicineCategories } = useSelector(state => state.products);
+  const { locationFilter, isFiltered } = useAdminLocation();
+  const [medicinesList, setMedicinesList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
+  const timeframe = searchParams.get('timeframe') || 'month';
+
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      setLoading(true);
+      try {
+        const url = buildApiUrl('/api/admin/medicines', locationFilter, timeframe);
+        const res = await apiClient.get(url);
+        setMedicinesList(res.data.data || []);
+      } catch (err) {
+        console.error('Error fetching medicines:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMedicines();
+  }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
 
   const handleDelete = (id) => {
     dispatch(deleteMedicine(id));
+    setMedicinesList(prev => prev.filter(m => m.id !== id && m._id !== id));
   };
 
   // Define ReusableTable Columns
@@ -75,7 +109,7 @@ export default function MedicinesPage() {
 
   const tableActions = (row) => (
     <button
-      onClick={() => handleDelete(row.id)}
+      onClick={() => handleDelete(row._id || row.id)}
       className="p-2 bg-coral-light/40 hover:bg-coral-light text-coral rounded-xl transition-all cursor-pointer tap-scale"
       title="Delete Product"
     >
@@ -89,24 +123,48 @@ export default function MedicinesPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Medicines Directory</h1>
-          <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
+          <div className="admin-page-title">Medicines Directory</div>
+          <p className="admin-page-subtitle mt-2">
             Browse and manage all registered pharmaceutical formulations, stocks, and pricing details.
           </p>
         </div>
       </div>
 
-      {/* Main Listing View (Table for Desktop / Cards for Mobile handled inside ReusableTable implicitly or here) */}
+      {/* Location Filter Bar */}
+      <LocationFilter />
+      <LocationBanner />
+
+      {/* Main Listing View */}
       <div className="flex-1">
-        <ReusableTable 
-          columns={columns}
-          data={medicines}
-          searchPlaceholder="Search medicines by name or composition..."
-          searchKey="name"
-          filterOptions={{ key: 'category', label: 'Therapy Class', options: medicineCategories }}
-          actions={tableActions}
-          fileName="emediclub-medicines-listings"
-        />
+        {loading ? (
+          <div className="admin-skeleton-grid">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="admin-skeleton-card" />
+            ))}
+          </div>
+        ) : isFiltered && medicinesList.length === 0 ? (
+          <LocationEmptyState 
+            locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ')}
+            hasVendors={false}
+            hasOrders={false}
+          />
+        ) : !isFiltered && medicinesList.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[300px]">
+            <span className="text-3xl mb-3">💊</span>
+            <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Medicines Yet</div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no medicines registered in the system yet.</p>
+          </div>
+        ) : (
+          <ReusableTable 
+            columns={columns}
+            data={medicinesList}
+            searchPlaceholder="Search medicines by name or composition..."
+            searchKey="name"
+            filterOptions={{ key: 'category', label: 'Therapy Class', options: medicineCategories }}
+            actions={tableActions}
+            fileName="emediclub-medicines-listings"
+          />
+        )}
       </div>
 
     </div>

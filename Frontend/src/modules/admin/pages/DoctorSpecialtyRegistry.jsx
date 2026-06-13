@@ -104,7 +104,7 @@ export default function DoctorSpecialtyRegistry() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Specialty & Doctor Registry</h1>
+          <div className="text-xl font-extrabold text-slate-800 leading-none">Specialty & Doctor Registry</div>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
             Register and audit physician specialities, consult classes, and register clinical practitioners.
           </p>
@@ -125,9 +125,9 @@ export default function DoctorSpecialtyRegistry() {
         {/* Left list: registered Specialties */}
         <div className="md:col-span-2 bg-white border border-slate-100 p-6 rounded-3xl shadow-premium">
           <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-2">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+            <div className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
               <FiGrid className="text-teal" /> Registered Clinical Specialities
-            </h3>
+            </div>
             <span className="text-[10px] text-slate-400 font-bold uppercase">{doctorSpecialties.length} specialities</span>
           </div>
 
@@ -149,9 +149,9 @@ export default function DoctorSpecialtyRegistry() {
 
         {/* Right column: Add New Specialty */}
         <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium">
-          <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3">
+          <div className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3">
             Add Specialty Core
-          </h3>
+          </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-2 mb-4">
             Register a new physician category.
           </p>
@@ -200,9 +200,9 @@ export default function DoctorSpecialtyRegistry() {
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-150 shrink-0">
                 <div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                  <div className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
                     <FiUser className="text-teal" /> Register New Practitioner
-                  </h3>
+                  </div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">
                     Add certified physician credentials, fees, and schedule.
                   </p>

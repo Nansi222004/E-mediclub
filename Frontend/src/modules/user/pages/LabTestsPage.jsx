@@ -19,7 +19,7 @@ export default function LabTestsPage() {
   const dispatch = useDispatch();
 
   // Redux Selectors
-  const { labTests, labBookings, labs = [], doctors = [], location: locationState } = useSelector(state => state.products);
+  const { labTests, labBookings, labs = [], doctors = [], location: locationState, isLoading } = useSelector(state => state.products);
   const { user, isAuthenticated } = useSelector(state => state.auth || {});
   const globalSearchTerm = useSelector(state => state.products.searchTerm);
 
@@ -148,7 +148,7 @@ export default function LabTestsPage() {
   const [filterPriceLimit, setFilterPriceLimit] = useState(3000);
   const [filterLab, setFilterLab] = useState('All');
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
 
   // Scroll to top when lab provider filter changes
   useEffect(() => {
@@ -158,14 +158,7 @@ export default function LabTestsPage() {
     });
   }, [filterLab]);
 
-  // Trigger loading skeleton on filter change
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery, filterHomeCollection, filterFastReport, filterPriceLimit, filterLab]);
+  // Removed artificial loading skeleton to prevent screen flickering during filter changes
 
 
 
@@ -183,12 +176,21 @@ export default function LabTestsPage() {
 
   const hasNoResultsForCity = (pincode || city) && labsInCity.length === 0;
 
-  const baseLabs = (pincode || city) && labsInCity.length > 0
+  const rawBaseLabs = (pincode || city) && labsInCity.length > 0
     ? labsInCity
     : labs;
 
-  // Filter tests list
-  const filteredTests = labTests.filter(test => {
+  const baseLabs = React.useMemo(() => {
+    const unique = new Map();
+    rawBaseLabs.forEach(lab => {
+      if (!unique.has(lab.name)) {
+        unique.set(lab.name, lab);
+      }
+    });
+    return Array.from(unique.values());
+  }, [rawBaseLabs]);
+
+  const rawFilteredTests = labTests.filter(test => {
     // Check if test's lab exists in the current city's labs list
     const isLabInCity = isBrowsingAll || !city || baseLabs.some(l => 
       l.name.toLowerCase().includes(test.labName.toLowerCase()) || 
@@ -218,6 +220,16 @@ export default function LabTestsPage() {
 
     return matchesSearch && matchesHomeCollection && matchesFastReport && matchesPrice && matchesLab;
   });
+
+  const filteredTests = React.useMemo(() => {
+    const unique = new Map();
+    rawFilteredTests.forEach(test => {
+      if (!unique.has(test.name)) {
+        unique.set(test.name, test);
+      }
+    });
+    return Array.from(unique.values());
+  }, [rawFilteredTests]);
 
   const labsScrollRef = useRef(null);
 
@@ -609,7 +621,7 @@ export default function LabTestsPage() {
                     </div>
                     <div className="col-span-2 flex flex-col gap-0.5">
                       <span className="text-[10px] text-slate-400 font-bold uppercase">Sample Collection Address</span>
-                      <span className="font-semibold text-slate-750">{selectedBookingDetails.address || 'Home (Mumbai)'}</span>
+                      <span className="font-semibold text-slate-750">{selectedBookingDetails.address || `Home (${selectedBookingDetails.city || 'Mumbai'})`}</span>
                     </div>
                   </div>
                 </div>

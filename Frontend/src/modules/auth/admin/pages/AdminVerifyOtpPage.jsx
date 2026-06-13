@@ -12,6 +12,8 @@ export default function AdminVerifyOtpPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const { tempUser, tempToken } = useSelector(state => state.adminAuth || {});
+
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,15 +39,18 @@ export default function AdminVerifyOtpPage() {
       setLoading(false);
       
       if (code === "1234") {
-        const mockAdminUser = {
+        const adminUser = tempUser || {
           name: 'Super Admin',
           email: 'admin@emediclub.com',
           role: 'admin',
           phone: '9999999999'
         };
-        const mockToken = `MOCK-ADMIN-JWT-${Date.now()}`;
+        const token = tempToken || `MOCK-ADMIN-JWT-${Date.now()}`;
         
-        dispatch(adminVerifyOtpSuccess({ user: mockAdminUser, token: mockToken }));
+        dispatch(adminVerifyOtpSuccess({ user: adminUser, token }));
+
+        localStorage.setItem("em_admin_user", JSON.stringify(adminUser));
+        localStorage.setItem("em_admin_token", token);
         
         // Dynamic route check: if they have a tempEmail, they might be in recovery, otherwise dashboard
         navigate('/admin/dashboard');

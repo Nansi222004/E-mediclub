@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useDispatch } from 'react-redux';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { useAdminLocation } from '../context/AdminLocationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   approveVendor, 
@@ -12,16 +14,55 @@ import {
   FiPercent, FiEye, FiTrash2, FiClock, FiDownload, 
   FiSearch, FiFilter, FiDollarSign, FiCreditCard, FiAlertTriangle, FiArrowLeft
 } from 'react-icons/fi';
+import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import apiClient from '../../../shared/services/apiClient';
+import { buildApiUrl } from '../utils/adminQueryHelper';
 
 export default function VendorManagement() {
   const dispatch = useDispatch();
-  const { vendors } = useSelector(state => state.admin);
+  const location = useLocation();
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const { locationFilter, isFiltered, getQueryString } = useAdminLocation();
+
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
+  const timeframe = searchParams.get('timeframe') || '';
+
+  useEffect(() => {
+    const fetchVendors = async () => {
+      setLoading(true);
+      try {
+        const url = buildApiUrl('/api/admin/vendors', locationFilter, timeframe);
+        const res = await apiClient.get(url);
+        setVendors(res.data.data || []);
+      } catch (err) {
+        console.error('Error fetching vendors:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVendors();
+  }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
+
+  const roleParam = searchParams.get('role') || searchParams.get('type') || 'all';
+  const kycParam = searchParams.get('kyc') || searchParams.get('filter') || 'all';
 
   // Search & Filter local states
   const [searchQuery, setSearchQuery] = useState("");
   const [filterLicense, setFilterLicense] = useState("all");
-  const [filterKyc, setFilterKyc] = useState("all");
-  const [filterType, setFilterType] = useState("all");
+  const [filterKyc, setFilterKyc] = useState(kycParam);
+  const [filterType, setFilterType] = useState(roleParam);
+
+  useEffect(() => {
+    setFilterType(roleParam);
+    setFilterKyc(kycParam);
+  }, [roleParam, kycParam]);
 
   // Selection state for full-page details view
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -108,14 +149,14 @@ export default function VendorManagement() {
     const csvContent = [
       headers.join(','),
       ...vendors.map(v => [
-        `"${v.name}"`,
-        `"${v.email}"`,
-        `"${v.storeName}"`,
-        v.status.toUpperCase(),
-        v.kyc.toUpperCase(),
-        v.earnings,
-        v.commissionRate,
-        v.joinedDate
+        `"${v.name || ''}"`,
+        `"${v.email || ''}"`,
+        `"${v.storeName || ''}"`,
+        (v.status || 'pending').toUpperCase(),
+        (v.kyc || 'pending').toUpperCase(),
+        v.earnings || 0,
+        v.commissionRate || 10,
+        v.joinedDate || ''
       ].join(','))
     ].join('\n');
 
@@ -130,20 +171,54 @@ export default function VendorManagement() {
   };
 
   // Process search and status filters
-  const filteredVendors = vendors.filter(v => {
-    const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          v.storeName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          v.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLicense = filterLicense === "all" ? true : 
-                           filterLicense === "awaiting" ? v.status === "pending" : 
-                           v.status === filterLicense;
-    const matchesKyc = filterKyc === "all" ? true : v.kyc === filterKyc;
-    const matchesType = filterType === "all" ? true :
-                        filterType === "pharmacy" ? (v.role === "pharmacy_vendor" || v.role === "vendor" || !v.role) :
-                        filterType === "lab" ? v.role === "lab_vendor" :
-                        filterType === "doctor" ? v.role === "doctor_vendor" : true;
-    return matchesSearch && matchesLicense && matchesKyc && matchesType;
-  });
+  const filteredVendors = useMemo(() => {
+    const vendorCities = {
+      1: 'Mumbai',
+      2: 'Pune',
+      3: 'Delhi',
+      4: 'Bangalore'
+    };
+    const vendorPincodes = {
+      1: ['400001', '400002'],
+      2: ['411001', '411015'],
+      3: ['110001'],
+      4: ['560001', '560008']
+    };
+
+    return vendors.filter(v => {
+      const matchesSearch = (v.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (v.storeName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (v.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesLicense = filterLicense === "all" ? true : 
+                             filterLicense === "awaiting" ? (v.status || 'pending') === "pending" : 
+                             (v.status || 'pending') === filterLicense;
+      const matchesKyc = filterKyc === "all" ? true : (v.kyc || 'pending') === filterKyc;
+      const matchesType = filterType === "all" ? true :
+                          filterType === "pharmacy" ? (v.role === "pharmacy_vendor" || v.role === "vendor" || !v.role) :
+                          filterType === "lab" ? v.role === "lab_vendor" :
+                          filterType === "doctor" ? v.role === "doctor_vendor" : true;
+
+      if (!(matchesSearch && matchesLicense && matchesKyc && matchesType)) return false;
+
+      const city = v.city || vendorCities[v.id] || 'Mumbai';
+      const info = CITY_MAPPINGS[city] || { state: 'Maharashtra' };
+      const state = info.state;
+      const pincodes = vendorPincodes[v.id] || [info.pincode];
+
+      if (stateVal && state !== stateVal) return false;
+      if (cityVal && city !== cityVal) return false;
+      if (pincodeVal && !pincodes.includes(pincodeVal)) return false;
+      if (locationQuery) {
+        const query = locationQuery.toLowerCase();
+        const matchesLocation = state.toLowerCase().includes(query) || 
+                                city.toLowerCase().includes(query) || 
+                                pincodes.some(pin => pin.toLowerCase().includes(query));
+        if (!matchesLocation) return false;
+      }
+
+      return true;
+    });
+  }, [vendors, searchQuery, filterLicense, filterKyc, filterType, stateVal, cityVal, pincodeVal, locationQuery]);
 
   // If details view is active, render the full-page Details View sub-page
   if (selectedVendor) {
@@ -161,7 +236,7 @@ export default function VendorManagement() {
               <FiArrowLeft className="text-lg" />
             </button>
             <div>
-              <h1 className="text-base font-extrabold text-slate-800 leading-none">{selectedVendor.storeName}</h1>
+              <div className="admin-page-title">{selectedVendor.storeName || selectedVendor.name || 'Partner Brand'}</div>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">
                 Merchant Partner Profile & Compliance Documents
               </p>
@@ -181,9 +256,9 @@ export default function VendorManagement() {
             
             {/* Partner Profile Card */}
             <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-premium">
-              <h2 className="text-xs font-black text-slate-850 uppercase tracking-widest border-b border-slate-50 pb-3 mb-4">
+              <div className="admin-section-heading mb-4 border-b border-slate-50 pb-3 uppercase tracking-widest text-xs font-black">
                 Partner Profile
-              </h2>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-xs font-semibold">
                 <div>
                   <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block mb-0.5">Applicant Partner</span>
@@ -206,9 +281,9 @@ export default function VendorManagement() {
 
             {/* Financial Settlements Card */}
             <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-premium">
-              <h2 className="text-xs font-black text-slate-850 uppercase tracking-widest border-b border-slate-50 pb-3 mb-4">
+              <div className="admin-section-heading mb-4 border-b border-slate-50 pb-3 uppercase tracking-widest text-xs font-black">
                 Financials & Commission
-              </h2>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-xs font-semibold">
                 <div>
                   <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block mb-0.5">Bank Partner</span>
@@ -249,9 +324,9 @@ export default function VendorManagement() {
             
             {/* Status & Compliance Sidebar Card */}
             <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-premium">
-              <h2 className="text-xs font-black text-slate-850 uppercase tracking-widest border-b border-slate-50 pb-3 mb-4">
+              <div className="admin-section-heading mb-4 border-b border-slate-50 pb-3 uppercase tracking-widest text-xs font-black">
                 Compliance Status
-              </h2>
+              </div>
               <div className="flex flex-col gap-4 text-xs font-semibold">
                 <div>
                   <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block mb-1">License State</span>
@@ -268,8 +343,8 @@ export default function VendorManagement() {
                 <div>
                   <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block mb-1">KYC Audit</span>
                   <span className="text-slate-750 font-extrabold flex items-center gap-1.5 text-sm">
-                    <FiFileText className={selectedVendor.kyc === 'verified' ? 'text-emerald-500' : 'text-slate-400'} />
-                    {selectedVendor.kyc.toUpperCase()}
+                    <FiFileText className={(selectedVendor.kyc || 'pending') === 'verified' ? 'text-emerald-500' : 'text-slate-400'} />
+                    {(selectedVendor.kyc || 'pending').toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -277,9 +352,9 @@ export default function VendorManagement() {
 
             {/* Document Previews Card */}
             <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-premium flex-1">
-              <h2 className="text-xs font-black text-slate-850 uppercase tracking-widest border-b border-slate-50 pb-3 mb-4">
+              <div className="admin-section-heading mb-4 border-b border-slate-50 pb-3 uppercase tracking-widest text-xs font-black">
                 Compliance Credentials
-              </h2>
+              </div>
               <div className="grid grid-cols-1 gap-3">
                 {selectedVendor.role === 'lab_vendor' ? (
                   <div className="border border-slate-100 rounded-2xl p-4 flex flex-col gap-1 items-center justify-center text-center bg-indigo-50/20">
@@ -368,11 +443,11 @@ export default function VendorManagement() {
                 <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
                   <FiAlertTriangle className="text-xl" />
                 </div>
-                <h3 className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
+                <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
                   Confirm Rejection
-                </h3>
+                </div>
                 <p className="text-2xs text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-3.5 mb-5 leading-relaxed text-center">
-                  You are rejecting the retail drug license request of <strong className="text-slate-600">{vendorToReject.storeName}</strong>.
+                  You are rejecting the retail drug license request of <strong className="text-slate-600">{vendorToReject.storeName || vendorToReject.name || 'Partner Brand'}</strong>.
                 </p>
                 <div className="flex flex-col gap-1 text-left mb-6">
                   <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Reason for Rejection (Optional)</label>
@@ -407,7 +482,7 @@ export default function VendorManagement() {
             </div>
           )}
         </AnimatePresence>
-
+ 
         <AnimatePresence>
           {vendorToDelete && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -427,11 +502,11 @@ export default function VendorManagement() {
                 <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
                   <FiTrash2 className="text-xl" />
                 </div>
-                <h3 className="text-base font-black text-slate-800 uppercase tracking-wider mb-2 text-center">
+                <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2 text-center">
                   Delete Partner?
-                </h3>
+                </div>
                 <p className="text-2xs text-slate-400 font-bold uppercase tracking-wider mb-6 leading-relaxed text-center">
-                  Are you sure you want to permanently delete <strong className="text-slate-600">{vendorToDelete.storeName}</strong>?
+                  Are you sure you want to permanently delete <strong className="text-slate-600">{vendorToDelete.storeName || vendorToDelete.name || 'Partner Brand'}</strong>?
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <button
@@ -468,8 +543,8 @@ export default function VendorManagement() {
       {/* 1. Header Section */}
       <div className="flex flex-row items-center justify-between gap-2 border-b border-slate-100 pb-2 shrink-0">
         <div>
-          <h1 className="text-base font-extrabold text-slate-800 leading-none">Vendor Partner Directory</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider leading-tight">
+          <div className="admin-page-title">Vendor Partner Directory</div>
+          <p className="admin-page-subtitle mt-2">
             Verify retail license credentials and margins.
           </p>
         </div>
@@ -482,6 +557,10 @@ export default function VendorManagement() {
           <span className="sm:hidden">CSV</span>
         </button>
       </div>
+
+      {/* Location Filter Bar */}
+      <LocationFilter />
+      <LocationBanner />
 
       {/* 2. Filters Deck */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-white p-3 rounded-2xl border border-slate-100 shadow-premium shrink-0">
@@ -521,7 +600,7 @@ export default function VendorManagement() {
             onChange={(e) => setFilterKyc(e.target.value)}
             className="bg-transparent border-none outline-none text-[10px] font-black text-slate-650 uppercase tracking-wide cursor-pointer"
           >
-            <option value="all">All KYC Statuses</option>
+            <option value="all">All KYC Status</option>
             <option value="verified">Verified</option>
             <option value="submitted">Submitted</option>
             <option value="pending">Pending</option>
@@ -548,12 +627,29 @@ export default function VendorManagement() {
 
       {/* 3. Core Listings Panel */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
-        
-        {filteredVendors.length > 0 ? (
+        {loading ? (
+          <div className="admin-skeleton-grid">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="admin-skeleton-card" />
+            ))}
+          </div>
+        ) : isFiltered && vendors.length === 0 ? (
+          <LocationEmptyState 
+            locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ') || 'Selected Location'}
+            hasVendors={false}
+            hasOrders={false}
+          />
+        ) : !isFiltered && vendors.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[300px]">
+            <span className="text-3xl mb-3">🏢</span>
+            <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Vendors Registered</div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no vendor partners registered in the system yet.</p>
+          </div>
+        ) : filteredVendors.length > 0 ? (
           <>
-            {/* Desktop Table View Layout */}
             <div className="hidden md:block bg-white border border-slate-100 rounded-3xl shadow-premium overflow-hidden">
-              <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto no-scrollbar">
+                <table className="w-full text-left border-collapse min-w-[1200px]">
                 <thead>
                   <tr className="bg-slate-50/60 border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest">
                     <th className="py-4.5 px-6">Vendor Name</th>
@@ -562,6 +658,7 @@ export default function VendorManagement() {
                     <th className="py-4.5 px-6">Vendor Type</th>
                     <th className="py-4.5 px-6">License Status</th>
                     <th className="py-4.5 px-6">KYC Status</th>
+                    <th className="py-4.5 px-6">Location Served</th>
                     <th className="py-4.5 px-6">Commission</th>
                     <th className="py-4.5 px-6">Earnings</th>
                     <th className="py-4.5 px-6 text-right">Actions</th>
@@ -581,7 +678,7 @@ export default function VendorManagement() {
                       </td>
                       
                       {/* Store Name */}
-                      <td className="py-4.5 px-6 font-bold text-slate-700">{vendor.storeName}</td>
+                      <td className="py-4.5 px-6 font-bold text-slate-700">{vendor.storeName || vendor.name || 'Partner Brand'}</td>
 
                       {/* Vendor Type */}
                       <td className="py-4.5 px-6 font-bold text-slate-750">
@@ -611,8 +708,20 @@ export default function VendorManagement() {
                       <td className="py-4.5 px-6">
                         <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
                           <FiFileText className={vendor.kyc === 'verified' ? 'text-emerald-500' : 'text-slate-400'} />
-                          {vendor.kyc.toUpperCase()}
+                          {(vendor.kyc || 'pending').toUpperCase()}
                         </span>
+                      </td>
+
+                      {/* Location Served */}
+                      <td className="py-4.5 px-6">
+                        <div className="flex flex-col gap-0.5 text-2xs font-extrabold uppercase">
+                          <span className="text-slate-800">{vendor.city || (vendor.id === 1 ? 'Mumbai' : vendor.id === 2 ? 'Pune' : vendor.id === 3 ? 'Delhi' : 'Bangalore')}, {([1,2].includes(vendor.id)) ? 'MH' : vendor.id === 3 ? 'DL' : 'KA'}</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {([vendor.id === 1 ? ['400001', '400002'] : vendor.id === 2 ? ['411001', '411015'] : vendor.id === 3 ? ['110001'] : ['560001', '560008']][0]).map(pin => (
+                              <span key={pin} className="bg-slate-100 text-slate-650 px-1 rounded text-[8.5px]">{pin}</span>
+                            ))}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Commission Rates */}
@@ -706,6 +815,7 @@ export default function VendorManagement() {
                 </tbody>
               </table>
             </div>
+          </div>
 
             {/* Mobile Card Grid View Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
@@ -716,7 +826,7 @@ export default function VendorManagement() {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-extrabold text-slate-800 text-sm leading-tight">{vendor.storeName}</h3>
+                      <div className="font-extrabold text-slate-800 text-sm leading-tight">{vendor.storeName || vendor.name || 'Partner Brand'}</div>
                       <div className="flex items-center gap-1.5 mt-1.5">
                         {vendor.role === 'lab_vendor' ? (
                           <span className="bg-indigo-50 text-indigo-650 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider">🔬 Lab</span>
@@ -754,7 +864,7 @@ export default function VendorManagement() {
                     <div className="flex flex-col gap-0.5 border-l border-slate-200 pl-1 min-w-0 items-center justify-center">
                       <span className="text-slate-400 font-black uppercase text-[8px] tracking-wider truncate">Verification</span>
                       <span className="font-black text-emerald-600 uppercase flex items-center gap-0.5 leading-tight text-[9px] truncate">
-                        <FiFileText className="text-2xs shrink-0" /> {vendor.kyc}
+                        <FiFileText className="text-2xs shrink-0" /> {vendor.kyc || 'pending'}
                       </span>
                     </div>
                   </div>
@@ -807,7 +917,7 @@ export default function VendorManagement() {
           </>
         ) : (
           <div className="bg-white border border-slate-100 p-12 text-center rounded-3xl shadow-premium">
-            <p className="text-slate-400 font-bold text-sm uppercase">No merchant registry matching that selection.</p>
+            <p className="text-slate-400 font-bold text-sm uppercase">No vendor partners match that selection.</p>
           </div>
         )}
 
@@ -833,11 +943,11 @@ export default function VendorManagement() {
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
                 <FiAlertTriangle className="text-xl" />
               </div>
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
+              <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
                 Confirm Rejection
-              </h3>
+              </div>
               <p className="text-2xs text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-3.5 mb-5 leading-relaxed">
-                You are rejecting the retail drug license request of <strong className="text-slate-600">{vendorToReject.storeName}</strong>.
+                You are rejecting the retail drug license request of <strong className="text-slate-600">{vendorToReject.storeName || vendorToReject.name || 'Partner Brand'}</strong>.
               </p>
               <div className="flex flex-col gap-1 text-left mb-6">
                 <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Reason for Rejection (Optional)</label>
@@ -892,11 +1002,11 @@ export default function VendorManagement() {
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
                 <FiTrash2 className="text-xl" />
               </div>
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
+              <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
                 Delete Partner?
-              </h3>
+              </div>
               <p className="text-2xs text-slate-400 font-bold uppercase tracking-wider mb-6 leading-relaxed">
-                Are you sure you want to permanently delete <strong className="text-slate-600">{vendorToDelete.storeName}</strong>?
+                Are you sure you want to permanently delete <strong className="text-slate-600">{vendorToDelete.storeName || vendorToDelete.name || 'Partner Brand'}</strong>?
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <button

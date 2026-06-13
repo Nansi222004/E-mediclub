@@ -2770,8 +2770,8 @@ const storedAppointments = localStorage.getItem('em_appointments')
       }
     ];
 
-const storedLabBookings = localStorage.getItem('em_lab_bookings')
-  ? JSON.parse(localStorage.getItem('em_lab_bookings'))
+const storedLabBookings = localStorage.getItem('em_lab_bookings_v2')
+  ? JSON.parse(localStorage.getItem('em_lab_bookings_v2'))
   : [
       {
         id: 'LBB-29381',
@@ -2839,6 +2839,7 @@ const initialState = {
   selectedLocation: savedSelectedLocation,
   location: savedLocation,
   isPrescriptionFilterActive: false,
+  isLoading: false,
   medicineCategories: ['Allopathy', 'Ayurveda', 'Homeopathy', 'Wellness', 'Surgical', 'Devices', 'Supplements', 'OTC'],
   doctorSpecialties: ['Cardiologist', 'Dermatologist', 'Pediatrician', 'Orthopedic', 'Neurologist', 'General Physician'],
   labCategories: ['Blood Test', 'Thyroid', 'Diabetes', 'Full Body Checkup', 'Vitamin Tests', 'Urine Test']
@@ -2956,6 +2957,12 @@ const productSlice = createSlice({
       localStorage.setItem('em_location', JSON.stringify(state.location));
       localStorage.setItem('em_selected_location', state.selectedLocation);
     },
+    clearCityData: (state) => {
+      state.medicines = [];
+      state.doctors = [];
+      state.labs = [];
+      state.labTests = [];
+    },
     setPrescriptionFilterActive: (state, action) => {
       state.isPrescriptionFilterActive = action.payload;
     },
@@ -2973,7 +2980,7 @@ const productSlice = createSlice({
     },
     bookLabPackage: (state, action) => {
       state.labBookings.unshift(action.payload);
-      localStorage.setItem('em_lab_bookings', JSON.stringify(current(state.labBookings)));
+      localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
     },
     completeDoctorAppointment: (state, action) => {
       const apt = state.appointments.find(a => a.id === action.payload);
@@ -2986,7 +2993,7 @@ const productSlice = createSlice({
       const booking = state.labBookings.find(b => b.id === action.payload);
       if (booking) {
         booking.status = 'Completed';
-        localStorage.setItem('em_lab_bookings', JSON.stringify(current(state.labBookings)));
+        localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
       }
     },
     updateOrderStatus: (state, action) => {
@@ -3083,7 +3090,7 @@ const productSlice = createSlice({
         bk.rating = rating;
         bk.feedback = feedback;
         bk.isRated = true;
-        localStorage.setItem('em_lab_bookings', JSON.stringify(current(state.labBookings)));
+        localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
       }
     },
     approveDoctor: (state, action) => {
@@ -3107,10 +3114,21 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchDoctors.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(fetchDoctors.fulfilled, (state, action) => {
         state.doctors = action.payload;
+        state.isLoading = false;
+      })
+      .addCase(fetchDoctors.rejected, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(fetchLabs.pending, (state) => {
+        state.isLoading = true;
       })
       .addCase(fetchLabs.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.labs = action.payload;
         const generatedTests = [];
         action.payload.forEach(lab => {
@@ -3213,8 +3231,18 @@ const productSlice = createSlice({
         const customTests = (state.labTests || []).filter(t => t.id && !t.id.startsWith('test-dyn-') && !t.id.startsWith('lab-'));
         state.labTests = [...customTests, ...generatedTests];
       })
+      .addCase(fetchLabs.rejected, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(fetchProducts.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(fetchProducts.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.medicines = action.payload;
+      })
+      .addCase(fetchProducts.rejected, (state) => {
+        state.isLoading = false;
       });
   }
 });
@@ -3224,6 +3252,7 @@ export const {
   setSelectedCategory,
   setSelectedLocation,
   setLocation,
+  clearCityData,
   setPrescriptionFilterActive,
   addPrescription,
   placeOrder,

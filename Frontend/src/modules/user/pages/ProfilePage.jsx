@@ -205,9 +205,23 @@ export default function ProfilePage() {
     );
   }
 
+  const getTodayStrGlobal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Filter consultations
-  const upcomingAppointments = appointments.filter(apt => apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending');
-  const pastAppointments = appointments.filter(apt => apt.status === 'Completed' || apt.status === 'Cancelled');
+  const upcomingAppointments = appointments.filter(apt => {
+    if (apt.date && apt.date < getTodayStrGlobal()) return false;
+    return apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending';
+  });
+  const pastAppointments = appointments.filter(apt => {
+    if (apt.date && apt.date < getTodayStrGlobal()) return true;
+    return apt.status === 'Completed' || apt.status === 'Cancelled';
+  });
 
   // Filter completed lab bookings
   const completedLabBookings = labBookings.filter(b => b.status === 'Completed' || b.status === 'Verified' || new Date(b.date) < new Date());

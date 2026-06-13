@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiUploadCloud, FiX, FiCheckCircle, FiFileText, FiCamera, FiTrash2, FiImage } from 'react-icons/fi';
 import { addPrescription } from '../../modules/user/store/productSlice';
 import { PrescriptionMedicineService } from '../services/PrescriptionMedicineService';
+import apiClient from '../services/apiClient';
 
 export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess }) {
   const dispatch = useDispatch();
@@ -58,43 +59,60 @@ export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess })
     setUploadProgress(0);
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) return;
     
     setUploadState('uploading');
-    setUploadProgress(0);
+    setUploadProgress(10); // Start progress
 
-    // Simulate upload progress interval
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        const next = prev + 10;
-        if (next >= 100) {
-          clearInterval(interval);
-          
-          // Defer state updates & side-effects to avoid bad setState during render
-          setTimeout(() => {
-            setUploadState('success');
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
 
-            // Parse prescription using service
-            const parsedMeds = PrescriptionMedicineService.parsePrescription(selectedFile.name);
-            const newRx = {
-              id: `rx-${Date.now()}`,
-              date: new Date().toISOString().split('T')[0],
-              fileName: selectedFile.name,
-              fileSize: (selectedFile.size / 1024).toFixed(1) + ' KB',
-              medicines: parsedMeds
-            };
+      // We can add notes or other info if needed, e.g. formData.append('notes', 'Optional notes');
 
-            // Dispatch to Redux store
-            dispatch(addPrescription(newRx));
-            setCreatedRx(newRx);
-          }, 0);
+      // Add a simulated interval for smooth progress bar while waiting for response
+      const interval = setInterval(() => {
+        setUploadProgress(prev => prev < 90 ? prev + 10 : prev);
+      }, 300);
 
-          return 100;
+      const response = await apiClient.post('/api/prescriptions/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-        return next;
       });
-    }, 120);
+      
+      clearInterval(interval);
+      setUploadProgress(100);
+
+      setTimeout(() => {
+        setUploadState('success');
+        
+        // Parse prescription using service for local preview
+        const parsedMeds = PrescriptionMedicineService.parsePrescription(selectedFile.name);
+        const newRx = {
+          id: response.data?.data?.id || `rx-${Date.now()}`,
+          date: new Date().toISOString().split('T')[0],
+          fileName: selectedFile.name,
+          fileSize: (selectedFile.size / 1024).toFixed(1) + ' KB',
+          fileUrl: response.data?.data?.fileUrl, // Provided by cloudinary via API
+          medicines: parsedMeds
+        };
+
+        dispatch(addPrescription(newRx));
+        setCreatedRx(newRx);
+        
+        if (onUploadSuccess) {
+          onUploadSuccess(newRx);
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadState('idle');
+      setUploadProgress(0);
+      alert('Failed to upload prescription. Please try again.');
+    }
   };
 
   const handleRemove = () => {

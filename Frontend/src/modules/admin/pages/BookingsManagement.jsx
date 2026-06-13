@@ -1,23 +1,81 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { useAdminLocation } from '../context/AdminLocationContext';
 import { FiCalendar, FiSearch, FiClock, FiActivity, FiFilter, FiCheckCircle } from 'react-icons/fi';
+import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import LocationBanner from '../components/LocationBanner';
+import LocationEmptyState from '../components/LocationEmptyState';
+import apiClient from '../../../shared/services/apiClient';
+import { buildApiUrl } from '../utils/adminQueryHelper';
 
-export default function BookingsManagement() {
-  const { appointments = [], labBookings = [] } = useSelector(state => state.products);
+export default function BookingsManagement({ defaultTab }) {
+  const [appointments, setAppointments] = useState([]);
+  const [labBookings, setLabBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const location = useLocation();
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('Doctors');
+  const { locationFilter, isFiltered } = useAdminLocation();
+  const [searchParams] = useSearchParams();
 
-  const filteredDoctors = appointments.filter(apt => 
-    apt.doctorName?.toLowerCase().includes(search.toLowerCase()) || 
-    apt.patientName?.toLowerCase().includes(search.toLowerCase()) ||
-    apt.specialty?.toLowerCase().includes(search.toLowerCase())
-  );
+  const stateVal = locationFilter.state || '';
+  const cityVal = locationFilter.city || '';
+  const pincodeVal = locationFilter.pincode || '';
+  const locationQuery = locationFilter.search || '';
+  const timeframe = searchParams.get('timeframe') || 'month';
 
-  const filteredLabs = labBookings.filter(lab => 
-    lab.packageName?.toLowerCase().includes(search.toLowerCase()) || 
-    lab.address?.toLowerCase().includes(search.toLowerCase()) || 
-    lab.id?.toLowerCase().includes(search.toLowerCase())
-  );
+  const getInitialTab = () => {
+    if (defaultTab) return defaultTab;
+    if (location.pathname.includes('lab-bookings')) return 'Lab Tests';
+    if (location.pathname.includes('appointments')) return 'Doctors';
+    return 'Doctors';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  useEffect(() => {
+    setActiveTab(getInitialTab());
+  }, [defaultTab, location.pathname]);
+
+  useEffect(() => {
+    const fetchBookingsData = async () => {
+      setLoading(true);
+      try {
+        const apptsUrl = buildApiUrl('/api/admin/orders/appointments', locationFilter, timeframe);
+        const labsUrl = buildApiUrl('/api/admin/orders/lab-bookings', locationFilter, timeframe);
+        const [apptsRes, labsRes] = await Promise.all([
+          apiClient.get(apptsUrl),
+          apiClient.get(labsUrl)
+        ]);
+        setAppointments(apptsRes.data.data || []);
+        setLabBookings(labsRes.data.data || []);
+      } catch (err) {
+        console.error('Error fetching bookings:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookingsData();
+  }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
+
+  const filteredDoctors = useMemo(() => {
+    return appointments.filter(apt => {
+      const matchesSearch = apt.doctorName?.toLowerCase().includes(search.toLowerCase()) || 
+        apt.patientName?.toLowerCase().includes(search.toLowerCase()) ||
+        apt.specialty?.toLowerCase().includes(search.toLowerCase());
+      if (!matchesSearch) return false;
+      return true;
+    });
+  }, [appointments, search]);
+
+  const filteredLabs = useMemo(() => {
+    return labBookings.filter(lab => {
+      const matchesSearch = lab.packageName?.toLowerCase().includes(search.toLowerCase()) || 
+        lab.address?.toLowerCase().includes(search.toLowerCase()) || 
+        lab.id?.toLowerCase().includes(search.toLowerCase());
+      if (!matchesSearch) return false;
+      return true;
+    });
+  }, [labBookings, search]);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in font-sans pb-12 bg-[#F5F7FA]">
@@ -25,8 +83,8 @@ export default function BookingsManagement() {
       {/* Header */}
       <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-black text-slate-805 uppercase tracking-wide leading-none">Bookings Management</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2">
+          <div className="admin-page-title">Bookings Management</div>
+          <p className="admin-page-subtitle mt-2">
             Supervise clinical appointments and diagnostics packages scheduled on E Mediclub.
           </p>
         </div>
@@ -34,6 +92,10 @@ export default function BookingsManagement() {
           {appointments.length + labBookings.length} Active Bookings
         </span>
       </div>
+
+      {/* Location Filter */}
+      <LocationFilter />
+      <LocationBanner />
 
       {/* Tabs & Search Row */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
@@ -67,72 +129,106 @@ export default function BookingsManagement() {
 
       {/* List viewport */}
       <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
-        {activeTab === 'Doctors' ? (
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest">
-                  <th className="py-3 px-4">Booking ID</th>
-                  <th className="py-3 px-4">Clinician</th>
-                  <th className="py-3 px-4">Specialty</th>
-                  <th className="py-3 px-4">Patient Name</th>
-                  <th className="py-3 px-4">Date & Time</th>
-                  <th className="py-3 px-4">Mode</th>
-                  <th className="py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-xs font-semibold text-slate-650 divide-y divide-slate-50/50">
-                {filteredDoctors.map(apt => (
-                  <tr key={apt.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="py-3 px-4 font-extrabold text-slate-800">{apt.id}</td>
-                    <td className="py-3 px-4 text-slate-850 font-extrabold">{apt.doctorName}</td>
-                    <td className="py-3 px-4">
-                      <span className="bg-[#0D6E56]/5 text-[#0D6E56] border border-[#0D6E56]/10 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider">
-                        {apt.specialty}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">{apt.patientName}</td>
-                    <td className="py-3 px-4 font-black text-slate-800">{apt.date} • {apt.timeSlot}</td>
-                    <td className="py-3 px-4 text-slate-450">{apt.type}</td>
-                    <td className="py-3 px-4">
-                      <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider">
-                        {apt.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {loading ? (
+          <div className="admin-skeleton-grid">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="admin-skeleton-card" />
+            ))}
           </div>
+        ) : activeTab === 'Doctors' ? (
+          isFiltered && filteredDoctors.length === 0 ? (
+            <LocationEmptyState 
+              locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ') || 'Selected Location'}
+              hasVendors={true}
+              hasOrders={false}
+            />
+          ) : !isFiltered && filteredDoctors.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[200px]">
+              <span className="text-3xl mb-3">📅</span>
+              <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Appointments Yet</div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no doctor appointments scheduled yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest">
+                    <th className="py-3 px-4">Booking ID</th>
+                    <th className="py-3 px-4">Clinician</th>
+                    <th className="py-3 px-4">Specialty</th>
+                    <th className="py-3 px-4">Patient Name</th>
+                    <th className="py-3 px-4">Date & Time</th>
+                    <th className="py-3 px-4">Mode</th>
+                    <th className="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs font-semibold text-slate-650 divide-y divide-slate-50/50">
+                  {filteredDoctors.map(apt => (
+                    <tr key={apt.id} className="hover:bg-slate-50/30 transition-colors">
+                      <td className="py-3 px-4 font-extrabold text-slate-800">{apt.id}</td>
+                      <td className="py-3 px-4 text-slate-850 font-extrabold">{apt.doctorName}</td>
+                      <td className="py-3 px-4">
+                        <span className="bg-[#0D6E56]/5 text-[#0D6E56] border border-[#0D6E56]/10 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider">
+                          {apt.specialty}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-700">{apt.patientName}</td>
+                      <td className="py-3 px-4 font-black text-slate-800">{apt.date} • {apt.timeSlot}</td>
+                      <td className="py-3 px-4 text-slate-450">{apt.type}</td>
+                      <td className="py-3 px-4">
+                        <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider">
+                          {apt.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest">
-                  <th className="py-3 px-4">Booking ID</th>
-                  <th className="py-3 px-4">Test Package</th>
-                  <th className="py-3 px-4">Address</th>
-                  <th className="py-3 px-4">Schedule Date & Slot</th>
-                  <th className="py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-xs font-semibold text-slate-650 divide-y divide-slate-50/50">
-                {filteredLabs.map(lab => (
-                  <tr key={lab.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="py-3 px-4 font-extrabold text-slate-800">{lab.id}</td>
-                    <td className="py-3 px-4 text-slate-850 font-extrabold">{lab.packageName}</td>
-                    <td className="py-3 px-4 text-slate-500">{lab.address}</td>
-                    <td className="py-3 px-4 font-black text-slate-800">{lab.date} • {lab.timeSlot}</td>
-                    <td className="py-3 px-4">
-                      <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider">
-                        {lab.status}
-                      </span>
-                    </td>
+          isFiltered && filteredLabs.length === 0 ? (
+            <LocationEmptyState 
+              locationName={[stateVal, cityVal, pincodeVal, locationQuery].filter(Boolean).join(' → ') || 'Selected Location'}
+              hasVendors={true}
+              hasOrders={false}
+            />
+          ) : !isFiltered && filteredLabs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-white border border-slate-100 rounded-3xl text-center shadow-premium min-h-[200px]">
+              <span className="text-3xl mb-3">🔬</span>
+              <div className="text-xs font-black uppercase text-slate-800 tracking-wider">No Lab Bookings Yet</div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no lab bookings scheduled yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest">
+                    <th className="py-3 px-4">Booking ID</th>
+                    <th className="py-3 px-4">Test Package</th>
+                    <th className="py-3 px-4">Address</th>
+                    <th className="py-3 px-4">Schedule Date & Slot</th>
+                    <th className="py-3 px-4">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="text-xs font-semibold text-slate-650 divide-y divide-slate-50/50">
+                  {filteredLabs.map(lab => (
+                    <tr key={lab.id} className="hover:bg-slate-50/30 transition-colors">
+                      <td className="py-3 px-4 font-extrabold text-slate-800">{lab.id}</td>
+                      <td className="py-3 px-4 text-slate-850 font-extrabold">{lab.packageName}</td>
+                      <td className="py-3 px-4 text-slate-500">{lab.address}</td>
+                      <td className="py-3 px-4 font-black text-slate-800">{lab.date} • {lab.timeSlot}</td>
+                      <td className="py-3 px-4">
+                        <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider">
+                          {lab.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
 

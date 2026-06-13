@@ -108,7 +108,7 @@ export default function ReusableTable({
                 onChange={handleFilterChange}
                 className="bg-transparent border-none outline-none text-[10px] font-black text-slate-650 uppercase tracking-wide cursor-pointer"
               >
-                <option value="all">All {filterOptions.label}s</option>
+                <option value="all">{filterOptions.label === 'Status' ? 'All Status' : `All ${filterOptions.label}s`}</option>
                 {filterOptions.options.map(opt => (
                   <option key={opt} value={opt}>{opt.toUpperCase()}</option>
                 ))}

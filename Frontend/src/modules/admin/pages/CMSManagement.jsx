@@ -93,7 +93,7 @@ export default function CMSManagement() {
       {/* Page Header */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">CMS Content Management</h1>
+          <div className="text-xl font-extrabold text-slate-800 leading-none">CMS Content Management</div>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
             Manage promotional banners, applied coupon codes, and clinical health blog articles.
           </p>
@@ -108,9 +108,9 @@ export default function CMSManagement() {
           
           {/* Coupon codes Table */}
           <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <div className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <FiTag className="text-teal" /> Platform Promo Coupons
-            </h3>
+            </div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-2 mb-4">
               Add discounts sheets to incentivize checkout conversions.
             </p>
@@ -126,9 +126,9 @@ export default function CMSManagement() {
 
           {/* Banner Lists */}
           <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <div className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <FiLayout className="text-teal" /> Hero Sliding Banners
-            </h3>
+            </div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-2 mb-4">
               Upload carousel layouts floating on user landing dashboards.
             </p>
@@ -170,9 +170,9 @@ export default function CMSManagement() {
           
           {/* Coupon Addition */}
           <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <div className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <FiPlus className="text-teal" /> Add Discount Coupon
-            </h3>
+            </div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-2 mb-4">
               Publish a new promo badge.
             </p>
@@ -221,9 +221,9 @@ export default function CMSManagement() {
 
           {/* Banner Addition */}
           <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <div className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <FiPlus className="text-teal" /> Add Hero Banner
-            </h3>
+            </div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-2 mb-4">
               Add new promotional slider graphics.
             </p>

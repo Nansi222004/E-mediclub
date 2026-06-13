@@ -29,7 +29,7 @@ export default function DoctorAppointmentsPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   // Redux Selectors
-  const { doctors, appointments, labs = [], location: locationState } = useSelector(state => state.products);
+  const { doctors, appointments, labs = [], location: locationState, isLoading } = useSelector(state => state.products);
   const { isAuthenticated } = useSelector(state => state.auth || {});
   const globalSearchTerm = useSelector(state => state.products.searchTerm);
 
@@ -140,7 +140,7 @@ export default function DoctorAppointmentsPage() {
   const [filterExperience, setFilterExperience] = useState('All'); // 'All', '10+', '15+'
   const [filterFeeMax, setFilterFeeMax] = useState(1500);
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
 
   // Scroll to top when doctor specialty changes
   useEffect(() => {
@@ -175,14 +175,7 @@ export default function DoctorAppointmentsPage() {
     { name: 'Dentistry', label: 'Dentistry', icon: '🦷' }
   ];
 
-  // Trigger skeleton loader shimmer effect on filter change
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 450);
-    return () => clearTimeout(timer);
-  }, [selectedSpecialty, filterMode, filterGender, filterExperience, filterFeeMax, searchQuery]);
+  // Removed artificial skeleton loader on filter change to stop flickering
 
 
 
@@ -200,9 +193,19 @@ export default function DoctorAppointmentsPage() {
 
   const hasNoResultsForCity = (pincode || city) && doctorsInCity.length === 0;
 
-  const baseDoctors = (pincode || city) && doctorsInCity.length > 0
+  const rawBaseDoctors = (pincode || city) && doctorsInCity.length > 0
     ? doctorsInCity
     : doctors;
+
+  const baseDoctors = React.useMemo(() => {
+    const unique = new Map();
+    rawBaseDoctors.forEach(doc => {
+      if (!unique.has(doc.name)) {
+        unique.set(doc.name, doc);
+      }
+    });
+    return Array.from(unique.values());
+  }, [rawBaseDoctors]);
 
   // Filter Doctors list
   const filteredDoctors = baseDoctors.filter(doc => {
@@ -936,6 +939,12 @@ export default function DoctorAppointmentsPage() {
                   <span className="text-slate-400">Booking Status:</span>
                   <span className="text-[9px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-black uppercase tracking-wide">Confirmed & Verified</span>
                 </div>
+                {selectedCircleApt.city && (
+                  <div className="flex justify-between pt-1 mt-1 border-t border-slate-50">
+                    <span className="text-slate-400">Booked City:</span>
+                    <span className="text-slate-800 font-extrabold uppercase text-[10px]">{selectedCircleApt.city}</span>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -957,7 +966,7 @@ export default function DoctorAppointmentsPage() {
                     <span className="text-lg">🏥</span>
                     <h5 className="text-[10px] text-amber-800 font-extrabold uppercase tracking-wide">Clinic Location Visit</h5>
                     <p className="text-[10px] text-slate-500 font-semibold leading-normal">
-                      This is an offline consult. Please visit the doctor's hospital counter 15 minutes before the time slot.
+                      This is an offline consult{selectedCircleApt.city ? ` in ${selectedCircleApt.city}` : ''}. Please visit the doctor's hospital counter 15 minutes before the time slot.
                     </p>
                   </div>
                 )}

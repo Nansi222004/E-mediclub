@@ -16,9 +16,9 @@ export default function Navbar({ toggleSidebar }) {
         >
           <FiMenu className="text-lg" />
         </button>
-        <h2 className="text-sm font-black text-slate-800 tracking-wide uppercase leading-none">
-          Admin Dashboard
-        </h2>
+        <div className="admin-header-page-title leading-none">
+          E Mediclub Administration
+        </div>
       </div>
 
       {/* Right side: Notifications bell */}

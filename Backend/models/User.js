@@ -62,7 +62,16 @@ const userSchema = new mongoose.Schema(
       district: String,
       fullAddress: String,
       isDefault: { type: Boolean, default: false }
-    }]
+    }],
+    city: String,
+    state: String,
+    pincode: String,
+    status: { type: String, enum: ['active', 'blocked'], default: 'active' },
+    profile: {
+      city: String,
+      state: String,
+      pincode: String
+    }
   },
   {
     timestamps: true,

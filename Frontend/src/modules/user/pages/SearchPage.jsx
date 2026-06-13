@@ -8,7 +8,10 @@ export default function SearchPage() {
   const dispatch = useDispatch();
 
   // Redux Selectors
-  const { medicines, searchTerm } = useSelector(state => state.products);
+  const { medicines, searchTerm, location: locationState } = useSelector(state => state.products);
+  
+  const pincode = locationState?.pincode ? locationState.pincode.trim() : '';
+  const city = locationState?.city ? locationState.city.trim() : '';
 
   // States
   const [selectedBrands, setSelectedBrands] = useState([]);
@@ -18,8 +21,33 @@ export default function SearchPage() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
+  // Apply location filtering
+  const baseMedicinesRaw = React.useMemo(() => {
+    let result = medicines;
+    if (pincode) {
+      result = result.filter(med => med.vendorPincode === pincode);
+    } else if (city) {
+      result = result.filter(med => med.vendorCity && med.vendorCity.toLowerCase() === city.toLowerCase());
+    }
+    return result.length > 0 ? result : medicines;
+  }, [medicines, pincode, city]);
+
+  const baseMedicines = React.useMemo(() => {
+    const unique = new Map();
+    baseMedicinesRaw.forEach(med => {
+      if (!unique.has(med.name)) {
+        unique.set(med.name, med);
+      }
+    });
+    return Array.from(unique.values());
+  }, [baseMedicinesRaw]);
+
   // Search logic
-  const brandList = ['Sun Pharmaceutical Industries Ltd', 'Micro Labs Ltd', 'Dabur India Ltd', 'Roche Diabetes Care', 'Koye Pharmaceuticals Pvt Ltd', 'The Himalaya Drug Company'];
+  const brandList = React.useMemo(() => {
+    const brands = baseMedicines.map(m => m.brand).filter(Boolean);
+    return Array.from(new Set(brands)).sort();
+  }, [baseMedicines]);
+  
   const dosageForms = ['Tablet', 'Capsule', 'Spray', 'Strips', 'Tonic', 'Face Wash'];
 
   // Toggle Filters
@@ -36,7 +64,7 @@ export default function SearchPage() {
   };
 
   // Filter & Sort core logic
-  const filteredProducts = medicines
+  const filteredProducts = baseMedicines
     .filter(med => {
       // 1. Text Search matching
       const query = searchTerm.toLowerCase().trim();

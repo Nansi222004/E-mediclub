@@ -215,7 +215,11 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
         setTimeout(async () => {
           try {
             const { latitude, longitude } = position.coords;
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+              headers: {
+                'Accept-Language': 'en-US,en'
+              }
+            });
             const data = await res.json();
             const addr = data?.address;
             if (addr) {
@@ -400,7 +404,7 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
                     onClick={handleAutoDetect}
                     className="w-full py-3 bg-[#0d9488] hover:bg-[#0b7e73] text-white text-xs font-black uppercase tracking-wider rounded-2xl cursor-pointer border-0"
                   >
-                    Go to settings
+                    Allow Location Access
                   </button>
                   <button
                     type="button"

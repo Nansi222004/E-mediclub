@@ -5,6 +5,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { FiHome, FiUsers, FiPackage, FiShoppingBag, FiLayers, FiActivity } from 'react-icons/fi';
+import { AdminLocationProvider } from '../context/AdminLocationContext';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '../styles/admin.css';
 
 export default function AdminLayout() {
   const { isAuthenticated, adminUser } = useSelector(state => state.adminAuth || { isAuthenticated: false, adminUser: null });
@@ -40,7 +43,8 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-50 flex font-sans text-slate-800">
+    <AdminLocationProvider>
+      <div className="admin-layout h-screen overflow-hidden bg-[#F8FAF9] flex font-sans text-slate-800">
       
       {/* 1. Backdrop Overlay on mobile viewports when sidebar drawer slides in */}
       <AnimatePresence>
@@ -76,7 +80,7 @@ export default function AdminLayout() {
         )}
 
         {/* Content canvas window */}
-        <main className="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar pb-24 md:pb-8 bg-slate-50">
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar pb-24 md:pb-8 bg-[#F8FAF9]">
           <Outlet />
         </main>
       </div>
@@ -235,5 +239,6 @@ export default function AdminLayout() {
       </AnimatePresence>
 
     </div>
+    </AdminLocationProvider>
   );
 }

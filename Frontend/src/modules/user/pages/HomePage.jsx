@@ -44,7 +44,7 @@ export default function HomePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Selectors from products store
-  const { medicines, labTests, doctors, labs = [], location: locationState, selectedLocation, appointments = [], labBookings = [] } = useSelector(state => state.products);
+  const { medicines, labTests, doctors, labs = [], location: locationState, selectedLocation, appointments = [], labBookings = [], isLoading } = useSelector(state => state.products);
   const { isAuthenticated, user } = useSelector(state => state.auth);
   const city = locationState?.city;
 
@@ -101,25 +101,31 @@ export default function HomePage() {
 
   const featuredCategories = [
     {
-      name: 'Pharmacy',
+      name: 'Medicines',
       route: '/medicines',
+      category: 'Medicines',
       accent: 'from-emerald-50 to-white',
-      badge: 'Medicines',
-      image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=300&q=80'
+      color: 'text-emerald-600',
+      icon: '💊',
+      bg: 'bg-emerald-50'
     },
     {
       name: 'Labs',
       route: '/lab-tests',
+      category: '',
       accent: 'from-cyan-50 to-white',
-      badge: 'Diagnostics',
-      image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=300&q=80'
+      color: 'text-cyan-600',
+      icon: '🔬',
+      bg: 'bg-cyan-50'
     },
     {
-      name: 'Consult',
+      name: 'Doctors',
       route: '/doctor-appointments',
+      category: '',
       accent: 'from-teal-50 to-white',
-      badge: 'Doctors',
-      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=300&q=80'
+      color: 'text-teal-600',
+      icon: '👨‍⚕️',
+      bg: 'bg-teal-50'
     },
   ];
 
@@ -265,18 +271,16 @@ export default function HomePage() {
   const prioritizedMedicines = getPrioritizedMedicines(medicines, selectedLocation);
   const pincode = locationState?.pincode ? locationState.pincode.trim() : '';
 
-  const cityFilteredDoctors = pincode
-    ? doctors.filter(doc => doc.pincode === pincode)
-    : city
-      ? doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase())
-      : doctors;
+  let cityFilteredDoctors = pincode ? doctors.filter(doc => doc.pincode === pincode) : [];
+  if (cityFilteredDoctors.length === 0 && city) {
+    cityFilteredDoctors = doctors.filter(doc => doc.city && normalizeCity(doc.city).toLowerCase() === city.toLowerCase());
+  }
   const homeDoctors = (pincode || city) ? cityFilteredDoctors : doctors;
 
-  const cityFilteredLabs = pincode
-    ? labs.filter(lab => lab.pincode === pincode)
-    : city
-      ? labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase())
-      : labs;
+  let cityFilteredLabs = pincode ? labs.filter(lab => lab.pincode === pincode) : [];
+  if (cityFilteredLabs.length === 0 && city) {
+    cityFilteredLabs = labs.filter(lab => lab.city && normalizeCity(lab.city).toLowerCase() === city.toLowerCase());
+  }
   const homeLabTests = (pincode || city)
     ? labTests.filter(test => cityFilteredLabs.some(l => 
         l.name.toLowerCase().includes(test.labName.toLowerCase()) || 
@@ -284,12 +288,22 @@ export default function HomePage() {
       ))
     : labTests;
 
-  const cityFilteredMedicines = pincode
-    ? prioritizedMedicines.filter(med => med.vendorPincode === pincode)
-    : city
-      ? prioritizedMedicines.filter(med => med.vendorCity && normalizeCity(med.vendorCity).toLowerCase() === city.toLowerCase())
-      : prioritizedMedicines;
-  const homeMedicines = (pincode || city) ? cityFilteredMedicines : prioritizedMedicines;
+  let cityFilteredMedicines = pincode ? prioritizedMedicines.filter(med => med.vendorPincode === pincode) : [];
+  if (cityFilteredMedicines.length === 0 && city) {
+    cityFilteredMedicines = prioritizedMedicines.filter(med => med.vendorCity && normalizeCity(med.vendorCity).toLowerCase() === city.toLowerCase());
+  }
+  const homeMedicinesRaw = (pincode || city) ? cityFilteredMedicines : prioritizedMedicines;
+
+  // Defensive deduplication to ensure no repeated products on the home page
+  const homeMedicines = React.useMemo(() => {
+    const unique = new Map();
+    homeMedicinesRaw.forEach(med => {
+      if (!unique.has(med.name)) {
+        unique.set(med.name, med);
+      }
+    });
+    return Array.from(unique.values());
+  }, [homeMedicinesRaw]);
 
   const filteredMedicines = React.useMemo(() => {
     let result = homeMedicines;
@@ -517,31 +531,28 @@ export default function HomePage() {
             </button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {featuredCategories.map((cat) => (
+            {quickCategories.map((cat) => (
               <motion.button
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 key={cat.name}
                 onClick={() => {
-                  if (cat.category) {
-                    dispatch(setSelectedCategory(cat.category));
+                  if (cat.name === 'Medicines') {
+                    dispatch(setSelectedCategory('Medicines'));
                   }
                   navigate(cat.route);
                 }}
-                className={`bg-gradient-to-br ${cat.accent} rounded-[22px] p-4 border border-slate-100 shadow-premium hover:shadow-premium-hover flex flex-col items-start text-left cursor-pointer select-none group transition-all duration-300`}
+                className="bg-white rounded-[22px] p-4 border border-slate-100 shadow-premium hover:shadow-premium-hover flex flex-col items-center justify-center text-center cursor-pointer select-none group transition-all duration-300"
               >
-                <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden mb-3">
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${cat.color.split(' ')[0]} shadow-sm flex items-center justify-center overflow-hidden mb-3`}>
+                  <span className="text-2xl md:text-3xl leading-none">{cat.icon}</span>
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{cat.badge}</span>
-                <h3 className="text-[12px] sm:text-sm md:text-base font-black text-slate-800 leading-tight mt-1 group-hover:text-teal transition-colors duration-300">
+                <h3 className="text-sm md:text-base font-black text-slate-800 leading-tight">
                   {cat.name}
                 </h3>
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 mt-1">
+                  {cat.desc}
+                </span>
               </motion.button>
             ))}
           </div>
@@ -598,16 +609,21 @@ export default function HomePage() {
               <FiBookmark className="text-teal" /> Featured Brands
             </h2>
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Popular in {localCityLabel}
+              Medicines in {localCityLabel}
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {featuredBrands.map((brand) => (
-              <motion.div
+              <motion.button
                 key={brand.name}
                 whileHover={{ y: -3, scale: 1.01 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                className="bg-white rounded-[28px] p-4 border border-slate-100 shadow-premium flex flex-col items-center justify-center text-center min-h-[126px] hover:shadow-premium-hover transition-all duration-300"
+                onClick={() => {
+                  dispatch(setSearchTerm(brand.name));
+                  dispatch(setSelectedCategory('Medicines'));
+                  navigate('/categories');
+                }}
+                className="bg-white rounded-[28px] p-4 border border-slate-100 shadow-premium flex flex-col items-center justify-center text-center min-h-[126px] hover:shadow-premium-hover transition-all duration-300 outline-none cursor-pointer"
               >
                 <div className="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 shadow-inner overflow-hidden flex items-center justify-center">
                   {brand.image ? (
@@ -625,7 +641,7 @@ export default function HomePage() {
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-3">
                   Used Here
                 </p>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </section>
@@ -782,9 +798,23 @@ export default function HomePage() {
           </AnimatePresence>
 
           {/* Products Grid */}
-          {filteredMedicines.length > 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              {[1, 2, 3, 4].map((idx) => (
+                <div key={idx} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-premium flex flex-col gap-3 animate-pulse-subtle">
+                  <div className="w-full h-24 bg-slate-100 rounded-2xl" />
+                  <div className="w-2/3 h-4 bg-slate-200 rounded mt-2" />
+                  <div className="w-1/2 h-3 bg-slate-150 rounded" />
+                  <div className="flex justify-between items-end mt-4">
+                    <div className="w-1/3 h-6 bg-slate-200 rounded" />
+                    <div className="w-1/4 h-8 bg-slate-200 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredMedicines.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 animate-fade-in">
-              {filteredMedicines.map((med) => (
+              {filteredMedicines.slice(0, 8).map((med) => (
                 <ProductCard key={med.id || med._id} product={med} />
               ))}
             </div>
@@ -813,7 +843,24 @@ export default function HomePage() {
               See All Lab Tests
             </button>
           </div>
-          {cityHasLabs ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[1, 2].map((idx) => (
+                <div key={idx} className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-premium flex flex-col gap-4 animate-pulse-subtle">
+                  <div className="flex justify-between items-start">
+                    <div className="w-2/3 h-4 bg-slate-200 rounded" />
+                    <div className="w-16 h-5 bg-slate-200 rounded-full" />
+                  </div>
+                  <div className="w-1/2 h-3 bg-slate-150 rounded" />
+                  <div className="h-10 bg-slate-50 border border-slate-100 rounded-2xl" />
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="w-1/4 h-6 bg-slate-200 rounded" />
+                    <div className="w-1/3 h-8 bg-slate-200 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : cityHasLabs ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {homeLabTests.slice(0, 6).map((test) => (
                 <LabTestCard key={test.id || test._id} test={test} />
@@ -843,7 +890,21 @@ export default function HomePage() {
               See All Doctors
             </button>
           </div>
-          {cityHasDoctors ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[1, 2].map((idx) => (
+                <div key={idx} className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-premium flex gap-4 animate-pulse-subtle">
+                  <div className="w-20 h-24 bg-slate-200 rounded-[18px]" />
+                  <div className="flex-1 flex flex-col justify-center gap-2">
+                    <div className="w-2/3 h-4 bg-slate-200 rounded" />
+                    <div className="w-1/2 h-3 bg-slate-150 rounded" />
+                    <div className="w-1/3 h-3 bg-slate-150 rounded" />
+                    <div className="w-24 h-6 bg-slate-200 rounded mt-1" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : cityHasDoctors ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {homeDoctors.slice(0, 6).map((doc) => (
                 <DoctorCard key={doc.id || doc._id} doctor={doc} />
@@ -924,28 +985,30 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-3 gap-2 px-1">
             {featuredCategories.map((cat) => (
-              <button
+              <motion.button
                 key={cat.name}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   if (cat.category) {
                     dispatch(setSelectedCategory(cat.category));
                   }
                   navigate(cat.route);
                 }}
-                className="bg-white rounded-[22px] border border-slate-100 shadow-premium p-3 flex flex-col items-center text-center cursor-pointer select-none active:scale-95 transition-all"
+                className="bg-white rounded-[24px] border border-slate-100 shadow-premium hover:shadow-lg p-3 md:p-4 flex flex-col items-center text-center cursor-pointer select-none transition-all w-full"
                 >
-                <div className="w-11 h-11 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden mb-2">
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-                <span className="text-[11px] sm:text-[12px] font-black text-slate-800 leading-tight break-words">
+                <motion.div 
+                  initial={{ y: 0 }}
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                  className={`w-20 h-20 rounded-full ${cat.bg} border-2 border-white shadow-sm flex items-center justify-center overflow-hidden mb-2.5`}
+                >
+                  <span className="text-[2.5rem] leading-none">{cat.icon}</span>
+                </motion.div>
+                <span className="text-base sm:text-lg font-black text-slate-800 leading-tight">
                   {cat.name}
                 </span>
-              </button>
+              </motion.button>
             ))}
           </div>
         </section>
@@ -1049,6 +1112,7 @@ export default function HomePage() {
                     whileHover={{ scale: 1.08, y: -4 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 15 }}
                     onClick={() => {
+                      dispatch(setSearchTerm(brand.name));
                       dispatch(setSelectedCategory('Medicines'));
                       navigate('/categories');
                     }}
@@ -1061,7 +1125,7 @@ export default function HomePage() {
                       colorClass={brand.color}
                     />
                   </motion.button>
-                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight leading-tight text-center break-words max-w-[85px]">
+                  <span className="text-[11px] font-bold text-slate-700 leading-snug text-center break-words max-w-[85px]">
                     {brand.name}
                   </span>
                 </div>
