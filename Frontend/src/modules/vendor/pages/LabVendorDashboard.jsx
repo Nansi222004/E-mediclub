@@ -1,308 +1,498 @@
 import React, { useState } from 'react';
-import StatsCard from '../../admin/components/StatsCard';
+import { useSelector, useDispatch } from 'react-redux';
 import { 
-  FiActivity, FiFileText, FiDollarSign, FiCheckCircle, 
-  FiClock, FiTrendingUp, FiFilter, FiUser 
+  FiCalendar, FiFileText, FiDroplet, FiDollarSign, 
+  FiMoreVertical, FiPlus, FiSettings, FiImage, FiAward, FiEye, FiUpload, FiX, FiCheck
 } from 'react-icons/fi';
+import { FaShieldAlt, FaLungs, FaVial, FaCheckCircle } from 'react-icons/fa';
+import { updateLabProfile, updateLabGallery, updateLabBanner, toggleLabFacility } from '../store/vendorSlice';
+import { updateLabInCatalog } from '../../user/store/productSlice';
 
 export default function LabVendorDashboard() {
-  const [weeklyHoverIndex, setWeeklyHoverIndex] = useState(null);
+  const dispatch = useDispatch();
+  const { labBookings = [] } = useSelector(state => state.products || {});
+  const { user } = useSelector(state => state.auth || {});
+  const { labProfile } = useSelector(state => state.vendor || { labProfile: { gallery: [], banner: {}, facilities: {} } });
   
-  // Status filter state: all, pending, completed
-  const [statusFilter, setStatusFilter] = useState("all");
+  // Modals state
+  const [activeModal, setActiveModal] = useState(null); // 'profile', 'gallery', 'banner'
 
-  const [bookings, setBookings] = useState([
-    { id: 'LB-BK-7701', patientName: 'Anoop Singh', testName: 'Complete Blood Count (CBC)', date: '2026-06-04', status: 'pending', sampleType: 'Blood', amount: 350 },
-    { id: 'LB-BK-7692', patientName: 'Ramesh Kumar', testName: 'Lipid Profile Screen', date: '2026-06-03', status: 'completed', sampleType: 'Serum', amount: 800 },
-    { id: 'LB-BK-7685', patientName: 'Meera Deshmukh', testName: 'Thyroid Stimulating Hormone (TSH)', date: '2026-06-03', status: 'completed', sampleType: 'Blood', amount: 450 },
-    { id: 'LB-BK-7674', patientName: 'Sunita Sharma', testName: 'HbA1c Diabetes Control Panel', date: '2026-06-02', status: 'pending', sampleType: 'Blood', amount: 600 },
-    { id: 'LB-BK-7661', patientName: 'Vijay Chawla', testName: 'Urinalysis Basic Screening', date: '2026-06-01', status: 'completed', sampleType: 'Urine', amount: 250 },
-  ]);
+  // Form states
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [bannerForm, setBannerForm] = useState(labProfile?.banner || {});
 
-  const handleUpdateStatus = (id, newStatus) => {
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
+  const syncToCatalog = (updates) => {
+    dispatch(updateLabInCatalog({
+      labId: 'lab-pun-1', // Mock ID
+      updates
+    }));
   };
 
-  const filteredBookings = bookings.filter(b => {
-    if (statusFilter === "all") return true;
-    return b.status === statusFilter;
-  });
+  const handleFacilityToggle = (key) => {
+    dispatch(toggleLabFacility(key));
+    const newFacilities = { ...labProfile.facilities, [key]: !labProfile.facilities[key] };
+    
+    // Unpack facilities to top-level for User Panel syncing
+    syncToCatalog({ 
+      facilities: newFacilities,
+      homeCollection: newFacilities.homeCollection,
+      nablCertified: newFacilities.nablCertified
+    });
+  };
 
-  const dailyCollectionsData = [
-    { day: 'Mon', samples: 14 },
-    { day: 'Tue', samples: 22 },
-    { day: 'Wed', samples: 18 },
-    { day: 'Thu', samples: 27 },
-    { day: 'Fri', samples: 32 },
-    { day: 'Sat', samples: 25 },
-    { day: 'Sun', samples: 12 }
+  const handleBannerSave = () => {
+    dispatch(updateLabBanner(bannerForm));
+    syncToCatalog({ banner: bannerForm });
+    setActiveModal(null);
+  };
+
+  const testCategories = [
+    { name: 'Thyroid Profile', subs: 4, icon: FaShieldAlt, color: 'text-coral', bg: 'bg-coral-light/20' },
+    { name: 'Diabetes', subs: 8, icon: FaVial, color: 'text-orange-500', bg: 'bg-orange-50' },
+    { name: 'Respiratory', subs: 6, icon: FaLungs, color: 'text-[#135A5A]', bg: 'bg-[#135A5A]/10' },
   ];
 
-  // SVG Bar Chart render helper
-  const renderCollectionsChart = () => {
-    const data = dailyCollectionsData;
-    const width = 500;
-    const height = 180;
-    const padding = 20;
+  const baseBookings = [
+    { initials: 'AK', name: 'Amit Kumar', test: 'CBC & Lipid Profile', time: '09:30 AM', status: 'Pending', statusColor: 'bg-coral-light/30 text-coral' },
+    { initials: 'SR', name: 'Sunita Rao', test: 'Thyroid Screening', time: '10:15 AM', status: 'In Progress', statusColor: 'bg-teal-light text-teal' },
+  ];
 
-    const maxVal = Math.max(...data.map(d => d.samples)) || 40;
-    const barWidth = 32;
-    const chartWidth = width - padding * 2;
-    const chartHeight = height - padding * 2;
+  const mappedLabBookings = labBookings.map(bk => ({
+    initials: (user?.name || 'User').substring(0, 2).toUpperCase(),
+    name: user?.name || 'User Patient',
+    test: bk.packageName || 'Lab Test',
+    time: bk.timeSlot || '10:00 AM',
+    status: bk.status === 'confirmed' ? 'In Progress' : 'Pending',
+    statusColor: bk.status === 'confirmed' ? 'bg-teal-light text-teal' : 'bg-coral-light/30 text-coral'
+  }));
 
-    return (
-      <div className="w-full bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Daily Sample Collections</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Clinical sample tubes received overview</p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className={`transition-opacity duration-200 ${weeklyHoverIndex !== null ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              <span className="text-[9px] bg-slate-800 text-white font-extrabold uppercase px-2.5 py-1 rounded-xl shadow-sm">
-                {weeklyHoverIndex !== null ? `${data[weeklyHoverIndex].day}: ${data[weeklyHoverIndex].samples} tubes` : ''}
-              </span>
-            </div>
-            <span className="text-[10px] bg-teal-light text-teal font-black uppercase px-2 py-0.5 rounded-full">Target Met</span>
-          </div>
-        </div>
-        <div className="relative w-full overflow-hidden">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full overflow-visible">
-            {/* Gridlines */}
-            {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-              const y = padding + ratio * chartHeight;
-              return (
-                <line 
-                  key={idx} 
-                  x1={padding} 
-                  y1={y} 
-                  x2={width - padding} 
-                  y2={y} 
-                  stroke="#F8FAFC" 
-                  strokeWidth="1.5"
-                />
-              );
-            })}
+  const recentBookings = [...mappedLabBookings, ...baseBookings];
 
-            {/* Drawing Bars */}
-            {data.map((d, i) => {
-              const x = padding + (i / data.length) * chartWidth + (chartWidth / data.length - barWidth) / 2;
-              const barHeight = (d.samples / maxVal) * chartHeight;
-              const y = height - padding - barHeight;
-              const isHovered = weeklyHoverIndex === i;
+  const todaysBookingsCount = labBookings.length > 0 ? labBookings.length + 42 : 42;
+  const pendingReportsCount = labBookings.length > 0 ? Math.floor(labBookings.length / 2) + 8 : 8;
+  const sampleCollectionsCount = labBookings.length > 0 ? labBookings.length + 15 : 15;
+  const monthlyRevenueText = labBookings.length > 0 ? `₹${(2.8 + (labBookings.length * 0.05)).toFixed(1)}L` : '₹2.8L';
 
-              return (
-                <g 
-                  key={i} 
-                  className="group cursor-pointer"
-                  onMouseEnter={() => setWeeklyHoverIndex(i)}
-                  onMouseLeave={() => setWeeklyHoverIndex(null)}
-                >
-                  <rect
-                    x={x}
-                    y={y}
-                    width={barWidth}
-                    height={barHeight}
-                    fill={isHovered ? "var(--color-teal-dark)" : "var(--color-teal)"}
-                    rx="8"
-                    className="transition-colors duration-200"
-                  />
-                  <text
-                    x={x + barWidth / 2}
-                    y={y - 8}
-                    textAnchor="middle"
-                    fill="var(--color-teal)"
-                    className={`text-[8px] font-black uppercase tracking-wider transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-                  >
-                    {d.samples}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-
-        {/* X Axis Labels */}
-        <div className="flex justify-between px-6 mt-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-          {data.map((d, i) => <span key={i}>{d.day}</span>)}
-        </div>
-      </div>
-    );
-  };
+  const chartDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in font-sans">
+    <div className="flex flex-col gap-6 animate-fade-in font-sans relative">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Lab Performance Dashboard</h1>
-          <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
-            Monitor clinical diagnostic bookings, sample collections, and lab revenue.
-          </p>
+      {/* Top Section: Lab Identity Card & Quick Actions */}
+      <section className="flex flex-col lg:flex-row gap-6">
+        
+        {/* Lab Identity Card */}
+        <div className="lg:w-1/3 bg-white rounded-2xl p-6 shadow-premium border border-slate-100 flex flex-col items-center text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-r from-[#135A5A] to-[#319C9B]" />
+          <div className="relative w-24 h-24 rounded-full border-4 border-white shadow-md bg-white flex items-center justify-center overflow-hidden mb-4 mt-8">
+            <img src="https://images.unsplash.com/photo-1579154261294-88752594e687?auto=format&fit=crop&w=150&h=150&q=80" alt="Lab Logo" className="w-full h-full object-cover" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            Central Diagnostics <FaCheckCircle className="text-teal text-sm" />
+          </h2>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+              ★ 4.8
+            </span>
+            {labProfile?.facilities?.nablCertified && (
+              <span className="bg-[#135A5A]/10 text-[#135A5A] px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+                NABL Accredited
+              </span>
+            )}
+          </div>
+          <button onClick={() => window.open('/lab-tests', '_blank')} className="mt-6 flex items-center gap-2 text-sm font-medium text-[#135A5A] hover:underline bg-transparent border-0 cursor-pointer">
+            <FiEye /> Customer View Preview
+          </button>
         </div>
-        <div className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5 bg-white border border-slate-100 px-3 py-1.5 rounded-2xl shadow-sm select-none">
-          <span className="w-2 h-2 rounded-full bg-teal animate-ping" />
-          <span>Realtime Lab Status</span>
+
+        {/* Quick Actions Grid */}
+        <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div 
+            onClick={() => setActiveModal('profile')}
+            className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale"
+          >
+            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiSettings className="text-xl" />
+            </div>
+            <span className="text-xs font-bold text-slate-700">Facilities</span>
+          </div>
+
+          <div 
+            onClick={() => setActiveModal('gallery')}
+            className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale"
+          >
+            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiImage className="text-xl" />
+            </div>
+            <span className="text-xs font-bold text-slate-700">Gallery</span>
+          </div>
+
+          <div 
+            onClick={() => setActiveModal('banner')}
+            className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale"
+          >
+            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiAward className="text-xl" />
+            </div>
+            <span className="text-xs font-bold text-slate-700">Banner</span>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale">
+            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiUpload className="text-xl" />
+            </div>
+            <span className="text-xs font-bold text-slate-700">Upload Report</span>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* KPI Deck */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatsCard 
-          title="Total Bookings" 
-          value="184" 
-          change="+12.4%" 
-          isPositive={true} 
-          icon={FiActivity} 
-          color="teal" 
-          sparklineData={[12, 14, 15, 18, 16, 22, 24]}
-        />
-        <StatsCard 
-          title="Pending Samples" 
-          value={`${bookings.filter(b => b.status === 'pending').length}`} 
-          change="-2" 
-          isPositive={true} 
-          icon={FiClock} 
-          color="coral" 
-          sparklineData={[8, 7, 5, 4, 3, 3, 2]}
-        />
-        <StatsCard 
-          title="Revenue Generated" 
-          value="₹74,500" 
-          change="+18.5%" 
-          isPositive={true} 
-          icon={FiDollarSign} 
-          color="forest" 
-          sparklineData={[5000, 6200, 7100, 6800, 8400, 9100, 9900]}
-        />
-        <StatsCard 
-          title="Completed Tests" 
-          value="172" 
-          change="+8.3%" 
-          isPositive={true} 
-          icon={FiCheckCircle} 
-          color="gold" 
-          sparklineData={[10, 12, 13, 14, 15, 16, 17]}
-        />
-      </section>
-
-      {/* Charts & Listings */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
-        {/* Daily chart collections */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          {renderCollectionsChart()}
-
-          {/* Recent test bookings table */}
-          <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-50 pb-3.5 mb-4">
-              <div>
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Recent Test Bookings</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Clinical diagnostics status tracking</p>
-              </div>
-
-              {/* Status Filter select */}
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-xl shrink-0">
-                <FiFilter className="text-slate-400 text-[10px]" />
-                <select 
-                  value={statusFilter} 
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-transparent border-none outline-none text-[10px] font-black text-slate-650 uppercase tracking-wide cursor-pointer"
-                >
-                  <option value="all">All Bookings</option>
-                  <option value="pending">Pending Samples</option>
-                  <option value="completed">Completed Tests</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/60 border-b border-slate-100 text-slate-400 text-[9px] font-black uppercase tracking-widest">
-                    <th className="py-3 px-4">Booking ID</th>
-                    <th className="py-3 px-4">Patient</th>
-                    <th className="py-3 px-4">Diagnostic Test</th>
-                    <th className="py-3 px-4">Sample</th>
-                    <th className="py-3 px-4">Fees</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 font-semibold text-slate-650">
-                  {filteredBookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="py-3.5 px-4 font-black text-slate-800">{b.id}</td>
-                      <td className="py-3.5 px-4 font-bold text-slate-700">{b.patientName}</td>
-                      <td className="py-3.5 px-4 text-slate-500 font-medium">{b.testName}</td>
-                      <td className="py-3.5 px-4">
-                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider">
-                          {b.sampleType}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-black text-slate-850">₹{b.amount}</td>
-                      <td className="py-3.5 px-4 text-right">
-                        {b.status === 'pending' ? (
-                          <button
-                            onClick={() => handleUpdateStatus(b.id, 'completed')}
-                            className="bg-teal hover:bg-teal-dark text-white px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer border-0 tap-scale shadow-sm"
-                          >
-                            Mark Collected
-                          </button>
-                        ) : (
-                          <span className="text-emerald-600 font-black uppercase text-[9px] flex items-center justify-end gap-1 select-none">
-                            <FiCheckCircle /> Completed
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Right side widgets */}
-        <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-5">
-              <div>
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Accreditation Info</h3>
-                <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Certificates & licensing keys</p>
-              </div>
-              <FiActivity className="text-teal" />
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="p-4 border border-teal/10 bg-teal-light/10 rounded-2xl flex flex-col gap-2">
-                <span className="text-[8px] font-black text-teal uppercase tracking-widest block">NABL Verification Code</span>
-                <span className="text-sm font-black text-slate-800 tracking-wider">NABL-MC-5412-A</span>
-                <span className="text-[9px] text-slate-400 font-semibold leading-relaxed">
-                  National Accreditation Board for Testing and Calibration Laboratories certification valid until Dec 2027.
-                </span>
-              </div>
-              
-              <div className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col gap-2">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">ISO Certification</span>
-                <span className="text-xs font-black text-slate-700">ISO 15189:2012</span>
-                <span className="text-[9px] text-slate-450 font-semibold leading-relaxed">
-                  Medical laboratories — Requirements for quality and competence global standard guidelines check met.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-50 pt-4 mt-5 flex justify-center">
-            <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest text-center">
-              Clinical Quality Certified Terminals
+        {/* KPI 1 - Solid Teal */}
+        <div className="bg-[#135A5A] rounded-2xl p-5 shadow-premium flex flex-col justify-between relative overflow-hidden">
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <FiCalendar className="text-white text-xl" />
+            <span className="bg-white/20 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+              +12%
             </span>
           </div>
+          <div className="relative z-10">
+            <h3 className="text-white/80 text-xs font-medium tracking-wide mb-1">Today's Bookings</h3>
+            <p className="text-white text-3xl font-light">{todaysBookingsCount}</p>
+          </div>
+        </div>
 
+        {/* KPI 2 - Pending Reports */}
+        <div className="bg-white rounded-2xl p-5 shadow-premium flex flex-col justify-between border border-slate-100">
+          <div className="mb-4">
+            <FiFileText className="text-coral text-xl" />
+          </div>
+          <div>
+            <h3 className="text-slate-500 text-xs font-medium tracking-wide mb-1">Pending Reports</h3>
+            <p className="text-coral text-3xl font-light">{pendingReportsCount < 10 ? `0${pendingReportsCount}` : pendingReportsCount}</p>
+          </div>
+        </div>
+
+        {/* KPI 3 - Sample Collections */}
+        <div className="bg-white rounded-2xl p-5 shadow-premium flex flex-col justify-between border border-slate-100">
+          <div className="mb-4">
+            <FiDroplet className="text-[#135A5A] text-xl" />
+          </div>
+          <div>
+            <h3 className="text-slate-500 text-xs font-medium tracking-wide mb-1">Sample Collections</h3>
+            <p className="text-[#135A5A] text-3xl font-light">{sampleCollectionsCount}</p>
+          </div>
+        </div>
+
+        {/* KPI 4 - Monthly Revenue */}
+        <div className="bg-white rounded-2xl p-5 shadow-premium flex flex-col justify-between border border-slate-100">
+          <div className="mb-4">
+            <FiDollarSign className="text-[#135A5A] text-xl" />
+          </div>
+          <div>
+            <h3 className="text-slate-500 text-xs font-medium tracking-wide mb-1">Monthly Revenue</h3>
+            <p className="text-[#135A5A] text-3xl font-light">{monthlyRevenueText}</p>
+          </div>
         </div>
 
       </section>
+
+      {/* Middle Grid */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Weekly Volume Chart (Left) */}
+        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-premium border border-slate-100 flex flex-col min-h-[300px]">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-slate-700 text-sm font-medium tracking-wide">Weekly Volume</h3>
+            <div className="bg-slate-100 text-slate-500 text-[10px] font-medium px-3 py-1 rounded-full">
+              This Week
+            </div>
+          </div>
+          
+          <div className="flex-1 flex items-end justify-between px-2 pt-10 relative h-full">
+            {chartDays.map((day, idx) => {
+              const heightValue = [40, 65, 45, 80, 55, 90, 75][idx];
+              const isToday = idx === 3; // Making 'Thu' the active day
+              return (
+                <div key={day} className="flex flex-col items-center gap-3 w-full h-full justify-end group">
+                  <div className="w-6 sm:w-10 relative flex items-end h-[150px] bg-slate-50 rounded-t-xl overflow-visible">
+                    <div 
+                      className={`w-full rounded-t-xl transition-all duration-700 ease-out ${isToday ? 'bg-[#135A5A]' : 'bg-[#135A5A]/30 group-hover:bg-[#135A5A]/50'}`}
+                      style={{ height: `${heightValue}%` }}
+                    ></div>
+                    {/* Tooltip */}
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                      {heightValue * 2} Tests
+                    </div>
+                  </div>
+                  <span className={`text-[10px] tracking-wide mt-auto ${isToday ? 'text-[#135A5A] font-bold' : 'text-slate-400 font-medium'}`}>{day}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Test Categories (Right) */}
+        <div className="bg-white rounded-2xl p-6 shadow-premium border border-slate-100 flex flex-col justify-between">
+          <div>
+            <h3 className="text-slate-700 text-sm font-medium tracking-wide mb-6">Test Categories</h3>
+            
+            <div className="flex flex-col gap-4">
+              {testCategories.map((cat, idx) => {
+                const Icon = cat.icon;
+                return (
+                  <div key={idx} className="flex items-center justify-between group cursor-pointer">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cat.bg} ${cat.color}`}>
+                        <Icon size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm text-slate-700 font-medium">{cat.name}</h4>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{cat.subs} Sub-categories</p>
+                      </div>
+                    </div>
+                    <FiMoreVertical className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <button className="w-full mt-6 py-2.5 bg-[#135A5A]/5 text-[#135A5A] font-medium text-xs rounded-xl hover:bg-[#135A5A]/10 transition-colors border-0 cursor-pointer">
+            View All Categories
+          </button>
+        </div>
+
+      </section>
+
+      {/* Bottom Section: Recent Bookings */}
+      <section className="bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-slate-50">
+          <h3 className="text-slate-700 text-sm font-medium tracking-wide">Recent Bookings</h3>
+          <button className="text-[#135A5A] text-xs font-medium bg-transparent border-0 cursor-pointer hover:underline">
+            View All
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50">
+                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Patient Name</th>
+                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Test Type</th>
+                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Time</th>
+                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {recentBookings.map((b, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#135A5A]/10 text-[#135A5A] flex items-center justify-center text-[10px] font-bold">
+                        {b.initials}
+                      </div>
+                      <span className="text-sm text-slate-800 font-bold">{b.name}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-sm text-slate-500">{b.test}</td>
+                  <td className="py-4 px-6 text-sm text-slate-500">{b.time}</td>
+                  <td className="py-4 px-6">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${b.statusColor}`}>
+                      {b.status}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <button className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-1">
+                        <FiMoreVertical />
+                      </button>
+                      <button className="w-8 h-8 rounded-full bg-[#135A5A] text-white flex items-center justify-center hover:bg-[#0F4A4A] transition-colors border-0 cursor-pointer shadow-sm">
+                        <FiPlus />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* --- MODALS --- */}
+      {activeModal === 'profile' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-slide-up">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><FiSettings /> Manage Facilities</h3>
+              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors border-0 bg-transparent cursor-pointer">
+                <FiX className="text-slate-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-500 mb-6">Toggle the facilities available at your laboratory. These will be visible to users when booking tests.</p>
+              <div className="space-y-4">
+                {[
+                  { key: 'homeCollection', label: 'Free Home Collection' },
+                  { key: 'nablCertified', label: 'NABL Certified' },
+                  { key: 'digitalReports', label: 'Digital Reports via WhatsApp/Email' },
+                  { key: 'sameDayReports', label: 'Same Day Reporting' },
+                  { key: 'parking', label: 'Free Parking Available' },
+                  { key: 'wheelchair', label: 'Wheelchair Accessible' }
+                ].map(fac => (
+                  <label key={fac.key} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-[#135A5A]/30 cursor-pointer transition-colors bg-white">
+                    <span className="text-sm font-medium text-slate-700">{fac.label}</span>
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 accent-[#135A5A] cursor-pointer"
+                      checked={!!labProfile?.facilities?.[fac.key]}
+                      onChange={() => handleFacilityToggle(fac.key)}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+              <button onClick={() => setActiveModal(null)} className="px-6 py-2.5 bg-[#135A5A] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#0F4A4A] transition-colors shadow-md border-0 cursor-pointer">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'banner' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-slide-up">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><FiAward /> Promotional Banner</h3>
+              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors border-0 bg-transparent cursor-pointer">
+                <FiX className="text-slate-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              
+              {/* Live Preview */}
+              <div className="mb-6 rounded-2xl overflow-hidden relative h-32 bg-slate-800 shadow-inner group">
+                <img src={bannerForm.image || "https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=800&q=80"} alt="Banner Preview" className="w-full h-full object-cover opacity-60" />
+                <div className="absolute inset-0 p-4 flex flex-col justify-center">
+                  <h4 className="text-white font-bold text-lg shadow-sm">{bannerForm.title || 'Enter Title'}</h4>
+                  <p className="text-white/90 text-xs mt-1 shadow-sm max-w-[80%]">{bannerForm.subtitle || 'Enter Subtitle'}</p>
+                  <div className="mt-2 text-[10px] font-bold bg-white text-slate-800 px-3 py-1 rounded-full self-start inline-block shadow-md">
+                    {bannerForm.ctaText || 'Button Text'}
+                  </div>
+                </div>
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                  <span className="text-white text-xs font-bold flex items-center gap-2"><FiUpload /> Change Image</span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Banner Title</label>
+                  <input type="text" value={bannerForm.title || ''} onChange={e => setBannerForm({...bannerForm, title: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:border-[#135A5A] focus:ring-1 focus:ring-[#135A5A] outline-none transition-all text-sm" placeholder="e.g. Free Home Collection" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Subtitle / Offer Text</label>
+                  <input type="text" value={bannerForm.subtitle || ''} onChange={e => setBannerForm({...bannerForm, subtitle: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:border-[#135A5A] focus:ring-1 focus:ring-[#135A5A] outline-none transition-all text-sm" placeholder="e.g. Get 20% off on all full body checkups this month." />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Button (CTA) Text</label>
+                  <input type="text" value={bannerForm.ctaText || ''} onChange={e => setBannerForm({...bannerForm, ctaText: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:border-[#135A5A] focus:ring-1 focus:ring-[#135A5A] outline-none transition-all text-sm" placeholder="e.g. Book Now" />
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+              <button onClick={() => setActiveModal(null)} className="px-5 py-2.5 text-slate-500 text-xs font-bold uppercase tracking-wider hover:bg-slate-200 rounded-xl transition-colors border-0 cursor-pointer bg-transparent">Cancel</button>
+              <button onClick={handleBannerSave} className="px-6 py-2.5 bg-[#135A5A] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#0F4A4A] transition-colors shadow-md border-0 cursor-pointer">
+                Save Banner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'gallery' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-3xl h-[80vh] shadow-2xl overflow-hidden animate-slide-up flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50 shrink-0">
+              <div>
+                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><FiImage /> Manage Gallery</h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-bold">{labProfile?.gallery?.length || 0} / 15 Images Uploaded</p>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors border-0 bg-transparent cursor-pointer">
+                <FiX className="text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 relative">
+              {/* Uploader Box */}
+              <div className="border-2 border-dashed border-[#135A5A]/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-[#135A5A]/5 hover:bg-[#135A5A]/10 transition-colors cursor-pointer mb-8">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 text-[#135A5A]">
+                  <FiUpload className="text-xl" />
+                </div>
+                <h4 className="font-bold text-slate-700">Click to upload or drag & drop</h4>
+                <p className="text-xs text-slate-500 mt-2">SVG, PNG, JPG or GIF (max. 5MB)</p>
+              </div>
+
+              {/* Grid of images */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {(labProfile?.gallery || []).map((img, idx) => (
+                  <div 
+                    key={img.id} 
+                    draggable 
+                    onDragStart={() => setDraggedIdx(idx)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      const newGallery = [...labProfile.gallery];
+                      const item = newGallery.splice(draggedIdx, 1)[0];
+                      newGallery.splice(idx, 0, item);
+                      dispatch(updateLabGallery(newGallery));
+                      syncToCatalog({ gallery: newGallery.map(g => g.url) });
+                      setDraggedIdx(null);
+                    }}
+                    className="relative aspect-video rounded-xl overflow-hidden group border-2 border-transparent hover:border-[#135A5A] transition-all shadow-sm cursor-move bg-slate-100"
+                  >
+                    <img src={img.url} alt="Gallery item" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-3 left-3">
+                        <span className="text-[9px] bg-white text-slate-800 font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm">
+                          {img.category || 'General'}
+                        </span>
+                      </div>
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        {!img.isFeatured && (
+                          <button 
+                            onClick={() => {
+                              const updated = labProfile.gallery.map(g => ({ ...g, isFeatured: g.id === img.id }));
+                              dispatch(updateLabGallery(updated));
+                              syncToCatalog({ gallery: updated.map(g => g.url) });
+                            }}
+                            className="w-7 h-7 bg-white/20 hover:bg-white text-white hover:text-amber-500 backdrop-blur-md rounded-lg flex items-center justify-center transition-colors border-0 cursor-pointer tooltip-trigger"
+                            title="Set as Featured"
+                          >
+                            <FiAward size={12} />
+                          </button>
+                        )}
+                        <button className="w-7 h-7 bg-coral/80 hover:bg-coral text-white backdrop-blur-md rounded-lg flex items-center justify-center transition-colors border-0 cursor-pointer" title="Delete">
+                          <FiX size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    {img.isFeatured && (
+                      <div className="absolute top-2 left-2 bg-amber-400 text-amber-900 text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm flex items-center gap-1">
+                        <FiAward /> Featured
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

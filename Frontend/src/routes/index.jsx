@@ -60,15 +60,19 @@ const HomeCollections = lazy(() => import('../modules/admin/pages/HomeCollection
 const Prescriptions = lazy(() => import('../modules/admin/pages/Prescriptions'));
 
 // Multi-Vendor Auth Page Modules
-const VendorLoginPage = lazy(() => import('../modules/auth/vendor/pages/VendorLoginPage'));
-const VendorSignupPage = lazy(() => import('../modules/auth/vendor/pages/VendorSignupPage'));
+const PharmacyLogin = lazy(() => import('../modules/vendor/pages/PharmacyLogin'));
+const PharmacySignup = lazy(() => import('../modules/vendor/pages/PharmacySignup'));
+const LabVendorAuth = lazy(() => import('../modules/vendor/pages/LabVendorAuth'));
+const DoctorVendorAuth = lazy(() => import('../modules/vendor/pages/DoctorVendorAuth'));
+
 const VendorForgotPasswordPage = lazy(() => import('../modules/auth/vendor/pages/VendorForgotPasswordPage'));
 const VendorVerifyOtpPage = lazy(() => import('../modules/auth/vendor/pages/VendorVerifyOtpPage'));
 const OnboardingPending = lazy(() => import('../modules/vendor/pages/OnboardingPending'));
-const VendorAuthPage = lazy(() => import('../modules/auth/vendor/pages/VendorAuthPage'));
 
 // Multi-Vendor Page Modules (Pharmacy)
+const PharmacyVendorLayout = lazy(() => import('../modules/vendor/layouts/PharmacyVendorLayout'));
 const VendorDashboard = lazy(() => import('../modules/vendor/pages/VendorDashboard'));
+const MedicineCatalog = lazy(() => import('../modules/vendor/pages/MedicineCatalog'));
 const VendorProductManagement = lazy(() => import('../modules/vendor/pages/VendorProductManagement'));
 const VendorOrdersManagement = lazy(() => import('../modules/vendor/pages/VendorOrdersManagement'));
 const VendorStocksManagement = lazy(() => import('../modules/vendor/pages/VendorStocksManagement'));
@@ -177,41 +181,72 @@ export default function AppRoutes() {
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
-      {/* 4. Multi-Vendor Auth Public Routes */}
-      <Route path="/vendor/auth" element={<VendorAuthPage />} />
-      <Route path="/vendor/login" element={<Navigate to="/vendor/auth" replace />} />
-      <Route path="/vendor/signup" element={<Navigate to="/vendor/auth" replace />} />
-      <Route path="/vendor/forgot-password" element={<VendorForgotPasswordPage />} />
-      <Route path="/vendor/verify-otp" element={<VendorVerifyOtpPage />} />
-      <Route path="/vendor/onboarding-pending" element={<OnboardingPending />} />
-
-      {/* 5. Multi-Vendor Module Protected Router (Pharmacy) */}
-      <Route path="/vendor" element={<VendorLayout />}>
+      {/* 4. Pharmacy Vendor Auth & Routes */}
+      <Route path="/vendor/pharmacy/login" element={<PharmacyLogin />} />
+      <Route path="/vendor/pharmacy/signup" element={<PharmacySignup />} />
+      <Route path="/vendor/pharmacy/forgot-password" element={<VendorForgotPasswordPage />} />
+      
+      <Route path="/vendor/pharmacy" element={<PharmacyVendorLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
+        
+        {/* Pharmacy Specific Catalog */}
+        <Route path="medicines" element={<MedicineCatalog />} />
+        
+        {/* Fallbacks for other routes requested in the sidebar */}
         <Route path="products" element={<VendorProductManagement />} />
-        <Route path="orders" element={<VendorOrdersManagement />} />
-        <Route path="stocks" element={<VendorStocksManagement />} />
-        <Route path="earnings" element={<VendorEarnings />} />
+        <Route path="orders/*" element={<VendorOrdersManagement />} />
+        <Route path="prescriptions/*" element={<VendorOrdersManagement />} />
+        <Route path="categories/*" element={<VendorProductManagement />} />
+        <Route path="inventory/*" element={<VendorStocksManagement />} />
+        <Route path="promotions/*" element={<VendorEarnings />} />
+        <Route path="customers" element={<VendorProfile />} />
+        <Route path="delivery" element={<VendorOrdersManagement />} />
+        <Route path="revenue" element={<VendorEarnings />} />
+        <Route path="analytics" element={<VendorEarnings />} />
+        <Route path="notifications" element={<VendorProfile />} />
         <Route path="profile" element={<VendorProfile />} />
+        <Route path="settings" element={<VendorProfile />} />
       </Route>
 
-      {/* 6. Lab Vendor Module Router */}
+      {/* 5. Lab Vendor Auth & Routes */}
+      <Route path="/vendor/lab/login" element={<LabVendorAuth />} />
+      <Route path="/vendor/lab/signup" element={<LabVendorAuth />} />
+      <Route path="/vendor/lab/forgot-password" element={<VendorForgotPasswordPage />} />
+
       <Route path="/vendor/lab" element={<LabVendorLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<LabVendorDashboard />} />
         <Route path="tests" element={<LabVendorTests />} />
+        <Route path="tests/add" element={<LabVendorTests />} />
         <Route path="bookings" element={<LabVendorBookings />} />
+        <Route path="bookings/home-collections" element={<LabVendorBookings />} />
+        <Route path="reports" element={<LabVendorBookings />} />
+        <Route path="earnings" element={<VendorEarnings />} />
         <Route path="profile" element={<LabVendorProfile />} />
+        <Route path="settings" element={<LabVendorProfile />} />
       </Route>
 
-      {/* 7. Doctor Vendor Module Router */}
+      {/* 6. Doctor Vendor Auth & Routes */}
+      <Route path="/vendor/doctor/login" element={<DoctorVendorAuth />} />
+      <Route path="/vendor/doctor/signup" element={<DoctorVendorAuth />} />
+      <Route path="/vendor/doctor/forgot-password" element={<VendorForgotPasswordPage />} />
+      <Route path="/vendor/onboarding-pending" element={<OnboardingPending />} />
+      <Route path="/vendor/verify-otp" element={<VendorVerifyOtpPage />} />
+
       <Route path="/vendor/doctor" element={<DoctorVendorLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DoctorVendorDashboard />} />
         <Route path="schedule" element={<DoctorVendorSchedule />} />
+        <Route path="appointments" element={<DoctorVendorPatients />} />
+        <Route path="appointments/today" element={<DoctorVendorPatients />} />
+        <Route path="consultations" element={<DoctorVendorPatients />} />
+        <Route path="prescriptions" element={<DoctorVendorPatients />} />
+        <Route path="availability" element={<DoctorVendorSchedule />} />
+        <Route path="earnings" element={<VendorEarnings />} />
         <Route path="patients" element={<DoctorVendorPatients />} />
         <Route path="profile" element={<DoctorVendorProfile />} />
+        <Route path="settings" element={<DoctorVendorProfile />} />
       </Route>
 
       {/* Fallback route */}

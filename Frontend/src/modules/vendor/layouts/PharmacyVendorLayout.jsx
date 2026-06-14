@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
-import VendorSidebar from '../components/VendorSidebar';
+import PharmacyVendorSidebar from '../components/PharmacyVendorSidebar';
 import VendorNavbar from '../components/VendorNavbar';
 import { FiHome, FiPackage, FiShoppingBag, FiLayers, FiUser } from 'react-icons/fi';
 import { NavLink } from 'react-router-dom';
 
-export default function VendorLayout() {
+export default function PharmacyVendorLayout() {
   const { isAuthenticated, vendorUser } = useSelector(state => state.vendorAuth || { isAuthenticated: false, vendorUser: null });
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -16,7 +16,6 @@ export default function VendorLayout() {
   useEffect(() => {
     const handleResize = () => {
       const isMobileScreen = window.innerWidth < 768;
-      
       setIsMobile(isMobileScreen);
       if (isMobileScreen) {
         setIsSidebarOpen(false);
@@ -28,16 +27,6 @@ export default function VendorLayout() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Secure Guard: Ensure user has 'vendor' role, otherwise redirect to VendorLoginPage (Temporarily bypassed for development)
-  // if (!isAuthenticated || !vendorUser) {
-  //   return <Navigate to="/vendor/login" replace state={{ from: location }} />;
-  // }
-
-  // Onboarding Guard: If KYC is pending and user is trying to access dashboard pages, redirect to pending screen (Temporarily bypassed for development)
-  // if (vendorUser.kycStatus === 'pending' && location.pathname !== '/vendor/onboarding-pending') {
-  //   return <Navigate to="/vendor/onboarding-pending" replace />;
-  // }
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -59,9 +48,9 @@ export default function VendorLayout() {
         )}
       </AnimatePresence>
 
-      {/* 2. Side Navigation Sidebar */}
+      {/* 2. Side Navigation Sidebar (Pharmacy Specific) */}
       <div className={`shrink-0 z-40 ${isMobile && !isSidebarOpen ? 'pointer-events-none' : ''}`}>
-        <VendorSidebar 
+        <PharmacyVendorSidebar 
           isOpen={isSidebarOpen} 
           toggleSidebar={toggleSidebar} 
         />
@@ -78,44 +67,44 @@ export default function VendorLayout() {
         />
 
         {/* Content canvas window */}
-        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-8">
+        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-8 relative">
           <Outlet />
         </main>
       </div>
 
-      {/* 4. Bottom mobile navigation bar */}
+      {/* 4. Bottom mobile navigation bar (Pharmacy Specific) */}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around z-30 md:hidden shadow-app-bar px-2 vendor-bottom-nav">
         <NavLink 
           to="/vendor/pharmacy/dashboard" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
+          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-[#135A5A]' : 'text-slate-400'}`}
         >
           <FiHome className="text-xl" />
           <span>Dashboard</span>
         </NavLink>
         <NavLink 
           to="/vendor/pharmacy/orders" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
+          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-[#135A5A]' : 'text-slate-400'}`}
         >
           <FiShoppingBag className="text-xl" />
           <span>Orders</span>
         </NavLink>
         <NavLink 
           to="/vendor/pharmacy/medicines" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
+          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-[#135A5A]' : 'text-slate-400'}`}
         >
           <FiPackage className="text-xl" />
           <span>Medicines</span>
         </NavLink>
         <NavLink 
           to="/vendor/pharmacy/prescriptions" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
+          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-[#135A5A]' : 'text-slate-400'}`}
         >
           <FiLayers className="text-xl" />
           <span>Scripts</span>
         </NavLink>
         <NavLink 
           to="/vendor/pharmacy/profile" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
+          className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-[#135A5A]' : 'text-slate-400'}`}
         >
           <FiUser className="text-xl" />
           <span>Profile</span>

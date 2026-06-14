@@ -39,7 +39,7 @@ export default function Logo({ showText = true, layout = 'horizontal' }) {
           <span 
             style={{ 
               fontFamily: "'Great Vibes', cursive", 
-              color: '#d32f2f' 
+              color: '#9B2C3A' 
             }} 
             className="text-3xl sm:text-4xl font-bold select-none mt-1.5 block"
           >
@@ -68,7 +68,7 @@ export default function Logo({ showText = true, layout = 'horizontal' }) {
         <span 
           style={{ 
             fontFamily: "'Great Vibes', cursive", 
-            color: '#d32f2f' 
+            color: '#9B2C3A' 
           }} 
           className="text-xl sm:text-2xl md:text-3xl font-bold shrink-0 tracking-wide select-none leading-none pt-1"
         >

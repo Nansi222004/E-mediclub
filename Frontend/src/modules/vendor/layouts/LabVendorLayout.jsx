@@ -4,7 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
   FiHome, FiActivity, FiUser, FiGrid, FiFileText, 
-  FiMenu, FiBell, FiChevronDown, FiLogOut, FiArrowLeft, FiPlusCircle 
+  FiMenu, FiBell, FiChevronDown, FiLogOut, FiArrowLeft, FiPlusCircle,
+  FiChevronRight, FiUpload, FiClock, FiLayers, FiUsers, FiDollarSign, FiPieChart, FiSettings
 } from 'react-icons/fi';
 import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 import Logo from '../../../shared/components/Logo';
@@ -18,6 +19,7 @@ export default function LabVendorLayout() {
   const [isMobile, setIsMobile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [expandedMenu, setExpandedMenu] = useState('Test Orders');
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,15 +41,32 @@ export default function LabVendorLayout() {
   };
 
   const handleLogout = () => {
-    dispatch(vendorLogout());
-    navigate('/vendor/auth');
+    localStorage.removeItem('labToken');
+    localStorage.removeItem('labProfile');
+    navigate('/vendor/lab/login');
   };
 
   const sidebarItems = [
     { name: 'Dashboard', path: '/vendor/lab/dashboard', icon: FiGrid },
-    { name: 'Diagnostic Tests', path: '/vendor/lab/tests', icon: FiActivity },
-    { name: 'Home Bookings', path: '/vendor/lab/bookings', icon: FiFileText },
-    { name: 'KYC Profile', path: '/vendor/lab/profile', icon: FiUser },
+    { 
+      name: 'Test Orders', icon: FiFileText,
+      subItems: [
+        { name: 'Pending', path: '/vendor/lab/orders/pending' },
+        { name: 'In Progress', path: '/vendor/lab/orders/progress' },
+        { name: 'Completed', path: '/vendor/lab/orders/completed' },
+      ]
+    },
+    { name: 'Sample Collection', path: '/vendor/lab/collections', icon: FiActivity },
+    { name: 'Upload Reports', path: '/vendor/lab/reports/upload', icon: FiUpload },
+    { name: 'Report History', path: '/vendor/lab/reports/history', icon: FiClock },
+    { name: 'Test Packages', path: '/vendor/lab/packages', icon: FiLayers },
+    { name: 'Home Collection Requests', path: '/vendor/lab/home-requests', icon: FiHome },
+    { name: 'Customers', path: '/vendor/lab/customers', icon: FiUsers },
+    { name: 'Revenue', path: '/vendor/lab/revenue', icon: FiDollarSign },
+    { name: 'Analytics', path: '/vendor/lab/analytics', icon: FiPieChart },
+    { name: 'Notifications', path: '/vendor/lab/notifications', icon: FiBell },
+    { name: 'Profile', path: '/vendor/lab/profile', icon: FiUser },
+    { name: 'Settings', path: '/vendor/lab/settings', icon: FiSettings },
   ];
 
   return (
@@ -70,36 +89,102 @@ export default function LabVendorLayout() {
       <aside 
         className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ${
           isOpen => isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 md:translate-x-0 -translate-x-full'
-        } bg-white border-r border-slate-100 shadow-premium flex flex-col justify-between`}
+        } bg-[#135A5A] text-white border-r border-[#0F4A4A] shadow-premium flex flex-col justify-between`}
         style={{ width: isSidebarOpen ? '256px' : isMobile ? '0px' : '80px', transform: isMobile && !isSidebarOpen ? 'translateX(-100%)' : 'translateX(0)' }}
       >
         <div>
           {/* Brand Logo */}
-          <div className="h-20 flex items-center justify-between px-6 border-b border-slate-50">
-            <div className="overflow-hidden">
+          <div className="h-20 flex items-center justify-between px-5 border-b border-[#0F4A4A] shrink-0 bg-white/10">
+            <div className="overflow-hidden flex items-center bg-white rounded-xl px-2 py-1">
               <Logo showText={isSidebarOpen} />
             </div>
             <button 
               onClick={toggleSidebar} 
-              className="hidden md:flex p-1.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-teal transition-colors border-0 cursor-pointer"
+              className="hidden md:flex p-1.5 rounded-xl hover:bg-white/10 text-[#88D4D3] hover:text-white transition-colors border-0 cursor-pointer"
             >
               <FiArrowLeft className={`transition-transform duration-300 ${!isSidebarOpen && 'rotate-180'}`} />
             </button>
+          </div>
+
+          <div className="px-5 py-5 border-b border-[#0F4A4A] flex items-center gap-3">
+            <img src="https://i.pravatar.cc/150?u=central" alt="Central Lab" className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white/20" />
+            {isSidebarOpen && (
+              <div className="overflow-hidden">
+                <h3 className="text-sm font-medium text-white truncate">Central Lab</h3>
+                <p className="text-[10px] text-[#88D4D3] font-medium truncate">Lead Technician</p>
+              </div>
+            )}
           </div>
 
           {/* Links */}
           <nav className="p-3.5 flex flex-col gap-1.5 overflow-y-auto no-scrollbar max-h-[calc(100vh-160px)]">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
+              const hasSubItems = item.subItems && item.subItems.length > 0;
+              const isExpanded = expandedMenu === item.name;
+
+              if (hasSubItems) {
+                return (
+                  <div key={item.name} className="flex flex-col gap-1">
+                    <button
+                      onClick={() => setExpandedMenu(isExpanded ? '' : item.name)}
+                      className={`
+                        flex items-center justify-between px-4 py-3 rounded-r-3xl text-sm font-medium transition-all duration-200 tap-scale mr-4 w-full bg-transparent border-0 cursor-pointer
+                        ${isExpanded 
+                          ? 'bg-[#319C9B]/30 text-white border-l-4 border-[#319C9B] font-bold shadow-sm' 
+                          : 'text-[#88D4D3] hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <Icon className="text-lg shrink-0" />
+                        {isSidebarOpen && (
+                          <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="truncate">
+                            {item.name}
+                          </motion.span>
+                        )}
+                      </div>
+                      {isSidebarOpen && (
+                        isExpanded ? <FiChevronDown className="text-[#88D4D3]" /> : <FiChevronRight className="text-[#88D4D3]" />
+                      )}
+                    </button>
+                    
+                    <AnimatePresence>
+                      {isExpanded && isSidebarOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="flex flex-col gap-1 overflow-hidden ml-10 border-l border-slate-100 pl-3 mr-4"
+                        >
+                          {item.subItems.map(sub => (
+                            <NavLink
+                              key={sub.name}
+                              to={sub.path}
+                              className={({ isActive }) => `
+                                py-2 px-3 text-xs font-medium rounded-xl transition-all duration-200
+                                ${isActive ? 'text-white bg-[#319C9B]/30 font-bold' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
+                              `}
+                            >
+                              {sub.name}
+                            </NavLink>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              }
+
               return (
                 <NavLink
-                  key={item.path}
+                  key={item.name}
                   to={item.path}
                   className={({ isActive }) => `
-                    flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-black tracking-wider uppercase transition-all duration-200 tap-scale
+                    flex items-center gap-3.5 px-4 py-3 rounded-r-3xl text-sm font-medium transition-all duration-200 tap-scale mr-4
                     ${isActive 
-                      ? 'bg-teal/10 text-teal shadow-sm' 
-                      : 'text-slate-500 hover:bg-slate-50/80 hover:text-slate-800'
+                      ? 'bg-[#319C9B]/30 text-white border-l-4 border-[#319C9B] font-bold shadow-sm' 
+                      : 'text-[#88D4D3] hover:bg-white/5 hover:text-white border-l-4 border-transparent'
                     }
                   `}
                 >
@@ -120,10 +205,10 @@ export default function LabVendorLayout() {
         </div>
 
         {/* Footer controls */}
-        <div className="p-3.5 border-t border-slate-50 flex flex-col gap-1.5">
+        <div className="p-3.5 border-t border-[#0F4A4A] flex flex-col gap-1.5">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3.5 px-4 py-3 w-full rounded-2xl text-xs font-black tracking-wider uppercase text-coral hover:bg-coral-light/60 transition-all text-left tap-scale cursor-pointer border-0"
+            className="flex items-center gap-3.5 px-4 py-3 w-full rounded-2xl text-xs font-black tracking-wider uppercase text-coral hover:bg-white/10 hover:text-coral-light transition-all text-left tap-scale cursor-pointer border-0 bg-transparent"
           >
             <FiLogOut className="text-lg shrink-0" />
             {isSidebarOpen && <span>Log Out</span>}
@@ -147,16 +232,11 @@ export default function LabVendorLayout() {
               <FiMenu className="text-xl" />
             </button>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-black text-slate-800 tracking-wide uppercase leading-none">
-                  {vendorUser?.name || 'Diagnostics Lab'}
-                </h2>
-                <span className="flex items-center gap-0.5 text-[8px] bg-teal-light text-teal border border-teal/10 px-2 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 leading-none">
-                  🔬 Laboratory Partner
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">
-                Lab Diagnostic Center
+              <h2 className="text-base sm:text-lg font-medium text-slate-700 tracking-wide leading-none">
+                Welcome back, Apex Diagnostics
+              </h2>
+              <p className="text-xs text-slate-500 font-medium tracking-wide mt-1.5">
+                Monday, 23 Oct 2023
               </p>
             </div>
           </div>
@@ -201,16 +281,12 @@ export default function LabVendorLayout() {
             <div className="relative">
               <button 
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-150 transition-colors tap-scale text-left cursor-pointer"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/80 hover:bg-slate-200/80 transition-colors tap-scale cursor-pointer border-0"
               >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-teal to-forest text-white flex items-center justify-center text-xs font-black uppercase">
-                  LB
+                <div className="w-7 h-7 rounded-full bg-[#135A5A] text-white flex items-center justify-center text-xs">
+                  <FiUser />
                 </div>
-                <div className="hidden md:block text-left">
-                  <h4 className="text-xs font-black text-slate-800 leading-none">Lab Director</h4>
-                  <span className="text-[9px] text-teal font-extrabold uppercase mt-0.5 block tracking-wide">Accredited</span>
-                </div>
-                <FiChevronDown className="text-slate-400 text-xs hidden sm:block shrink-0" />
+                <span className="text-xs font-medium text-slate-700 pr-1 hidden sm:block">Admin</span>
               </button>
 
               <AnimatePresence>
@@ -225,7 +301,7 @@ export default function LabVendorLayout() {
                     >
                       <div className="px-3 py-2 border-b border-slate-50">
                         <h4 className="text-xs font-black text-slate-850 truncate">{vendorUser?.name || 'Diagnostics Lab'}</h4>
-                        <span className="text-[8px] bg-teal-light text-teal border border-teal/10 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 mt-1.5 inline-block">
+                        <span className="text-[8px] bg-teal/10 text-teal border border-teal/10 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 mt-1.5 inline-block">
                           NABL ACCREDITED
                         </span>
                       </div>

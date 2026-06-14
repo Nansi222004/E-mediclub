@@ -135,6 +135,27 @@ const initialState = {
       { day: 'Sat', sales: 14500 },
       { day: 'Sun', sales: 12000 }
     ]
+  },
+  labProfile: {
+    gallery: [
+      { id: '1', url: 'https://images.unsplash.com/photo-1579154261294-88752594e687?auto=format&fit=crop&w=800&q=80', category: 'Testing Area', isFeatured: true },
+      { id: '2', url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80', category: 'Equipment', isFeatured: false },
+      { id: '3', url: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?auto=format&fit=crop&w=800&q=80', category: 'Reception', isFeatured: false }
+    ],
+    banner: {
+      image: 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=1200&q=80',
+      title: 'Advanced Diagnostics Center',
+      subtitle: 'NABL Certified | 100% Accurate Results | Free Home Sample Collection',
+      ctaText: 'View Test Packages'
+    },
+    facilities: {
+      homeCollection: true,
+      nablCertified: true,
+      digitalReports: true,
+      sameDayReports: true,
+      parking: true,
+      wheelchair: false
+    }
   }
 };
 
@@ -330,6 +351,18 @@ const vendorSlice = createSlice({
     },
     deleteLabTest: (state, action) => {
       state.labTests = state.labTests.filter(l => l.id !== action.payload);
+    },
+    updateLabProfile: (state, action) => {
+      state.labProfile = { ...state.labProfile, ...action.payload };
+    },
+    updateLabGallery: (state, action) => {
+      state.labProfile.gallery = action.payload;
+    },
+    updateLabBanner: (state, action) => {
+      state.labProfile.banner = { ...state.labProfile.banner, ...action.payload };
+    },
+    toggleLabFacility: (state, action) => {
+      state.labProfile.facilities[action.payload] = !state.labProfile.facilities[action.payload];
     }
   }
 });
@@ -355,7 +388,11 @@ export const {
   addLabCategory,
   addDoctor,
   deleteDoctor,
-  deleteLabTest
+  deleteLabTest,
+  updateLabProfile,
+  updateLabGallery,
+  updateLabBanner,
+  toggleLabFacility
 } = vendorSlice.actions;
 
 export default vendorSlice.reducer;

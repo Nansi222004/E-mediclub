@@ -210,3 +210,224 @@
     background: #94a3b8;
   }
 }
+
+/* ==========================================================================
+   VENDOR APPS MASTER CSS
+   ========================================================================== */
+
+/* Splash Screen CSS */
+.splash-container {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #1F7A79 0%, #319C9B 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 9999;
+  animation: splashFadeOut 0.5s ease-out 2.5s forwards;
+}
+
+@keyframes splashFadeOut {
+  to { opacity: 0; pointer-events: none; }
+}
+
+/* Logo bounce in */
+.splash-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: logoBounceIn 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+
+@keyframes logoBounceIn {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.splash-logo img {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+}
+
+.splash-logo-text {
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.splash-vendor-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  animation: fadeInUp 0.6s ease-out 0.4s both;
+}
+
+/* Shimmer loading bar */
+.splash-shimmer-bar {
+  width: 200px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 32px;
+  animation: fadeInUp 0.6s ease-out 0.6s both;
+}
+
+.splash-shimmer-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #952A36, #ffffff, #952A36);
+  border-radius: 999px;
+  animation: shimmerFill 2s ease-out 0.8s forwards;
+}
+
+@keyframes shimmerFill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile first — works on all screen sizes */
+
+/* Mobile (< 640px) */
+@media (max-width: 640px) {
+  /* Login/Signup: full screen card, no sidebar */
+  .vendor-auth-card {
+    margin: 0;
+    border-radius: 0;
+    min-height: 100vh;
+    padding: 24px 20px;
+  }
+
+  /* Dashboard: bottom tab navigation */
+  .vendor-sidebar { display: none; }
+  .vendor-bottom-nav { display: flex; }
+
+  /* Tables: horizontal scroll */
+  .vendor-table-wrapper { overflow-x: auto; }
+
+  /* Charts: full width */
+  .vendor-chart { width: 100%; }
+}
+
+/* Tablet (640px - 1024px) */
+@media (min-width: 640px) and (max-width: 1024px) {
+  /* Sidebar collapses to icons only */
+  .vendor-sidebar { width: 80px; }
+  .vendor-sidebar-label { display: none; }
+
+  /* Login card: centered with max-width */
+  .vendor-auth-card { max-width: 480px; margin: auto; border-radius: 24px; padding: 32px; }
+
+  /* Dashboard grid: 2 columns */
+  .vendor-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  
+  .vendor-bottom-nav { display: none; }
+}
+
+/* Desktop (> 1024px) */
+@media (min-width: 1024px) {
+  /* Full sidebar */
+  .vendor-sidebar { width: 260px; }
+
+  /* Login: split screen layout */
+  .vendor-auth-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+  }
+  
+  .vendor-auth-card { max-width: 520px; margin: auto; border-radius: 24px; padding: 48px; }
+
+  /* Dashboard grid: 3-4 columns */
+  .vendor-kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  
+  .vendor-bottom-nav { display: none; }
+}
+
+/* Page load */
+.vendor-page {
+  animation: vendorFadeIn 0.35s ease-out forwards;
+}
+@keyframes vendorFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Auth card shimmer on load */
+.vendor-auth-card {
+  background: white;
+  animation: cardSlideUp 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@keyframes cardSlideUp {
+  from { opacity: 0; transform: translateY(40px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0)  scale(1); }
+}
+
+/* Input focus ring */
+.vendor-input:focus {
+  border-color: var(--vendor-primary, #1A7A4A);
+  box-shadow: 0 0 0 3px rgba(26, 122, 74, 0.15);
+  transition: all 0.2s ease;
+}
+
+/* Button press */
+.vendor-btn {
+  transition: all 0.15s ease;
+}
+.vendor-btn:hover  { transform: translateY(-1px); filter: brightness(1.05); }
+.vendor-btn:active { transform: scale(0.98); }
+
+/* KPI card hover */
+.vendor-kpi-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.vendor-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+/* Sidebar item */
+.vendor-sidebar-item {
+  transition: background 0.2s ease, padding-left 0.2s ease;
+}
+.vendor-sidebar-item:hover { padding-left: 20px; }
+
+/* Signup step progress */
+.vendor-step-progress {
+  transition: width 0.4s ease;
+}
+
+/* Table row */
+.vendor-table tr {
+  transition: background 0.15s ease;
+}
+.vendor-table tr:hover { background: #F0FDF4; }
+
+/* Shimmer skeleton for loading states */
+.vendor-skeleton {
+  background: linear-gradient(
+    90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Online status pulse (Doctor app) */
+.vendor-online-dot {
+  animation: onlinePulse 2s infinite;
+}
+@keyframes onlinePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+}

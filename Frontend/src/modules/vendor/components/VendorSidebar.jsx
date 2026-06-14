@@ -14,17 +14,18 @@ export default function VendorSidebar({ isOpen, toggleSidebar }) {
   const navigate = useNavigate();
 
   const menuItems = [
-    { name: 'Dashboard', path: '/vendor/dashboard', icon: FiGrid },
-    { name: 'My Products', path: '/vendor/products', icon: FiPackage },
-    { name: 'Inventory Stocks', path: '/vendor/stocks', icon: FiLayers },
-    { name: 'Store Orders', path: '/vendor/orders', icon: FiShoppingBag },
-    { name: 'Sales Report', path: '/vendor/earnings', icon: FiTrendingUp },
-    { name: 'Seller Profile', path: '/vendor/profile', icon: FiUser },
+    { name: 'Dashboard', path: '/vendor/pharmacy/dashboard', icon: FiGrid },
+    { name: 'Orders', path: '/vendor/pharmacy/orders', icon: FiShoppingBag },
+    { name: 'My Medicines', path: '/vendor/pharmacy/medicines', icon: FiPackage },
+    { name: 'Prescriptions', path: '/vendor/pharmacy/prescriptions', icon: FiLayers },
+    { name: 'Earnings', path: '/vendor/pharmacy/earnings', icon: FiTrendingUp },
+    { name: 'My Profile', path: '/vendor/pharmacy/profile', icon: FiUser },
   ];
 
   const handleLogout = () => {
-    dispatch(vendorLogout());
-    navigate('/vendor/auth');
+    localStorage.removeItem('pharmacyToken');
+    localStorage.removeItem('pharmacyProfile');
+    navigate('/vendor/pharmacy/login');
   };
 
   return (
@@ -58,7 +59,7 @@ export default function VendorSidebar({ isOpen, toggleSidebar }) {
                 className={({ isActive }) => `
                   flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-black tracking-wider uppercase transition-all duration-200 tap-scale
                   ${isActive 
-                    ? 'bg-teal/10 text-teal shadow-sm' 
+                    ? 'bg-[#1A7A4A]/10 text-[#1A7A4A] shadow-sm' 
                     : 'text-slate-500 hover:bg-slate-50/80 hover:text-slate-800'
                   }
                 `}

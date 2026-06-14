@@ -3110,6 +3110,15 @@ const productSlice = createSlice({
       if (idx !== -1) {
         state.labTests[idx] = { ...state.labTests[idx], ...action.payload };
       }
+    },
+    updateLabInCatalog: (state, action) => {
+      const { labId, updates } = action.payload;
+      if (state.labs) {
+        const idx = state.labs.findIndex(l => l.id === labId);
+        if (idx !== -1) {
+          state.labs[idx] = { ...state.labs[idx], ...updates };
+        }
+      }
     }
   },
   extraReducers: (builder) => {
@@ -3275,6 +3284,7 @@ export const {
   approveDoctor,
   rejectDoctor,
   editLabTest,
+  updateLabInCatalog,
   archiveOrder
 } = productSlice.actions;
 

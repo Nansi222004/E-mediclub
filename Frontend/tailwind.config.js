@@ -18,14 +18,14 @@ export default {
           dark: '#053C22',
         },
         teal: {
-          light: '#E6F9F6',
-          DEFAULT: '#0D9488',
-          dark: '#0F766E',
+          light: '#E9F5F5',
+          DEFAULT: '#319C9B',
+          dark: '#247C7B',
         },
         coral: {
-          light: '#FFF1F2',
-          DEFAULT: '#E11D48',
-          dark: '#BE123C',
+          light: '#F4EAEB',
+          DEFAULT: '#9B2C3A',
+          dark: '#75212B',
         },
         gold: {
           light: '#FEF9C3',

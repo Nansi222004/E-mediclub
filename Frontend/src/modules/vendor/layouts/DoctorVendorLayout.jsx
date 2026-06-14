@@ -4,7 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
   FiHome, FiCalendar, FiUser, FiGrid, FiUsers, 
-  FiMenu, FiBell, FiChevronDown, FiLogOut, FiArrowLeft
+  FiMenu, FiBell, FiChevronDown, FiChevronRight, FiLogOut, FiArrowLeft, FiFileText, FiActivity,
+  FiClock, FiVideo, FiDollarSign, FiStar, FiSettings
 } from 'react-icons/fi';
 import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 import Logo from '../../../shared/components/Logo';
@@ -18,6 +19,9 @@ export default function DoctorVendorLayout() {
   const [isMobile, setIsMobile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  
+  // State to manage expanded accordions
+  const [expandedMenus, setExpandedMenus] = useState({});
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,15 +43,78 @@ export default function DoctorVendorLayout() {
   };
 
   const handleLogout = () => {
-    dispatch(vendorLogout());
-    navigate('/vendor/auth');
+    localStorage.removeItem('doctorToken');
+    localStorage.removeItem('doctorProfile');
+    navigate('/vendor/doctor/login');
+  };
+
+  const toggleMenu = (menuName) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuName]: !prev[menuName]
+    }));
   };
 
   const sidebarItems = [
     { name: 'Dashboard', path: '/vendor/doctor/dashboard', icon: FiGrid },
-    { name: 'Consultations', path: '/vendor/doctor/schedule', icon: FiCalendar },
-    { name: 'Patients', path: '/vendor/doctor/patients', icon: FiUsers },
-    { name: 'KYC Profile', path: '/vendor/doctor/profile', icon: FiUser },
+    { 
+      name: 'Appointments', icon: FiCalendar, 
+      subItems: [
+        { name: 'Upcoming', path: '/vendor/doctor/appointments/upcoming' },
+        { name: 'Completed', path: '/vendor/doctor/appointments/completed' },
+        { name: 'Cancelled', path: '/vendor/doctor/appointments/cancelled' }
+      ]
+    },
+    { 
+      name: 'Patients', icon: FiUsers,
+      subItems: [
+        { name: 'Patient List', path: '/vendor/doctor/patients/list' },
+        { name: 'Medical Records', path: '/vendor/doctor/patients/records' },
+        { name: 'Prescriptions', path: '/vendor/doctor/patients/prescriptions' }
+      ]
+    },
+    { 
+      name: 'Schedule Management', icon: FiClock,
+      subItems: [
+        { name: 'Availability', path: '/vendor/doctor/schedule/availability' },
+        { name: 'Time Slots', path: '/vendor/doctor/schedule/slots' },
+        { name: 'Leave Management', path: '/vendor/doctor/schedule/leave' }
+      ]
+    },
+    { 
+      name: 'Online Consultation', icon: FiVideo,
+      subItems: [
+        { name: 'Video Calls', path: '/vendor/doctor/consultations/video' },
+        { name: 'Chat Consultations', path: '/vendor/doctor/consultations/chat' }
+      ]
+    },
+    { 
+      name: 'Prescription Center', icon: FiFileText,
+      subItems: [
+        { name: 'Create Prescription', path: '/vendor/doctor/prescriptions/create' },
+        { name: 'Prescription History', path: '/vendor/doctor/prescriptions/history' }
+      ]
+    },
+    { 
+      name: 'Earnings', icon: FiDollarSign,
+      subItems: [
+        { name: 'Revenue', path: '/vendor/doctor/earnings/revenue' },
+        { name: 'Transactions', path: '/vendor/doctor/earnings/transactions' },
+        { name: 'Withdrawals', path: '/vendor/doctor/earnings/withdrawals' }
+      ]
+    },
+    { name: 'Reviews & Ratings', path: '/vendor/doctor/reviews', icon: FiStar },
+    { name: 'Notifications', path: '/vendor/doctor/notifications', icon: FiBell },
+    { name: 'Reports & Analytics', path: '/vendor/doctor/reports', icon: FiActivity },
+    { name: 'Profile', path: '/vendor/doctor/profile', icon: FiUser },
+    { name: 'Settings', path: '/vendor/doctor/settings', icon: FiSettings }
+  ];
+
+  const mobileNavItems = [
+    { name: 'Dashboard', path: '/vendor/doctor/dashboard', icon: FiGrid },
+    { name: 'Appointments', path: '/vendor/doctor/appointments/upcoming', icon: FiCalendar },
+    { name: 'Consults', path: '/vendor/doctor/consultations/video', icon: FiVideo },
+    { name: 'Profile', path: '/vendor/doctor/profile', icon: FiUser },
   ];
 
   return (
@@ -68,36 +135,94 @@ export default function DoctorVendorLayout() {
 
       {/* 2. Sidebar Navigation */}
       <aside 
-        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 bg-white border-r border-slate-100 shadow-premium flex flex-col justify-between`}
+        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 bg-[#135A5A] text-white border-r border-[#0F4A4A] shadow-premium flex flex-col justify-between`}
         style={{ width: isSidebarOpen ? '256px' : isMobile ? '0px' : '80px', transform: isMobile && !isSidebarOpen ? 'translateX(-100%)' : 'translateX(0)' }}
       >
-        <div>
+        <div className="flex flex-col h-[calc(100%-80px)]">
           {/* Brand Logo */}
-          <div className="h-20 flex items-center justify-between px-6 border-b border-slate-50">
-            <div className="overflow-hidden">
-              <Logo showText={isSidebarOpen} />
+          <div className="h-20 flex items-center justify-between px-5 border-b border-[#0F4A4A] shrink-0 bg-white/10">
+            <div className="overflow-hidden flex items-center whitespace-nowrap pt-2 bg-white rounded-xl px-2 py-1">
+              <Logo showText={isSidebarOpen} layout="horizontal" />
             </div>
             <button 
               onClick={toggleSidebar} 
-              className="hidden md:flex p-1.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-teal transition-colors border-0 cursor-pointer"
+              className="hidden md:flex p-1.5 rounded-xl hover:bg-white/10 text-[#88D4D3] hover:text-white transition-colors border-0 cursor-pointer"
             >
               <FiArrowLeft className={`transition-transform duration-300 ${!isSidebarOpen && 'rotate-180'}`} />
             </button>
           </div>
 
           {/* Links */}
-          <nav className="p-3.5 flex flex-col gap-1.5 overflow-y-auto no-scrollbar max-h-[calc(100vh-160px)]">
+          <nav className="p-3 flex flex-col gap-1 overflow-y-auto custom-scrollbar flex-1 pb-4">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
+              const hasSubItems = item.subItems && item.subItems.length > 0;
+              const isExpanded = expandedMenus[item.name];
+              const isParentActive = hasSubItems && item.subItems.some(sub => location.pathname.startsWith(sub.path));
+              
+              if (hasSubItems) {
+                return (
+                  <div key={item.name} className="flex flex-col">
+                    <button
+                      onClick={() => {
+                        if (!isSidebarOpen) toggleSidebar();
+                        toggleMenu(item.name);
+                      }}
+                      className={`
+                        flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 border-0 cursor-pointer
+                        ${isParentActive 
+                          ? 'bg-[#0F4A4A] text-white' 
+                          : 'text-[#9ADCDA] bg-transparent hover:bg-white/10 hover:text-white'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <Icon className="text-lg shrink-0" />
+                        {isSidebarOpen && <span className="truncate">{item.name}</span>}
+                      </div>
+                      {isSidebarOpen && (
+                        <FiChevronDown className={`transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                      )}
+                    </button>
+                    
+                    {/* Sub Items */}
+                    <AnimatePresence>
+                      {isSidebarOpen && isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden flex flex-col mt-1 ml-2 pl-4 border-l-2 border-[#207B7B]"
+                        >
+                          {item.subItems.map(subItem => (
+                            <NavLink
+                              key={subItem.path}
+                              to={subItem.path}
+                              className={({ isActive }) => `
+                                py-2 px-3 rounded-lg text-xs font-semibold tracking-wide transition-colors my-0.5
+                                ${isActive ? 'bg-[#207B7B] text-white' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
+                              `}
+                            >
+                              {subItem.name}
+                            </NavLink>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              }
+
+              // Normal single item
               return (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) => `
-                    flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-black tracking-wider uppercase transition-all duration-200 tap-scale
+                    flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 tap-scale
                     ${isActive 
-                      ? 'bg-teal/10 text-teal shadow-sm' 
-                      : 'text-slate-500 hover:bg-slate-50/80 hover:text-slate-800'
+                      ? 'bg-teal text-white shadow-md' 
+                      : 'text-[#9ADCDA] hover:bg-white/10 hover:text-white'
                     }
                   `}
                 >
@@ -117,15 +242,30 @@ export default function DoctorVendorLayout() {
           </nav>
         </div>
 
-        {/* Footer controls */}
-        <div className="p-3.5 border-t border-slate-50 flex flex-col gap-1.5">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3.5 px-4 py-3 w-full rounded-2xl text-xs font-black tracking-wider uppercase text-coral hover:bg-coral-light/60 transition-all text-left tap-scale cursor-pointer border-0"
-          >
-            <FiLogOut className="text-lg shrink-0" />
-            {isSidebarOpen && <span>Log Out</span>}
-          </button>
+        {/* Footer Profile & controls */}
+        <div className="p-3 border-t border-[#0F4A4A] flex flex-col gap-2 shrink-0 bg-[#0F4A4A]/50">
+          {isSidebarOpen ? (
+            <div className="flex items-center gap-3 bg-[#135A5A] p-2 rounded-xl border border-white/10 shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-white/20 overflow-hidden shrink-0 border border-white/20">
+                <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Dr. John Smith" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-white truncate">Dr. John Smith</h4>
+                <p className="text-xs text-[#88D4D3] truncate">Cardiologist</p>
+              </div>
+              <button onClick={handleLogout} className="p-2 text-[#88D4D3] hover:text-coral transition-colors shrink-0 border-0 bg-transparent cursor-pointer" title="Log Out">
+                <FiLogOut className="text-lg" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="flex items-center justify-center p-3 w-full rounded-xl text-[#F87171] hover:bg-white/10 transition-all tap-scale cursor-pointer border-0"
+              title="Log Out"
+            >
+              <FiLogOut className="text-xl" />
+            </button>
+          )}
         </div>
       </aside>
 
@@ -136,129 +276,63 @@ export default function DoctorVendorLayout() {
       >
         
         {/* Top Header navbar */}
-        <header className="sticky top-0 z-35 h-20 bg-white/80 backdrop-blur px-4 sm:px-6 flex items-center justify-between shadow-sm border-b border-slate-100">
+        <header className="sticky top-0 z-35 h-20 bg-white/90 backdrop-blur px-6 lg:px-8 flex items-center justify-between shadow-sm border-b border-slate-100">
           <div className="flex items-center gap-4">
             <button 
               onClick={toggleSidebar}
-              className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors border-0 cursor-pointer"
+              className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors border-0 cursor-pointer md:hidden"
             >
               <FiMenu className="text-xl" />
             </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-black text-slate-800 tracking-wide uppercase leading-none">
-                  {vendorUser?.name || 'Dr. Ramesh'}
-                </h2>
-                <span className="flex items-center gap-0.5 text-[8px] bg-teal-light text-teal border border-teal/10 px-2 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 leading-none">
-                  👨‍⚕️ Medical Practitioner
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">
-                Doctor Console Terminal
+            <div className="flex flex-col">
+              <h2 className="text-base sm:text-lg font-bold text-slate-800 leading-tight">
+                <span className="hidden sm:inline">Welcome back, </span>Dr. John Smith
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 hidden sm:block">
+                Monday, June 12, 2026
               </p>
             </div>
           </div>
 
           {/* Right side controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 sm:gap-6">
             
+            {/* Search Bar */}
+            <div className="hidden md:flex items-center bg-slate-50 border border-slate-100 rounded-full px-4 py-2 w-64">
+              <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input 
+                type="text" 
+                placeholder="Search patients..." 
+                className="bg-transparent border-none outline-none w-full ml-2 text-sm text-slate-600 placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Online Toggle */}
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-50 border border-emerald-100 px-2 sm:px-3 py-1.5 rounded-full select-none cursor-pointer hover:bg-emerald-100 transition-colors">
+              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shrink-0"></div>
+              <span className="text-xs sm:text-sm font-semibold text-emerald-700 hidden sm:block">Online</span>
+            </div>
+
             {/* Notifications */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors relative tap-scale border-0 cursor-pointer"
-              >
-                <FiBell className="text-lg" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-teal animate-pulse" />
-              </button>
-
-              <AnimatePresence>
-                {showNotifications && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowNotifications(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-3 w-80 bg-white border border-slate-100 rounded-3xl shadow-premium z-20 overflow-hidden"
-                    >
-                      <div className="p-4 border-b border-slate-50 flex items-center justify-between">
-                        <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Clinical Alerts</span>
-                      </div>
-                      <div className="p-4 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-1.5">
-                        <FiBell className="text-xl text-teal animate-bounce" />
-                        <span>No pending checkups.</span>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Profile Avatar */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-150 transition-colors tap-scale text-left cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-teal to-forest text-white flex items-center justify-center text-xs font-black uppercase">
-                  DR
-                </div>
-                <div className="hidden md:block text-left">
-                  <h4 className="text-xs font-black text-slate-800 leading-none">Practitioner</h4>
-                  <span className="text-[9px] text-teal font-extrabold uppercase mt-0.5 block tracking-wide">MD Verified</span>
-                </div>
-                <FiChevronDown className="text-slate-400 text-xs hidden sm:block shrink-0" />
-              </button>
-
-              <AnimatePresence>
-                {showProfileDropdown && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowProfileDropdown(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-3 w-64 bg-white border border-slate-100 rounded-3xl shadow-premium z-20 overflow-hidden p-3 flex flex-col gap-2"
-                    >
-                      <div className="px-3 py-2 border-b border-slate-50">
-                        <h4 className="text-xs font-black text-slate-850 truncate">{vendorUser?.name || 'Dr. Ramesh'}</h4>
-                        <span className="text-[8px] bg-teal-light text-teal border border-teal/10 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 mt-1.5 inline-block">
-                          REGISTERED PHYSICIAN
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => { setShowProfileDropdown(false); navigate('/vendor/doctor/profile'); }}
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-650 text-left w-full transition-colors border-0 bg-transparent cursor-pointer"
-                      >
-                        <FiUser className="text-sm text-teal shrink-0" />
-                        <span>My Profile</span>
-                      </button>
-                      <button 
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-coral-light/20 hover:bg-coral-light/50 text-xs font-black uppercase text-coral text-left w-full transition-colors shrink-0 border-0 cursor-pointer"
-                      >
-                        <span>🚪</span>
-                        <span>Log Out</span>
-                      </button>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
+            <button className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors border-0 bg-transparent cursor-pointer">
+              <FiBell className="text-xl" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-coral"></span>
+            </button>
 
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-8">
+        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-8 bg-slate-50 min-h-[calc(100vh-80px)]">
           <Outlet />
         </main>
       </div>
 
       {/* 4. Bottom mobile nav */}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around z-30 md:hidden shadow-app-bar px-2">
-        {sidebarItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink 
@@ -267,11 +341,24 @@ export default function DoctorVendorLayout() {
               className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
             >
               <Icon className="text-xl" />
-              <span>{item.name.split(' ')[0]}</span>
+              <span>{item.name}</span>
             </NavLink>
           );
         })}
       </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+        }
+      `}} />
 
     </div>
   );
