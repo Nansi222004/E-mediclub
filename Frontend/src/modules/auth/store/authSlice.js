@@ -10,6 +10,13 @@ const storedAddresses = localStorage.getItem('em_addresses')
       { id: 2, name: 'Office', phone: '9876543211', pincode: '110001', addressLine: 'Plot 45, Tech Park, Sector V', city: 'New Delhi', state: 'Delhi', isDefault: false }
     ];
 
+const storedCards = localStorage.getItem('em_saved_cards')
+  ? JSON.parse(localStorage.getItem('em_saved_cards'))
+  : [
+      { id: 'c-1', bank: 'HDFC Bank Credit Card', last4: '9874', expiry: '12/28', city: 'Mumbai', pincode: '400001' },
+      { id: 'c-2', bank: 'ICICI Bank Debit Card', last4: '3412', expiry: '05/29', city: 'New Delhi', pincode: '110001' }
+    ];
+
 const initialState = {
   user: storedUser,
   token: storedToken,
@@ -17,6 +24,7 @@ const initialState = {
   loading: false,
   error: null,
   addresses: storedAddresses,
+  savedCards: storedCards,
   otpSent: false,
   otpVerificationPending: false,
   tempPhone: null,
@@ -98,6 +106,14 @@ const authSlice = createSlice({
         isDefault: addr.id === action.payload
       }));
       localStorage.setItem('em_addresses', JSON.stringify(state.addresses));
+    },
+    addSavedCard: (state, action) => {
+      state.savedCards.push(action.payload);
+      localStorage.setItem('em_saved_cards', JSON.stringify(state.savedCards));
+    },
+    deleteSavedCard: (state, action) => {
+      state.savedCards = state.savedCards.filter(card => card.id !== action.payload);
+      localStorage.setItem('em_saved_cards', JSON.stringify(state.savedCards));
     }
   }
 });
@@ -113,7 +129,9 @@ export const {
   addAddress,
   updateAddress,
   deleteAddress,
-  setDefaultAddress
+  setDefaultAddress,
+  addSavedCard,
+  deleteSavedCard
 } = authSlice.actions;
 
 export default authSlice.reducer;

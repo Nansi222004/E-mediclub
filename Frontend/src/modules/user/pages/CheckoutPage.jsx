@@ -9,7 +9,7 @@ import {
 import { FiMapPin, FiCreditCard, FiSmartphone, FiCheckCircle, FiShield, FiPlus, FiArrowLeft } from 'react-icons/fi';
 import { clearCart } from '../store/cartSlice';
 import { placeOrder, normalizeCity } from '../store/productSlice';
-import { addAddress } from '../../auth/store/authSlice';
+import { addAddress, addSavedCard } from '../../auth/store/authSlice';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -17,17 +17,48 @@ export default function CheckoutPage() {
 
   // Redux Selectors
   const { items, total } = useSelector(state => state.cart);
-  const { addresses } = useSelector(state => state.auth);
+  const { addresses, savedCards = [] } = useSelector(state => state.auth);
   const { location: locationState } = useSelector(state => state.products || {});
 
   const selectedCity = locationState?.city ? normalizeCity(locationState.city).toLowerCase() : '';
+  const selectedPin = locationState?.pincode || '';
+
   const filteredAddresses = selectedCity
     ? addresses.filter(addr => addr.city && normalizeCity(addr.city).toLowerCase() === selectedCity)
     : addresses;
 
+  const filterCardsByLocation = (card) => {
+    if (!selectedCity) return true;
+    const cardCity = card.city ? card.city.toLowerCase() : '';
+    const cardPin = card.pincode || '';
+    const matchesCity = cardCity === selectedCity;
+    const matchesPin = selectedPin ? (cardPin === selectedPin) : true;
+    return matchesCity && matchesPin;
+  };
+
+  const filteredCards = savedCards.filter(filterCardsByLocation);
+
   // States
   const [activeStep, setActiveStep] = useState(0); // 0: Address, 1: Payment, 2: Success (MUI is 0-indexed)
   const [selectedAddressId, setSelectedAddressId] = useState(filteredAddresses[0]?.id || 1);
+
+  // Card sub-states
+  const [selectedCardId, setSelectedCardId] = useState('');
+  const [newCardBank, setNewCardBank] = useState('');
+  const [newCardNumber, setNewCardNumber] = useState('');
+  const [newCardExpiry, setNewCardExpiry] = useState('');
+  const [newCardCvv, setNewCardCvv] = useState('');
+  const [saveNewCard, setSaveNewCard] = useState(true);
+
+  // Set default selected card based on location changes
+  React.useEffect(() => {
+    const activeFiltered = savedCards.filter(filterCardsByLocation);
+    if (activeFiltered.length > 0) {
+      setSelectedCardId(activeFiltered[0].id);
+    } else {
+      setSelectedCardId('new');
+    }
+  }, [locationState?.city, locationState?.pincode, savedCards]);
 
   // Auto-populate address matching current location city if none exists
   React.useEffect(() => {
@@ -99,6 +130,25 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
+    if (paymentMode === 'card') {
+      if (selectedCardId === 'new') {
+        if (!newCardBank || !newCardNumber || !newCardExpiry || !newCardCvv) {
+          alert('Please fill out all new card details.');
+          return;
+        }
+        if (saveNewCard) {
+          dispatch(addSavedCard({
+            id: `c-${Date.now()}`,
+            bank: newCardBank,
+            last4: newCardNumber.slice(-4),
+            expiry: newCardExpiry,
+            city: locationState?.city || 'Mumbai',
+            pincode: locationState?.pincode || '400001'
+          }));
+        }
+      }
+    }
+
     const orderId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
     setGeneratedOrderId(orderId);
 
@@ -318,23 +368,137 @@ export default function CheckoutPage() {
               </div>
 
               {/* Cards */}
-              <div
-                onClick={() => setPaymentMode('card')}
-                className={`p-4 bg-white rounded-[24px] border shadow-sm cursor-pointer transition-all flex items-center gap-3 ${
-                  paymentMode === 'card' ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100'
-                }`}
-              >
-                <Radio
-                  checked={paymentMode === 'card'}
-                  onChange={() => setPaymentMode('card')}
-                  color="primary"
-                  name="payment-options"
-                />
-                <FiCreditCard className="text-teal w-5 h-5 shrink-0" />
-                <div className="flex-1 text-xs">
-                  <h4 className="font-extrabold text-slate-800">Credit or Debit Cards</h4>
-                  <p className="text-slate-400 font-semibold text-[10px]">Visa, Mastercard, RuPay cards processed via secure gateway</p>
+              <div className="flex flex-col gap-3">
+                <div
+                  onClick={() => setPaymentMode('card')}
+                  className={`p-4 bg-white rounded-[24px] border shadow-sm cursor-pointer transition-all flex items-center gap-3 ${
+                    paymentMode === 'card' ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100'
+                  }`}
+                >
+                  <Radio
+                    checked={paymentMode === 'card'}
+                    onChange={() => setPaymentMode('card')}
+                    color="primary"
+                    name="payment-options"
+                  />
+                  <FiCreditCard className="text-teal w-5 h-5 shrink-0" />
+                  <div className="flex-1 text-xs">
+                    <h4 className="font-extrabold text-slate-800">Credit or Debit Cards</h4>
+                    <p className="text-slate-400 font-semibold text-[10px]">Visa, Mastercard, RuPay cards processed via secure gateway</p>
+                  </div>
                 </div>
+
+                {paymentMode === 'card' && (
+                  <div className="p-4 bg-slate-50 border border-slate-150 rounded-[24px] flex flex-col gap-4 animate-fade-in text-xs font-semibold">
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Saved Cards in {locationState?.city || 'this area'}</span>
+                      {filteredCards.length > 0 ? (
+                        filteredCards.map((card) => (
+                          <div
+                            key={card.id}
+                            onClick={() => setSelectedCardId(card.id)}
+                            className={`p-3.5 bg-white border rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${
+                              selectedCardId === card.id ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100 hover:border-slate-300'
+                            }`}
+                          >
+                            <span className="text-base">💳</span>
+                            <div className="flex-1">
+                              <h4 className="font-extrabold text-slate-850">{card.bank}</h4>
+                              <p className="text-[10px] text-slate-400 font-bold mt-0.5">•••• {card.last4} • Exp {card.expiry}</p>
+                            </div>
+                            <Radio
+                              checked={selectedCardId === card.id}
+                              onChange={() => setSelectedCardId(card.id)}
+                              color="primary"
+                              size="small"
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-[10px] text-slate-450 font-bold bg-white p-3 border border-dashed border-slate-205 rounded-2xl text-center">
+                          No saved cards found in {locationState?.city || 'this area'} ({locationState?.pincode || ''}).
+                        </div>
+                      )}
+
+                      <div
+                        onClick={() => setSelectedCardId('new')}
+                        className={`p-3.5 bg-white border rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${
+                          selectedCardId === 'new' ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="text-base font-extrabold flex items-center justify-center"><FiPlus /></span>
+                        <div className="flex-1 font-extrabold text-slate-850">
+                          Use a new credit/debit card
+                        </div>
+                        <Radio
+                          checked={selectedCardId === 'new'}
+                          onChange={() => setSelectedCardId('new')}
+                          color="primary"
+                          size="small"
+                        />
+                      </div>
+                    </div>
+
+                    {selectedCardId === 'new' && (
+                      <div className="flex flex-col gap-3 pt-3 border-t border-slate-200/60 animate-fade-in">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Card Bank Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. HDFC Bank, ICICI Bank"
+                            value={newCardBank}
+                            onChange={(e) => setNewCardBank(e.target.value)}
+                            className="px-3.5 py-2.5 border border-slate-200 bg-white rounded-xl text-xs font-bold outline-none"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Card Number</label>
+                          <input
+                            type="text"
+                            maxLength="16"
+                            placeholder="4111 2222 3333 4444"
+                            value={newCardNumber}
+                            onChange={(e) => setNewCardNumber(e.target.value.replace(/\D/g, ''))}
+                            className="px-3.5 py-2.5 border border-slate-200 bg-white rounded-xl text-xs font-bold outline-none"
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="flex flex-col gap-1 col-span-2">
+                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Expiry Date</label>
+                            <input
+                              type="text"
+                              maxLength="5"
+                              placeholder="MM/YY"
+                              value={newCardExpiry}
+                              onChange={(e) => setNewCardExpiry(e.target.value)}
+                              className="px-3.5 py-2.5 border border-slate-200 bg-white rounded-xl text-xs font-bold outline-none text-center"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">CVV</label>
+                            <input
+                              type="password"
+                              maxLength="3"
+                              placeholder="•••"
+                              value={newCardCvv}
+                              onChange={(e) => setNewCardCvv(e.target.value.replace(/\D/g, ''))}
+                              className="px-3.5 py-2.5 border border-slate-200 bg-white rounded-xl text-xs font-bold outline-none text-center"
+                            />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={saveNewCard}
+                            onChange={(e) => setSaveNewCard(e.target.checked)}
+                            className="w-4 h-4 rounded text-forest focus:ring-forest border-slate-200"
+                          />
+                          <span className="text-[10px] font-bold text-slate-500">Save card for future payments in {locationState?.city || 'this area'}</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Cash on delivery */}

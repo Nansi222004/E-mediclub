@@ -14,10 +14,15 @@ export default function LabTestBookingPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Selectors
   const { labTests, labs = [], location: locationState } = useSelector(state => state.products);
   const { addresses = [], isAuthenticated } = useSelector(state => state.auth);
   const test = labTests.find(t => t.id === testId);
+
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/lab-tests/${testId}/book` } });
+    }
+  }, [isAuthenticated, navigate, testId]);
 
   const city = locationState?.city ? normalizeCity(locationState.city) : '';
 
@@ -276,7 +281,8 @@ export default function LabTestBookingPage() {
     } catch (error) {
       console.error('Failed to book lab test:', error);
       setIsPaying(false);
-      alert('Failed to process booking. Please try again.');
+      const errMsg = error.response?.data?.message || error.message || 'Unknown error';
+      alert(`Failed to process booking: ${errMsg}. Please try again.`);
     }
   };
 

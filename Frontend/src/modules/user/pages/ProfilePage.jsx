@@ -7,7 +7,7 @@ import {
   FiLogOut, FiEdit, FiCheck, FiShield, FiHeart, FiFileText, FiActivity, FiCreditCard, FiShoppingBag, FiDownload,
   FiChevronRight, FiBell, FiChevronDown, FiX, FiInfo, FiUploadCloud, FiCopy, FiRefreshCw, FiStar
 } from 'react-icons/fi';
-import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile } from '../../auth/store/authSlice';
+import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile, addSavedCard, deleteSavedCard } from '../../auth/store/authSlice';
 import { addToCart } from '../store/cartSlice';
 import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, cancelLabBooking, normalizeCity } from '../store/productSlice';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
@@ -18,7 +18,7 @@ export default function ProfilePage() {
   const dispatch = useDispatch();
 
   // Redux Selectors
-  const { user, isAuthenticated, addresses = [] } = useSelector(state => state.auth);
+  const { user, isAuthenticated, addresses = [], savedCards = [] } = useSelector(state => state.auth);
   const { appointments = [], labBookings = [], orders = [], prescriptions = [], location: locationState } = useSelector(state => state.products);
   
   const normalizedSelectedCityForAddresses = locationState?.city ? normalizeCity(locationState.city).toLowerCase() : '';
@@ -69,10 +69,6 @@ export default function ProfilePage() {
 
   // Payment methods states
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [savedCards, setSavedCards] = useState([
-    { id: 'c-1', bank: 'HDFC Bank Credit Card', last4: '9874', expiry: '12/28' },
-    { id: 'c-2', bank: 'ICICI Bank Debit Card', last4: '3412', expiry: '05/29' }
-  ]);
   const [cardBank, setCardBank] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -211,9 +207,11 @@ export default function ProfilePage() {
       id: `c-${Date.now()}`,
       bank: cardBank,
       last4: cardNumber.slice(-4),
-      expiry: cardExpiry
+      expiry: cardExpiry,
+      city: locationState?.city || 'Mumbai',
+      pincode: locationState?.pincode || '400001'
     };
-    setSavedCards(prev => [...prev, newCard]);
+    dispatch(addSavedCard(newCard));
     setCardBank('');
     setCardNumber('');
     setCardExpiry('');
@@ -221,7 +219,7 @@ export default function ProfilePage() {
   };
 
   const handleDeleteCard = (id) => {
-    setSavedCards(prev => prev.filter(c => c.id !== id));
+    dispatch(deleteSavedCard(id));
   };
 
   const handleOrderAgain = (itemsList) => {
@@ -761,8 +759,8 @@ export default function ProfilePage() {
         };
 
         const todayStr = getTodayStr();
-        const upcomingApts = appointments.filter(isAppointmentActive);
-        const pastApts = appointments.filter(apt => !isAppointmentActive(apt));
+        const upcomingApts = filteredAppointments.filter(isAppointmentActive);
+        const pastApts = filteredAppointments.filter(apt => !isAppointmentActive(apt));
 
         return (
           <div className="flex flex-col gap-5">
@@ -1148,43 +1146,94 @@ export default function ProfilePage() {
             </AnimatePresence>
 
             <div className="flex flex-col gap-2.5">
-              {savedCards.map((card) => (
-                <div key={card.id} className="p-3.5 bg-white border border-slate-100 rounded-2xl flex justify-between items-center text-xs text-slate-600 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">💳</span>
-                    <div>
-                      <h4 className="font-extrabold text-slate-800">{card.bank}</h4>
-                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">•••• •••• •••• {card.last4} • Exp {card.expiry}</p>
+              {savedCards.filter(filterByLocation).length > 0 ? (
+                savedCards.filter(filterByLocation).map((card) => (
+                  <div key={card.id} className="p-3.5 bg-white border border-slate-100 rounded-2xl flex justify-between items-center text-xs text-slate-655 shadow-sm animate-fade-in">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">💳</span>
+                      <div>
+                        <h4 className="font-extrabold text-slate-800">{card.bank}</h4>
+                        <p className="text-[10px] text-slate-400 font-semibold mt-0.5">•••• •••• •••• {card.last4} • Exp {card.expiry}</p>
+                      </div>
                     </div>
+                    <button 
+                      onClick={() => handleDeleteCard(card.id)}
+                      className="p-1 hover:bg-slate-100 text-slate-350 hover:text-coral rounded-lg border-0 bg-transparent cursor-pointer outline-none"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => handleDeleteCard(card.id)}
-                    className="p-1 hover:bg-slate-100 text-slate-350 hover:text-coral rounded-lg border-0 bg-transparent cursor-pointer outline-none"
-                  >
-                    <FiTrash2 className="w-4 h-4" />
-                  </button>
+                ))
+              ) : (
+                <div className="text-center py-8 px-4 text-slate-400 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl select-none font-bold text-xs uppercase tracking-wider">
+                  No saved payment methods found in {locationState?.city || 'this area'}.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         );
       case 'notifications':
+        const mockNotifications = [
+          {
+            id: 'n-1',
+            title: 'Prescription Verified',
+            desc: 'Our pharmacist team verified your prescription for Order #ORD-89472.',
+            icon: '🔔',
+            city: 'Mumbai',
+            pincode: '400001'
+          },
+          {
+            id: 'n-2',
+            title: 'Sample Collector Assigned',
+            desc: 'Technician Amit Sen is scheduled to collect blood samples tomorrow between 08:00 AM - 10:00 AM.',
+            icon: '🩸',
+            city: 'Delhi',
+            pincode: '110001'
+          },
+          {
+            id: 'n-3',
+            title: 'Express Delivery Partner Near You',
+            desc: 'E Mediclub delivery partners are now active in your neighborhood for faster doorstep delivery.',
+            icon: '🚚',
+            city: 'Indore',
+            pincode: '452010'
+          },
+          {
+            id: 'n-4',
+            title: 'Doctor Consultation Reminder',
+            desc: 'Your scheduled session with Dr. Priya Sharma starts in 30 minutes.',
+            icon: '🩺',
+            city: 'Pune',
+            pincode: '411001'
+          },
+          {
+            id: 'n-5',
+            title: 'Lab Collection Scheduled',
+            desc: 'Home sample collector will reach your address tomorrow morning.',
+            icon: '🔬',
+            city: 'Chennai',
+            pincode: '600001'
+          }
+        ];
+        const filteredNotifications = mockNotifications.filter(filterByLocation);
+
         return (
           <div className="flex flex-col gap-3 select-none">
-            <div className="bg-white border border-slate-100 p-3.5 rounded-2xl flex items-start gap-3 text-xs shadow-sm">
-              <span className="text-base text-teal mt-0.5">🔔</span>
-              <div>
-                <h5 className="font-black text-slate-700 leading-snug">Prescription Verified</h5>
-                <p className="text-[10px] text-slate-400 font-semibold mt-1">Our pharmacist team verified your prescription for Order #ORD-89472.</p>
+            {filteredNotifications.length > 0 ? (
+              filteredNotifications.map((notif) => (
+                <div key={notif.id} className="bg-white border border-slate-100 p-3.5 rounded-2xl flex items-start gap-3 text-xs shadow-sm animate-fade-in">
+                  <span className="text-base text-teal mt-0.5">{notif.icon}</span>
+                  <div>
+                    <h5 className="font-black text-slate-700 leading-snug">{notif.title}</h5>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-1">{notif.desc}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 px-4 text-slate-400 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl select-none font-bold text-xs uppercase tracking-wider">
+                No notifications in {locationState?.city || 'this area'}.
               </div>
-            </div>
-            <div className="bg-white border border-slate-100 p-3.5 rounded-2xl flex items-start gap-3 text-xs shadow-sm">
-              <span className="text-base text-teal mt-0.5">🩸</span>
-              <div>
-                <h5 className="font-black text-slate-700 leading-snug">Sample Collector Assigned</h5>
-                <p className="text-[10px] text-slate-400 font-semibold mt-1">Technician Amit Sen is scheduled to collect blood samples tomorrow between 08:00 AM - 10:00 AM.</p>
-              </div>
-            </div>
+            )}
           </div>
         );
       case 'lab_cancellations':
