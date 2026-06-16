@@ -76,18 +76,18 @@ export default function LabVendorDashboard() {
   const chartDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in font-sans relative">
+    <div className="flex flex-col gap-1.5 animate-fade-in font-sans relative">
       
       {/* Top Section: Lab Identity Card & Quick Actions */}
-      <section className="flex flex-col lg:flex-row gap-6">
+      <section className="flex flex-col lg:flex-row gap-1.5 lg:gap-2">
         
         {/* Lab Identity Card */}
-        <div className="lg:w-1/3 bg-white rounded-2xl p-6 shadow-premium border border-slate-100 flex flex-col items-center text-center relative overflow-hidden">
+        <div className="lg:w-1/3 bg-white rounded-lg p-3 md:p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-r from-[#135A5A] to-[#319C9B]" />
-          <div className="relative w-24 h-24 rounded-full border-4 border-white shadow-md bg-white flex items-center justify-center overflow-hidden mb-4 mt-8">
+          <div className="relative w-16 h-16 rounded-full border-4 border-white shadow-md bg-white flex items-center justify-center overflow-hidden mb-2 mt-4">
             <img src="https://images.unsplash.com/photo-1579154261294-88752594e687?auto=format&fit=crop&w=150&h=150&q=80" alt="Lab Logo" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
             Central Diagnostics <FaCheckCircle className="text-teal text-sm" />
           </h2>
           <div className="flex items-center gap-3 mt-2">
@@ -106,127 +106,130 @@ export default function LabVendorDashboard() {
         </div>
 
         {/* Quick Actions Grid */}
-        <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-1.5">
           <div 
             onClick={() => setActiveModal('profile')}
-            className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale"
+            className="bg-white rounded-lg p-2 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] transition-all group tap-scale"
           >
-            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
-              <FiSettings className="text-xl" />
+            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center mb-1.5 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiSettings className="text-sm" />
             </div>
-            <span className="text-xs font-bold text-slate-700">Facilities</span>
+            <span className="text-[10px] font-bold text-slate-700">Facilities</span>
           </div>
 
           <div 
             onClick={() => setActiveModal('gallery')}
-            className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale"
+            className="bg-white rounded-lg p-2 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] transition-all group tap-scale"
           >
-            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
-              <FiImage className="text-xl" />
+            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center mb-1.5 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiImage className="text-sm" />
             </div>
-            <span className="text-xs font-bold text-slate-700">Gallery</span>
+            <span className="text-[10px] font-bold text-slate-700">Gallery</span>
           </div>
 
           <div 
             onClick={() => setActiveModal('banner')}
-            className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale"
+            className="bg-white rounded-lg p-2 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] transition-all group tap-scale"
           >
-            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
-              <FiAward className="text-xl" />
+            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center mb-1.5 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiAward className="text-sm" />
             </div>
-            <span className="text-xs font-bold text-slate-700">Banner</span>
+            <span className="text-[10px] font-bold text-slate-700">Banner</span>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-premium border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] hover:shadow-lg transition-all group tap-scale">
-            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
-              <FiUpload className="text-xl" />
+          <div className="bg-white rounded-lg p-2 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#135A5A] transition-all group tap-scale">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center mb-1.5 group-hover:bg-[#135A5A] group-hover:text-white text-slate-400 transition-colors">
+              <FiUpload className="text-sm" />
             </div>
-            <span className="text-xs font-bold text-slate-700">Upload Report</span>
+            <span className="text-[10px] font-bold text-slate-700">Upload Report</span>
           </div>
         </div>
       </section>
 
       {/* KPI Deck */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
         
         {/* KPI 1 - Solid Teal */}
-        <div className="bg-[#135A5A] rounded-2xl p-5 shadow-premium flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <FiCalendar className="text-white text-xl" />
-            <span className="bg-white/20 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+        <div className="bg-[#135A5A] rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <FiCalendar className="text-white text-lg" />
+            <span className="bg-white/20 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
               +12%
             </span>
           </div>
           <div className="relative z-10">
-            <h3 className="text-white/80 text-xs font-medium tracking-wide mb-1">Today's Bookings</h3>
-            <p className="text-white text-3xl font-light">{todaysBookingsCount}</p>
+            <h3 className="text-white/80 text-[10px] font-black uppercase tracking-widest mb-0.5">Bookings</h3>
+            <p className="text-white text-xl font-black leading-none">{todaysBookingsCount}</p>
           </div>
         </div>
 
-        {/* KPI 2 - Pending Reports */}
-        <div className="bg-white rounded-2xl p-5 shadow-premium flex flex-col justify-between border border-slate-100">
-          <div className="mb-4">
-            <FiFileText className="text-coral text-xl" />
+        {/* Pending Reports Card */}
+        <div className="bg-white rounded-lg p-3 shadow-sm flex flex-col justify-between border border-slate-100">
+          <div className="mb-1.5">
+            <FiFileText className="text-coral text-sm" />
           </div>
           <div>
-            <h3 className="text-slate-500 text-xs font-medium tracking-wide mb-1">Pending Reports</h3>
-            <p className="text-coral text-3xl font-light">{pendingReportsCount < 10 ? `0${pendingReportsCount}` : pendingReportsCount}</p>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Pending Reports</h3>
+            <p className="text-coral text-xl font-black leading-none">{pendingReportsCount < 10 ? `0${pendingReportsCount}` : pendingReportsCount}</p>
           </div>
         </div>
 
-        {/* KPI 3 - Sample Collections */}
-        <div className="bg-white rounded-2xl p-5 shadow-premium flex flex-col justify-between border border-slate-100">
-          <div className="mb-4">
-            <FiDroplet className="text-[#135A5A] text-xl" />
+        {/* Sample Collections Card */}
+        <div className="bg-white rounded-lg p-3 shadow-sm flex flex-col justify-between border border-slate-100">
+          <div className="mb-1.5">
+            <FiDroplet className="text-[#135A5A] text-sm" />
           </div>
           <div>
-            <h3 className="text-slate-500 text-xs font-medium tracking-wide mb-1">Sample Collections</h3>
-            <p className="text-[#135A5A] text-3xl font-light">{sampleCollectionsCount}</p>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Samples</h3>
+            <p className="text-[#135A5A] text-xl font-black leading-none">{sampleCollectionsCount}</p>
           </div>
         </div>
 
-        {/* KPI 4 - Monthly Revenue */}
-        <div className="bg-white rounded-2xl p-5 shadow-premium flex flex-col justify-between border border-slate-100">
-          <div className="mb-4">
-            <FiDollarSign className="text-[#135A5A] text-xl" />
+        {/* Revenue Card */}
+        <div className="bg-white rounded-lg p-3 shadow-sm flex flex-col justify-between border border-slate-100">
+          <div className="mb-1.5">
+            <FiDollarSign className="text-[#135A5A] text-sm" />
           </div>
           <div>
-            <h3 className="text-slate-500 text-xs font-medium tracking-wide mb-1">Monthly Revenue</h3>
-            <p className="text-[#135A5A] text-3xl font-light">{monthlyRevenueText}</p>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Revenue</h3>
+            <p className="text-[#135A5A] text-xl font-black leading-none">{monthlyRevenueText}</p>
           </div>
         </div>
 
       </section>
 
       {/* Middle Grid */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-1.5">
         
         {/* Weekly Volume Chart (Left) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-premium border border-slate-100 flex flex-col min-h-[300px]">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-slate-700 text-sm font-medium tracking-wide">Weekly Volume</h3>
-            <div className="bg-slate-100 text-slate-500 text-[10px] font-medium px-3 py-1 rounded-full">
-              This Week
+        <div className="lg:col-span-2 bg-white rounded-lg p-3 shadow-sm border border-slate-100 flex flex-col min-h-[180px]">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-extrabold text-slate-800">Volume</h3>
+            <div className="flex bg-slate-100 rounded-lg p-0.5">
+              <button className="px-2 lg:px-3 py-1 text-[8px] lg:text-[9px] font-black rounded-md bg-white shadow-sm text-[#135A5A] cursor-pointer border-0">Weekly</button>
+              <button className="px-2 lg:px-3 py-1 text-[8px] lg:text-[9px] font-bold rounded-md text-slate-500 hover:text-slate-700 bg-transparent cursor-pointer border-0 transition-colors">Monthly</button>
             </div>
           </div>
           
-          <div className="flex-1 flex items-end justify-between px-2 pt-10 relative h-full">
+          <div className="flex-1 flex items-end justify-between px-1 pt-8 relative h-full">
             {chartDays.map((day, idx) => {
               const heightValue = [40, 65, 45, 80, 55, 90, 75][idx];
-              const isToday = idx === 3; // Making 'Thu' the active day
+              const currentDayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+              const isToday = idx === currentDayIdx;
               return (
-                <div key={day} className="flex flex-col items-center gap-3 w-full h-full justify-end group">
-                  <div className="w-6 sm:w-10 relative flex items-end h-[150px] bg-slate-50 rounded-t-xl overflow-visible">
+                <div key={day} className="flex flex-col items-center gap-1.5 w-full h-full justify-end group cursor-pointer">
+                  <div className="w-5 relative flex items-end h-[80px] bg-slate-50 rounded overflow-visible">
                     <div 
-                      className={`w-full rounded-t-xl transition-all duration-700 ease-out ${isToday ? 'bg-[#135A5A]' : 'bg-[#135A5A]/30 group-hover:bg-[#135A5A]/50'}`}
+                      className={`w-full rounded transition-all duration-300 ease-out bg-[#135A5A] ${isToday ? 'opacity-100 shadow-sm' : 'opacity-20 group-hover:opacity-100 group-hover:shadow-sm'}`}
                       style={{ height: `${heightValue}%` }}
                     ></div>
                     {/* Tooltip */}
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-20 pointer-events-none shadow-md">
                       {heightValue * 2} Tests
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                     </div>
                   </div>
-                  <span className={`text-[10px] tracking-wide mt-auto ${isToday ? 'text-[#135A5A] font-bold' : 'text-slate-400 font-medium'}`}>{day}</span>
+                  <span className={`text-[8px] tracking-wide mt-auto transition-colors duration-200 ${isToday ? 'text-slate-800 font-black' : 'text-slate-400 group-hover:text-slate-700 font-semibold'}`}>{day}</span>
                 </div>
               );
             })}
@@ -234,43 +237,43 @@ export default function LabVendorDashboard() {
         </div>
 
         {/* Test Categories (Right) */}
-        <div className="bg-white rounded-2xl p-6 shadow-premium border border-slate-100 flex flex-col justify-between">
+        <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 flex flex-col justify-between">
           <div>
-            <h3 className="text-slate-700 text-sm font-medium tracking-wide mb-6">Test Categories</h3>
+            <h3 className="text-xs font-extrabold text-slate-800 mb-3">Test Categories</h3>
             
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               {testCategories.map((cat, idx) => {
                 const Icon = cat.icon;
                 return (
-                  <div key={idx} className="flex items-center justify-between group cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cat.bg} ${cat.color}`}>
-                        <Icon size={16} />
+                  <div key={idx} className="flex items-center justify-between group cursor-pointer border-b border-slate-50 pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${cat.bg} ${cat.color}`}>
+                        <Icon size={14} />
                       </div>
                       <div>
-                        <h4 className="text-sm text-slate-700 font-medium">{cat.name}</h4>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{cat.subs} Sub-categories</p>
+                        <h4 className="text-xs text-slate-800 font-bold">{cat.name}</h4>
+                        <p className="text-[9px] text-slate-400 font-semibold">{cat.subs} Sub-categories</p>
                       </div>
                     </div>
-                    <FiMoreVertical className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <FiMoreVertical size={14} className="text-slate-300" />
                   </div>
                 );
               })}
             </div>
           </div>
           
-          <button className="w-full mt-6 py-2.5 bg-[#135A5A]/5 text-[#135A5A] font-medium text-xs rounded-xl hover:bg-[#135A5A]/10 transition-colors border-0 cursor-pointer">
-            View All Categories
+          <button className="w-full mt-3 py-2 bg-[#135A5A]/5 text-[#135A5A] font-medium text-[10px] rounded-lg hover:bg-[#135A5A]/10 transition-colors border-0 cursor-pointer">
+            View All
           </button>
         </div>
 
       </section>
 
       {/* Bottom Section: Recent Bookings */}
-      <section className="bg-white rounded-2xl shadow-premium border border-slate-100 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-slate-50">
-          <h3 className="text-slate-700 text-sm font-medium tracking-wide">Recent Bookings</h3>
-          <button className="text-[#135A5A] text-xs font-medium bg-transparent border-0 cursor-pointer hover:underline">
+      <section className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
+        <div className="flex items-center justify-between p-2 lg:p-3 border-b border-slate-50">
+          <h3 className="text-xs font-extrabold text-slate-800">Recent Bookings</h3>
+          <button className="text-[#135A5A] text-[9px] font-black uppercase tracking-wider bg-transparent border-0 cursor-pointer hover:underline">
             View All
           </button>
         </div>
@@ -279,38 +282,38 @@ export default function LabVendorDashboard() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Patient Name</th>
-                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Test Type</th>
-                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Time</th>
-                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
+                <th className="py-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Patient Name</th>
+                <th className="py-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Test Type</th>
+                <th className="py-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Time</th>
+                <th className="py-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="py-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {recentBookings.map((b, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#135A5A]/10 text-[#135A5A] flex items-center justify-center text-[10px] font-bold">
-                        {b.initials}
+            <tbody>
+              {recentBookings.slice(0, 4).map((bk, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                  <td className="py-2 px-4 border-b border-slate-50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 bg-[#135A5A]/10 text-[#135A5A] text-[8px] font-bold">
+                        {bk.initials}
                       </div>
-                      <span className="text-sm text-slate-800 font-bold">{b.name}</span>
+                      <span className="text-[10px] text-slate-800 font-bold">{bk.name}</span>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-sm text-slate-500">{b.test}</td>
-                  <td className="py-4 px-6 text-sm text-slate-500">{b.time}</td>
-                  <td className="py-4 px-6">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${b.statusColor}`}>
-                      {b.status}
+                  <td className="py-2 px-4 border-b border-slate-50 text-[10px] text-slate-500">{bk.test}</td>
+                  <td className="py-2 px-4 border-b border-slate-50 text-[10px] text-slate-500">{bk.time}</td>
+                  <td className="py-2 px-4 border-b border-slate-50">
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wide ${bk.statusColor}`}>
+                      {bk.status}
                     </span>
                   </td>
-                  <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <button className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-1">
-                        <FiMoreVertical />
+                  <td className="py-2 px-4 border-b border-slate-50 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0.5">
+                        <FiMoreVertical size={14} />
                       </button>
-                      <button className="w-8 h-8 rounded-full bg-[#135A5A] text-white flex items-center justify-center hover:bg-[#0F4A4A] transition-colors border-0 cursor-pointer shadow-sm">
-                        <FiPlus />
+                      <button className="w-6 h-6 rounded bg-[#135A5A] text-white flex items-center justify-center hover:bg-[#0F4A4A] transition-colors border-0 cursor-pointer shadow-sm">
+                        <FiPlus size={12} />
                       </button>
                     </div>
                   </td>

@@ -220,8 +220,7 @@ export default function HomePage() {
     { name: 'Lab Tests', icon: '🧪', desc: 'Diagnostic Kits', route: '/lab-tests', color: 'bg-teal-50 text-teal-600' },
     { name: 'Doctors', icon: '👨‍⚕️', desc: 'Expert Doctors', route: '/doctor-appointments', color: 'bg-blue-50 text-blue-600' },
     { name: 'Ayurveda', icon: '🌿', desc: 'Natural Herbs', route: '/ayurveda', color: 'bg-amber-50 text-amber-600' },
-    { name: 'Wellness', icon: '🧘', desc: 'Fitness & Care', route: '/wellness', color: 'bg-emerald-50 text-emerald-600' },
-    dynamicCategory
+    { name: 'Wellness', icon: '🧘', desc: 'Fitness & Care', route: '/wellness', color: 'bg-emerald-50 text-emerald-600' }
   ];
 
   // Dynamic products priorities by location
@@ -563,7 +562,7 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-white via-teal-50 to-emerald-50 border border-teal-100 shadow-premium p-5 md:p-6"
+          className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-teal-100 via-emerald-50 to-teal-100 border border-teal-200 shadow-premium p-5 md:p-6"
         >
           <div className="absolute -top-6 right-0 w-40 h-40 bg-teal/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-forest/10 rounded-full blur-3xl" />
@@ -1018,7 +1017,7 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-white via-teal-50 to-emerald-50 border border-teal-100 shadow-premium p-4"
+          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-teal-100 via-emerald-50 to-teal-100 border border-teal-200 shadow-premium p-4"
         >
           <motion.div
             className="absolute top-2 right-2 w-14 h-14 rounded-full bg-teal/10 border border-teal/10 flex items-center justify-center"

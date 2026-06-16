@@ -143,10 +143,11 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
                 {hasSubMenu ? (
                   <button
                     onClick={() => toggleAccordion(item.name)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-black tracking-wider uppercase transition-all duration-200 tap-scale cursor-pointer border-0 w-full
-                      ${isActive || isExpanded
-                        ? 'bg-[#0F4A4A] text-white shadow-inner border border-[#0F4A4A]/50' 
-                        : 'text-teal-100 hover:bg-[#0F4A4A]/50 hover:text-white bg-transparent'
+                    className={`
+                      flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 border-0 cursor-pointer w-full
+                      ${isExpanded 
+                        ? 'bg-[#0F4A4A] text-white' 
+                        : 'text-[#9ADCDA] bg-transparent hover:bg-white/10 hover:text-white'
                       }
                     `}
                   >
@@ -166,10 +167,10 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
                   <NavLink
                     to={item.path}
                     className={({ isActive: isLinkActive }) => `
-                      flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-black tracking-wider uppercase transition-all duration-200 tap-scale
+                      flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 tap-scale
                       ${isLinkActive 
-                        ? 'bg-[#0F4A4A] text-white shadow-inner border border-[#0F4A4A]/50' 
-                        : 'text-teal-100 hover:bg-[#0F4A4A]/50 hover:text-white'
+                        ? 'bg-teal text-white shadow-md' 
+                        : 'text-[#9ADCDA] hover:bg-white/10 hover:text-white'
                       }
                     `}
                   >
@@ -198,14 +199,11 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
                               key={subItem.path}
                               to={subItem.path}
                               className={({ isActive: isSubActive }) => `
-                                px-3 py-2 rounded-xl text-[10px] font-extrabold tracking-wider uppercase transition-colors block truncate
-                                ${isSubActive
-                                  ? 'bg-teal-600/30 text-white border border-teal-500/20'
-                                  : 'text-teal-200/70 hover:text-white hover:bg-teal-600/20'
-                                }
+                                py-2 px-3 rounded-lg text-xs font-semibold tracking-wide transition-colors my-0.5 block truncate
+                                ${isSubActive ? 'bg-[#207B7B] text-white' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
                               `}
                             >
-                              • {subItem.name}
+                              {subItem.name}
                             </NavLink>
                           ))}
                         </div>

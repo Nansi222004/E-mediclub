@@ -210,11 +210,28 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
     setStatusMsg(null);
     setShowPermissionPopup(false);
 
+    const gpsCityCoordinates = {
+      "Mumbai": { lat: 19.0760, lng: 72.8777, state: "Maharashtra", pincode: "400001" },
+      "Delhi": { lat: 28.6139, lng: 77.2090, state: "Delhi", pincode: "110001" },
+      "Bangalore": { lat: 12.9716, lng: 77.5946, state: "Karnataka", pincode: "560001" },
+      "Chennai": { lat: 13.0827, lng: 80.2707, state: "Tamil Nadu", pincode: "600001" },
+      "Hyderabad": { lat: 17.3850, lng: 78.4867, state: "Telangana", pincode: "500001" },
+      "Pune": { lat: 18.5204, lng: 73.8567, state: "Maharashtra", pincode: "411001" },
+      "Kolkata": { lat: 22.5726, lng: 88.3639, state: "West Bengal", pincode: "700001" },
+      "Ahmedabad": { lat: 23.0225, lng: 72.5714, state: "Gujarat", pincode: "380001" },
+      "Indore": { lat: 22.7196, lng: 75.8577, state: "Madhya Pradesh", pincode: "452010" },
+      "Bhopal": { lat: 23.2599, lng: 77.4126, state: "Madhya Pradesh", pincode: "462001" },
+      "Ujjain": { lat: 23.1760, lng: 75.7885, state: "Madhya Pradesh", pincode: "456010" },
+      "Dewas": { lat: 22.9623, lng: 76.0508, state: "Madhya Pradesh", pincode: "455001" }
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setTimeout(async () => {
+          const { latitude, longitude } = position.coords;
+          let resolvedLoc = null;
+
           try {
-            const { latitude, longitude } = position.coords;
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
               headers: {
                 'Accept-Language': 'en-US,en'
@@ -223,37 +240,69 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
             const data = await res.json();
             const addr = data?.address;
             if (addr) {
-              const city = addr.city || addr.town || addr.village || addr.suburb || "Mumbai";
-              const pincode = (addr.postcode || "").replace(/\D/g, '').slice(0, 6);
-              const state = addr.state || "Maharashtra";
-              const district = addr.state_district || addr.county || city;
-              
-              const locObj = {
-                pincode: pincode.length === 6 ? pincode : '400001',
-                city,
-                district: district || city,
-                state,
-                fullAddress: ''
-              };
+              const city = addr.city || addr.town || addr.village || addr.suburb || addr.city_district || addr.state_district || addr.county;
+              if (city) {
+                let pincode = (addr.postcode || "").replace(/\D/g, '').slice(0, 6);
+                const state = addr.state || "Maharashtra";
+                const district = addr.state_district || addr.county || city;
+                
+                // If pincode is not 6 digits, look up default pincode for this city
+                if (pincode.length !== 6) {
+                  const matchedCityKey = Object.keys(CITY_MAPPINGS).find(
+                    k => k.toLowerCase() === city.toLowerCase()
+                  );
+                  if (matchedCityKey) {
+                    pincode = CITY_MAPPINGS[matchedCityKey].pincode;
+                  } else {
+                    pincode = '400001'; // Default fallback pincode
+                  }
+                }
 
-              dispatch(setLocation(locObj));
-              setLocationEnabled(true);
-              onClose();
-            } else {
-              setStatusMsg({
-                type: 'invalid',
-                text: '❌ Could not detect address. Please choose a popular city.'
-              });
+                resolvedLoc = {
+                  pincode,
+                  city,
+                  district: district || city,
+                  state,
+                  fullAddress: ''
+                };
+              }
             }
           } catch (err) {
-            console.warn('Reverse Geocoding failed:', err);
+            console.warn('Reverse Geocoding failed, falling back to coordinate distance lookup:', err);
+          }
+
+          // Fallback logic using coordinates distance
+          if (!resolvedLoc) {
+            let closestCity = 'Mumbai';
+            let minDistance = Infinity;
+            for (const [cityName, coords] of Object.entries(gpsCityCoordinates)) {
+              const dist = Math.sqrt(Math.pow(latitude - coords.lat, 2) + Math.pow(longitude - coords.lng, 2));
+              if (dist < minDistance) {
+                minDistance = dist;
+                closestCity = cityName;
+              }
+            }
+            const match = gpsCityCoordinates[closestCity];
+            resolvedLoc = {
+              pincode: match.pincode,
+              city: closestCity,
+              district: closestCity,
+              state: match.state,
+              fullAddress: ''
+            };
+          }
+
+          if (resolvedLoc) {
+            dispatch(setLocation(resolvedLoc));
+            setLocationEnabled(true);
+            onClose();
+          } else {
             setStatusMsg({
               type: 'invalid',
-              text: '❌ Failed to connect to location service.'
+              text: '❌ Could not detect address. Please choose a popular city.'
             });
-          } finally {
-            setDetecting(false);
           }
+          setDetecting(false);
         }, 1200);
       },
       (error) => {

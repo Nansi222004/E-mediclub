@@ -32,7 +32,6 @@ export default function LabTestCard({ test }) {
             src={test.image || 'https://images.unsplash.com/photo-1579154261908-5f9c1c5f0d6d?auto=format&fit=crop&w=900&q=80'}
             alt={test.name}
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 to-transparent" />
           {test.tag && (

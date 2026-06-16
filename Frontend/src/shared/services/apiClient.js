@@ -9,6 +9,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token =
+    localStorage.getItem("em_token") ||
     localStorage.getItem("token") ||
     localStorage.getItem("adminToken") ||
     localStorage.getItem("userToken");
@@ -23,6 +24,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
+      localStorage.removeItem("em_token");
     }
     return Promise.reject(error);
   }

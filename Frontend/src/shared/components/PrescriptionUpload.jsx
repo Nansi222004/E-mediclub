@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUploadCloud, FiX, FiCheckCircle, FiFileText, FiCamera, FiTrash2, FiImage } from 'react-icons/fi';
 import { addPrescription } from '../../modules/user/store/productSlice';
@@ -8,6 +9,10 @@ import apiClient from '../services/apiClient';
 
 export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess }) {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useSelector(state => state.auth || {});
+  const { location: locationState } = useSelector(state => state.products || {});
   const fileInputRef = useRef(null);
 
   // States
@@ -61,6 +66,12 @@ export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess })
 
   const handleUpload = async () => {
     if (!selectedFile) return;
+
+    if (!isAuthenticated) {
+      handleClose();
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
     
     setUploadState('uploading');
     setUploadProgress(10); // Start progress
@@ -96,7 +107,9 @@ export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess })
           fileName: selectedFile.name,
           fileSize: (selectedFile.size / 1024).toFixed(1) + ' KB',
           fileUrl: response.data?.data?.fileUrl, // Provided by cloudinary via API
-          medicines: parsedMeds
+          medicines: parsedMeds,
+          city: locationState?.city || '',
+          pincode: locationState?.pincode || ''
         };
 
         dispatch(addPrescription(newRx));

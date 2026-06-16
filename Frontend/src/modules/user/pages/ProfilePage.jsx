@@ -5,11 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiUser, FiMapPin, FiCalendar, FiClock, FiTrash2, FiPlus, 
   FiLogOut, FiEdit, FiCheck, FiShield, FiHeart, FiFileText, FiActivity, FiCreditCard, FiShoppingBag, FiDownload,
-  FiChevronRight, FiBell, FiChevronDown, FiX, FiInfo, FiUploadCloud
+  FiChevronRight, FiBell, FiChevronDown, FiX, FiInfo, FiUploadCloud, FiCopy, FiRefreshCw, FiStar
 } from 'react-icons/fi';
 import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile } from '../../auth/store/authSlice';
 import { addToCart } from '../store/cartSlice';
-import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus } from '../store/productSlice';
+import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, cancelLabBooking, normalizeCity } from '../store/productSlice';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
 
@@ -19,7 +19,12 @@ export default function ProfilePage() {
 
   // Redux Selectors
   const { user, isAuthenticated, addresses = [] } = useSelector(state => state.auth);
-  const { appointments = [], labBookings = [], orders = [], prescriptions = [] } = useSelector(state => state.products);
+  const { appointments = [], labBookings = [], orders = [], prescriptions = [], location: locationState } = useSelector(state => state.products);
+  
+  const normalizedSelectedCityForAddresses = locationState?.city ? normalizeCity(locationState.city).toLowerCase() : '';
+  const filteredAddresses = normalizedSelectedCityForAddresses
+    ? addresses.filter(addr => addr.city && normalizeCity(addr.city).toLowerCase() === normalizedSelectedCityForAddresses)
+    : addresses;
 
   // Edit Profile States
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -53,7 +58,7 @@ export default function ProfilePage() {
     }));
     setShowEditProfileModal(false);
   };
-  const [activeTab, setActiveTab] = useState(null); // 'orders', 'labs', 'consultations', 'prescriptions', 'records', 'payments', 'notifications', 'help'
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'labs', 'consultations', 'prescriptions', 'records', 'payments', 'notifications', 'help'
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddrName, setNewAddrName] = useState('');
   const [newAddrPhone, setNewAddrPhone] = useState('');
@@ -74,6 +79,70 @@ export default function ProfilePage() {
   const [showGlobalUploadModal, setShowGlobalUploadModal] = useState(false);
   const [selectedRxForReview, setSelectedRxForReview] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+
+  const [replacements, setReplacements] = useState(() => {
+    const saved = localStorage.getItem('em_replacements');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'EM-29471',
+        itemName: 'Paracetamol 500mg x2',
+        date: '12 Jun',
+        status: 'In transit',
+        steps: [
+          { title: 'Request approved', date: '12 Jun, 10:30 AM', status: 'done' },
+          { title: 'Item picked up', date: '13 Jun, 2:00 PM', status: 'done' },
+          { title: 'Replacement in transit', date: 'Expected 15 Jun', status: 'active', icon: 'truck' },
+          { title: 'Delivered', date: 'Pending', status: 'pending', icon: 'home' }
+        ]
+      }
+    ];
+  });
+
+  const [refunds, setRefunds] = useState(() => {
+    const saved = localStorage.getItem('em_refunds_v2');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'LB-8812',
+        itemName: 'Lab test — CBC Full body',
+        amount: 799,
+        date: '10 Jun',
+        status: 'Credited',
+        city: 'mumbai',
+        pincode: '400001',
+        rrn: '103460748988',
+        billDetails: { mrp: 999, discount: 200, itemTotal: 799 },
+        steps: [
+          { title: 'Cancellation confirmed', date: '10 Jun, 9:00 AM', status: 'done' },
+          { title: 'Refund initiated', date: '10 Jun, 9:05 AM', status: 'done' },
+          { title: '₹799 credited to UPI', date: '12 Jun, 11:20 AM', status: 'done' }
+        ]
+      },
+      {
+        id: 'DC-3301',
+        itemName: 'Dr. Sharma consultation',
+        amount: 499,
+        date: '11 Jun',
+        status: 'Processing',
+        city: 'bangalore',
+        pincode: '560001',
+        rrn: '103460748989',
+        billDetails: { mrp: 599, discount: 100, itemTotal: 499 },
+        steps: [
+          { title: 'Cancellation confirmed', date: '11 Jun, 3:00 PM', status: 'done' },
+          { title: 'Refund processing', date: '3–5 business days', status: 'active', icon: 'refresh' },
+          { title: '₹499 credited', date: 'Pending', status: 'pending', icon: 'check' }
+        ]
+      }
+    ];
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('em_replacements', JSON.stringify(replacements));
+  }, [replacements]);
+
+  React.useEffect(() => {
+    localStorage.setItem('em_refunds_v2', JSON.stringify(refunds));
+  }, [refunds]);
 
   // Customer Feedback States
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -213,33 +282,97 @@ export default function ProfilePage() {
     return `${year}-${month}-${day}`;
   };
 
-  // Filter consultations
-  const upcomingAppointments = appointments.filter(apt => {
+  // Filter by location city and pincode
+  const selectedCity = locationState?.city?.toLowerCase() || '';
+  const selectedPin = locationState?.pincode || '';
+
+  const filterByLocation = (item) => {
+    if (!selectedCity) return true;
+    const itemCity = item.city ? item.city.toLowerCase() : '';
+    const itemPin = item.pincode || '';
+    const itemAddress = item.address ? item.address.toLowerCase() : (item.deliveryAddress ? item.deliveryAddress.toLowerCase() : '');
+
+    const matchesCity = itemCity === selectedCity || itemAddress.includes(selectedCity);
+    const matchesPin = selectedPin ? (itemPin === selectedPin || itemAddress.includes(selectedPin)) : true;
+    return matchesCity && matchesPin;
+  };
+
+  const filteredAppointments = appointments.filter(filterByLocation);
+  const upcomingAppointments = filteredAppointments.filter(apt => {
     if (apt.date && apt.date < getTodayStrGlobal()) return false;
     return apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending';
   });
-  const pastAppointments = appointments.filter(apt => {
+  const pastAppointments = filteredAppointments.filter(apt => {
     if (apt.date && apt.date < getTodayStrGlobal()) return true;
     return apt.status === 'Completed' || apt.status === 'Cancelled';
   });
 
   // Filter completed lab bookings
-  const completedLabBookings = labBookings.filter(b => b.status === 'Completed' || b.status === 'Verified' || new Date(b.date) < new Date());
+  const filteredLabBookings = labBookings.filter(filterByLocation);
+  const completedLabBookings = filteredLabBookings.filter(b => b.status === 'Completed' || b.status === 'Verified' || new Date(b.date) < new Date());
+
+  // Filter replacements & refunds
+  const filteredReplacements = replacements.filter(filterByLocation);
+  const filteredRefunds = refunds.filter(filterByLocation);
+  const filteredPrescriptions = prescriptions.filter(filterByLocation);
 
   const displayName = user?.name === 'Super Admin' ? 'Clinical Admin' : (user?.name || 'User');
   const firstName = displayName.split(' ')[0];
 
-  const menuItems = [
-    { key: 'orders', label: 'My Orders', icon: <FiShoppingBag /> },
-    { key: 'labs', label: 'My Lab Test Bookings', icon: <FiActivity /> },
-    { key: 'consultations', label: 'My Consultations', icon: <FiClock /> },
-    { key: 'prescriptions', label: 'My Prescriptions', icon: <FiFileText /> },
-    { key: 'records', label: 'Health Records', icon: <FiHeart />, badge: 'BETA' },
-    { key: 'addresses', label: 'Manage Delivery Addresses', icon: <FiMapPin /> },
-    { key: 'payments', label: 'Manage Payment Methods', icon: <FiCreditCard /> },
-    { key: 'notifications', label: 'Notifications', icon: <FiBell /> },
-    { key: 'help', label: 'Help & Support', icon: <FiInfo /> },
-    { key: 'logout', label: 'Logout', icon: <FiLogOut /> }
+  const menuSections = [
+    {
+      title: 'My Activity',
+      items: [
+        { key: 'orders', label: 'My Orders', icon: <FiShoppingBag className="text-[#0f6e56]" /> },
+        { key: 'labs', label: 'My Lab Test Bookings', icon: <FiActivity className="text-[#0f6e56]" /> },
+        { key: 'consultations', label: 'My Consultations', icon: <FiClock className="text-[#0f6e56]" /> },
+        { key: 'prescriptions', label: 'My Prescriptions', icon: <FiFileText className="text-[#0f6e56]" /> },
+        { key: 'records', label: 'Health Records', icon: <FiHeart className="text-[#0f6e56]" />, badge: 'BETA' }
+      ]
+    },
+    {
+      title: 'Cancellations & Refunds',
+      items: [
+        { key: 'lab_cancellations', label: 'Lab Test Cancellations', subLabel: 'Cancel & track refund', icon: <FiActivity className="text-[#ba7517]" /> },
+        { key: 'doctor_refunds', label: 'Doctor Appt. Refunds', subLabel: 'Cancelled consultations', icon: <FiCalendar className="text-[#ba7517]" /> },
+        { key: 'medicine_returns', label: 'Medicine Returns', subLabel: 'Return or replace medicines', icon: <FiShoppingBag className="text-[#ba7517]" /> }
+      ]
+    },
+    {
+      title: 'Track Status',
+      titleBadge: 'NEW',
+      items: [
+        { 
+          key: 'replacement_status', 
+          label: 'Replacement Status', 
+          subLabel: 'Track your replacement items', 
+          icon: <FiClock className="text-[#185fa5]" />,
+          activeBadge: filteredReplacements.length > 0 ? `${filteredReplacements.length} active` : null 
+        },
+        { 
+          key: 'refund_status', 
+          label: 'Refund Status', 
+          subLabel: 'Track money back to your account', 
+          icon: <FiCreditCard className="text-[#185fa5]" />,
+          activeBadge: filteredRefunds.length > 0 ? `${filteredRefunds.length} active` : null 
+        }
+      ]
+    },
+    {
+      title: 'Address & Payments',
+      items: [
+        { key: 'addresses', label: 'Manage Delivery Addresses', icon: <FiMapPin className="text-[#0f6e56]" /> },
+        { key: 'payments', label: 'Manage Payment Methods', icon: <FiCreditCard className="text-[#0f6e56]" /> }
+      ]
+    },
+    {
+      title: 'Settings & Account',
+      items: [
+        { key: 'notifications', label: 'Notifications', icon: <FiBell className="text-[#0f6e56]" /> },
+        { key: 'help', label: 'Help & Support', icon: <FiInfo className="text-[#0f6e56]" /> },
+        { key: 'logout', label: 'Logout', icon: <FiLogOut className="text-[#a32d2d]" />, isDestructive: true }
+      ]
+    }
   ];
 
   const toggleTab = (tab) => {
@@ -258,8 +391,9 @@ export default function ProfilePage() {
   const renderTabContent = (tab) => {
     switch (tab) {
       case 'orders':
-        const activeOrders = orders.filter(ord => ord.status !== 'Delivered' && !ord.archived);
-        const pastOrders = orders.filter(ord => ord.status === 'Delivered' && !ord.archived);
+        const filteredProfileOrders = orders.filter(filterByLocation);
+        const activeOrders = filteredProfileOrders.filter(ord => ord.status !== 'Delivered' && !ord.archived);
+        const pastOrders = filteredProfileOrders.filter(ord => ord.status === 'Delivered' && !ord.archived);
         
         const steps = [
           { label: 'Order Placed', desc: 'Received & verified' },
@@ -409,13 +543,22 @@ export default function ProfilePage() {
 
                     <div className="flex justify-between items-center border-t border-slate-50 pt-3 mt-1">
                       <span className="text-slate-400 font-bold">Total: <strong className="text-slate-700">₹{ord.total}</strong></span>
-                      <button
-                        type="button"
-                        onClick={() => handleOrderAgain(ord.items)}
-                        className="px-4 py-2 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-colors outline-none"
-                      >
-                        Order Again
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate('/orders')}
+                          className="px-3 py-2 bg-slate-100 hover:bg-slate-205 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-colors outline-none"
+                        >
+                          Order Details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOrderAgain(ord.items)}
+                          className="px-4 py-2 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-colors outline-none"
+                        >
+                          Order Again
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -476,8 +619,8 @@ export default function ProfilePage() {
         };
 
         const todayStrLabs = getTodayStrLabs();
-        const upcomingLabs = labBookings.filter(isLabBookingActiveObj);
-        const pastLabs = labBookings.filter(bk => !isLabBookingActiveObj(bk));
+        const upcomingLabs = filteredLabBookings.filter(isLabBookingActiveObj);
+        const pastLabs = filteredLabBookings.filter(bk => !isLabBookingActiveObj(bk));
 
         return (
           <div className="flex flex-col gap-5">
@@ -735,9 +878,9 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            {prescriptions && prescriptions.length > 0 ? (
+            {filteredPrescriptions && filteredPrescriptions.length > 0 ? (
               <div className="flex flex-col gap-3">
-                {prescriptions.map((rx) => (
+                {filteredPrescriptions.map((rx) => (
                   <div 
                     key={rx.id} 
                     onClick={() => {
@@ -898,43 +1041,49 @@ export default function ProfilePage() {
             </AnimatePresence>
 
             <div className="flex flex-col gap-3">
-              {addresses.map((addr) => (
-                <div 
-                  key={addr.id}
-                  className={`p-4 bg-white border rounded-2xl flex items-start justify-between gap-3 text-xs shadow-sm ${
-                    addr.isDefault ? 'border-teal/30 bg-teal-light/10' : 'border-slate-100'
-                  }`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-extrabold text-slate-800">{addr.name}</h4>
-                      {addr.isDefault && (
-                        <span className="text-[8px] font-black uppercase bg-teal text-white px-2 py-0.5 rounded">
+              {filteredAddresses.length > 0 ? (
+                filteredAddresses.map((addr) => (
+                  <div 
+                    key={addr.id}
+                    className={`p-4 bg-white border rounded-2xl flex items-start justify-between gap-3 text-xs shadow-sm ${
+                      addr.isDefault ? 'border-teal/30 bg-teal-light/10' : 'border-slate-100'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-extrabold text-slate-800">{addr.name}</h4>
+                        {addr.isDefault && (
+                          <span className="text-[8px] font-black uppercase bg-teal text-white px-2 py-0.5 rounded">
+                            DEFAULT
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-500 font-semibold mt-1">{addr.addressLine}, {addr.city}, {addr.state} - {addr.pincode}</p>
+                      <p className="text-[9.5px] text-slate-400 font-bold mt-1">PHONE: +91 {addr.phone}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button 
+                        onClick={() => dispatch(deleteAddress(addr.id))}
+                        className="p-1.5 hover:bg-slate-100 text-slate-350 hover:text-coral rounded-lg cursor-pointer border-0 bg-transparent outline-none"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                      {!addr.isDefault && (
+                        <button 
+                          onClick={() => dispatch(setDefaultAddress(addr.id))}
+                          className="p-1.5 hover:bg-slate-100 text-teal hover:underline text-[9.5px] font-black rounded cursor-pointer border-0 bg-transparent outline-none"
+                        >
                           DEFAULT
-                        </span>
+                        </button>
                       )}
                     </div>
-                    <p className="text-slate-500 font-semibold mt-1">{addr.addressLine}, {addr.city}, {addr.state} - {addr.pincode}</p>
-                    <p className="text-[9.5px] text-slate-400 font-bold mt-1">PHONE: +91 {addr.phone}</p>
                   </div>
-                  <div className="flex flex-col gap-2 shrink-0">
-                    <button 
-                      onClick={() => dispatch(deleteAddress(addr.id))}
-                      className="p-1.5 hover:bg-slate-100 text-slate-350 hover:text-coral rounded-lg cursor-pointer border-0 bg-transparent outline-none"
-                    >
-                      <FiTrash2 className="w-4 h-4" />
-                    </button>
-                    {!addr.isDefault && (
-                      <button 
-                        onClick={() => dispatch(setDefaultAddress(addr.id))}
-                        className="p-1.5 hover:bg-slate-100 text-teal hover:underline text-[9.5px] font-black rounded cursor-pointer border-0 bg-transparent outline-none"
-                      >
-                        DEFAULT
-                      </button>
-                    )}
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 px-4 text-slate-400 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl select-none font-bold text-xs uppercase tracking-wider">
+                  No saved addresses found in {locationState?.city || 'this area'}.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         );
@@ -1038,6 +1187,408 @@ export default function ProfilePage() {
             </div>
           </div>
         );
+      case 'lab_cancellations':
+        const cancelableLabs = filteredLabBookings.filter(b => b.status === 'Scheduled' || b.status === 'Confirmed' || b.status === 'Pending');
+        return (
+          <div className="flex flex-col gap-3 text-left">
+            {cancelableLabs.length > 0 ? (
+              cancelableLabs.map(booking => (
+                <div key={booking.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex justify-between items-center text-xs shadow-sm gap-3 animate-fade-in">
+                  <div>
+                    <h4 className="font-extrabold text-slate-750">🔬 {booking.packageName}</h4>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-1">{booking.date} • {booking.timeSlot}</p>
+                    <p className="text-[10px] text-slate-500 font-extrabold mt-1">Amount: ₹{booking.price || 799}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to cancel this booking for ${booking.packageName}?`)) {
+                        dispatch(cancelLabBooking(booking.id));
+                        const newRefund = {
+                          id: booking.id,
+                          itemName: `Lab test — ${booking.packageName}`,
+                          amount: booking.price || 799,
+                          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+                          status: 'Processing',
+                          city: locationState?.city || 'Mumbai',
+                          pincode: locationState?.pincode || '400001',
+                          steps: [
+                            { title: 'Cancellation confirmed', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
+                            { title: 'Refund processing', date: '3–5 business days', status: 'active', icon: 'refresh' },
+                            { title: `₹${booking.price || 799} credited`, date: 'Pending', status: 'pending', icon: 'check' }
+                          ]
+                        };
+                        setRefunds(prev => [newRefund, ...prev]);
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-black text-[10px] uppercase rounded-xl transition-all border border-rose-200/50 cursor-pointer outline-none shrink-0"
+                  >
+                    Cancel Booking
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 font-bold py-4 text-center uppercase tracking-wide bg-slate-50/50 border border-dashed border-slate-200 rounded-xl">No active lab test bookings eligible for cancellation.</p>
+            )}
+          </div>
+        );
+      case 'doctor_refunds':
+        const cancelableApts = filteredAppointments.filter(apt => apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending');
+        return (
+          <div className="flex flex-col gap-3 text-left">
+            {cancelableApts.length > 0 ? (
+              cancelableApts.map(apt => (
+                <div key={apt.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex justify-between items-center text-xs shadow-sm gap-3 animate-fade-in">
+                  <div>
+                    <h4 className="font-extrabold text-slate-750">👨‍⚕️ {apt.doctorName}</h4>
+                    <p className="text-[9px] text-slate-455 font-bold uppercase tracking-wide mt-1">{apt.specialty} • {apt.type}</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{apt.date} • {apt.timeSlot}</p>
+                    <p className="text-[10px] text-slate-500 font-extrabold mt-1">Fee paid: ₹{apt.fee || 499}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to cancel your appointment with ${apt.doctorName}?`)) {
+                        dispatch(cancelDoctorAppointment(apt.id));
+                        const newRefund = {
+                          id: apt.id,
+                          itemName: `${apt.doctorName} consultation`,
+                          amount: apt.fee || 499,
+                          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+                          status: 'Processing',
+                          city: locationState?.city || 'Mumbai',
+                          pincode: locationState?.pincode || '400001',
+                          steps: [
+                            { title: 'Cancellation confirmed', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
+                            { title: 'Refund processing', date: '3–5 business days', status: 'active', icon: 'refresh' },
+                            { title: `₹${apt.fee || 499} credited`, date: 'Pending', status: 'pending', icon: 'check' }
+                          ]
+                        };
+                        setRefunds(prev => [newRefund, ...prev]);
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-black text-[10px] uppercase rounded-xl transition-all border border-rose-200/50 cursor-pointer outline-none shrink-0"
+                  >
+                    Cancel Consult
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 font-bold py-4 text-center uppercase tracking-wide bg-slate-50/50 border border-dashed border-slate-200 rounded-xl">No active doctor consultations eligible for cancellation.</p>
+            )}
+          </div>
+        );
+      case 'medicine_returns':
+        const returnableOrders = orders.filter(filterByLocation).filter(ord => ord.status === 'Delivered');
+        return (
+          <div className="flex flex-col gap-3 text-left">
+            {returnableOrders.length > 0 ? (
+              returnableOrders.map(ord => (
+                <div key={ord.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex flex-col gap-3.5 shadow-sm text-xs animate-fade-in">
+                  <div className="flex justify-between items-start border-b border-slate-50 pb-2">
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block font-mono">Order {ord.id}</span>
+                      <span className="text-[10px] text-slate-500 font-semibold mt-0.5 block">Delivered on standard timelines</span>
+                    </div>
+                    <span className="text-[10px] text-slate-700 font-extrabold">Total: ₹{ord.total}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-slate-605 font-bold pl-1 bg-slate-50 p-2.5 rounded-xl">
+                    {ord.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between">
+                        <span>{item.name} x{item.qty}</span>
+                        <span className="text-slate-800">₹{item.price * item.qty}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 select-none border-t border-slate-50 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const alreadyExists = refunds.some(r => r.id === `RF-${ord.id}`);
+                        if (alreadyExists) {
+                          alert("A return request has already been raised for this order.");
+                          return;
+                        }
+                        const newRefund = {
+                          id: `RF-${ord.id}`,
+                          itemName: `Return: ${ord.items[0]?.name || 'Medicines'}${ord.items.length > 1 ? ' + ' + (ord.items.length - 1) + ' more' : ''}`,
+                          amount: ord.total || 250,
+                          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+                          status: 'Processing',
+                          city: locationState?.city || 'Mumbai',
+                          pincode: locationState?.pincode || '400001',
+                          steps: [
+                            { title: 'Return request approved', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
+                            { title: 'Item pick-up scheduled', date: 'Expected tomorrow', status: 'active', icon: 'truck' },
+                            { title: 'Refund processing', date: '3-5 business days after inspection', status: 'pending', icon: 'refresh' },
+                            { title: `₹${ord.total} credited`, date: 'Pending', status: 'pending', icon: 'check' }
+                          ]
+                        };
+                        setRefunds(prev => [newRefund, ...prev]);
+                        alert('Return request raised. Refund will be processed after item pick-up!');
+                      }}
+                      className="flex-1 py-2 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-black text-[10px] uppercase rounded-xl transition-all border border-rose-200/50 cursor-pointer outline-none"
+                    >
+                      Return & Refund
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const alreadyExists = replacements.some(r => r.id === `RP-${ord.id}`);
+                        if (alreadyExists) {
+                          alert("A replacement request has already been raised for this order.");
+                          return;
+                        }
+                        const newReplacement = {
+                          id: `RP-${ord.id}`,
+                          itemName: `Replace: ${ord.items[0]?.name || 'Medicines'}${ord.items.length > 1 ? ' + ' + (ord.items.length - 1) + ' more' : ''}`,
+                          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+                          status: 'Processing',
+                          city: locationState?.city || 'Mumbai',
+                          pincode: locationState?.pincode || '400001',
+                          steps: [
+                            { title: 'Replacement request approved', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
+                            { title: 'Item picked up', date: 'Expected tomorrow', status: 'active', icon: 'refresh' },
+                            { title: 'Replacement in transit', date: 'Pending', status: 'pending', icon: 'truck' },
+                            { title: 'Delivered', date: 'Pending', status: 'pending', icon: 'home' }
+                          ]
+                        };
+                        setReplacements(prev => [newReplacement, ...prev]);
+                        alert('Replacement request raised. Courier will pick up and replace the item!');
+                      }}
+                      className="flex-1 py-2 bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-600 font-black text-[10px] uppercase rounded-xl transition-all border border-amber-200/50 cursor-pointer outline-none"
+                    >
+                      Replace Item
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 font-bold py-4 text-center uppercase tracking-wide bg-slate-50/50 border border-dashed border-slate-200 rounded-xl">No delivered orders eligible for return or replacement.</p>
+            )}
+          </div>
+        );
+      case 'replacement_status':
+        return (
+          <div className="flex flex-col gap-4 text-left select-none">
+            {filteredReplacements.length > 0 ? (
+              filteredReplacements.map(rep => (
+                <div key={rep.id} className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col animate-fade-in">
+                  {/* Header */}
+                  <div className="flex justify-between items-center p-3.5 border-b border-slate-50 bg-slate-50/50">
+                    <div className="min-w-0 flex-1 pr-2">
+                      <h4 className="font-extrabold text-slate-800 text-[12px] truncate">{rep.itemName}</h4>
+                      <p className="text-[10px] text-slate-405 font-bold tracking-wide mt-0.5">Ticket #{rep.id} • Raised {rep.date}</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                      rep.status === 'Delivered'
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        : 'bg-amber-50 text-amber-600 border border-amber-100'
+                    }`}>
+                      {rep.status}
+                    </span>
+                  </div>
+                  {/* Stepper Body */}
+                  <div className="p-4 flex flex-col">
+                    {rep.steps.map((step, idx) => (
+                      <div key={idx} className="flex gap-3">
+                        <div className="flex flex-col items-center shrink-0 w-5">
+                          {step.status === 'done' ? (
+                            <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-[10px] font-black border border-emerald-100 shrink-0">✓</div>
+                          ) : step.status === 'active' ? (
+                            <div className="w-5 h-5 rounded-full bg-[#0f6e56] text-white flex items-center justify-center text-[9px] animate-pulse border border-[#0f6e56] shrink-0">
+                              {step.icon === 'truck' ? '🚚' : '⏳'}
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-slate-50 border border-slate-200 text-slate-350 flex items-center justify-center text-[9px] shrink-0">○</div>
+                          )}
+                          {idx < rep.steps.length - 1 && (
+                            <div className={`w-[1px] h-7 my-1 ${step.status === 'done' ? 'bg-emerald-300' : 'bg-slate-200'}`} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 pb-3.5">
+                          <h5 className={`text-[12px] font-extrabold leading-tight ${step.status === 'active' ? 'text-[#0f6e56]' : step.status === 'done' ? 'text-slate-800' : 'text-slate-400'}`}>
+                            {step.title}
+                          </h5>
+                          <span className="text-[10px] text-slate-400 font-bold block mt-0.5">{step.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 font-bold py-4 text-center uppercase tracking-wide bg-slate-50/50 border border-dashed border-slate-200 rounded-xl">No replacement tickets found.</p>
+            )}
+          </div>
+        );
+      case 'refund_status':
+        return (
+          <div className="flex flex-col gap-4 text-left select-none">
+            {filteredRefunds.length > 0 ? (
+              filteredRefunds.map(ref => {
+                const isCompleted = ref.status === 'Credited';
+                const displayTitle = isCompleted 
+                  ? `Refund of ₹${ref.amount} sent to your upi` 
+                  : `Refund processing for ₹${ref.amount}`;
+                const displaySubtitle = isCompleted 
+                  ? `Refund completed on ${ref.date}, 2026` 
+                  : `Refund initiated on ${ref.date}, 2026`;
+
+                return (
+                  <div key={ref.id} className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col p-4 gap-4 animate-fade-in">
+                    
+                    {/* Top status block */}
+                    <div className="bg-[#ebf8f6] p-4 rounded-xl flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-teal-light/60 flex items-center justify-center text-teal shrink-0">
+                        <FiRefreshCw className="w-5 h-5 text-teal" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-extrabold text-slate-805 text-[13px] leading-snug">
+                          {displayTitle}
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">
+                          {displaySubtitle}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Timeline stepper */}
+                    <div className="flex flex-col gap-4 pl-2 pr-2">
+                      {ref.steps.map((step, idx) => {
+                        const isStepDone = step.status === 'done';
+                        const isStepActive = step.status === 'active';
+                        return (
+                          <div key={idx} className="flex gap-4 relative">
+                            {/* Vertical Line */}
+                            {idx < ref.steps.length - 1 && (
+                              <div className={`absolute left-2.5 top-5 bottom-0 w-[2px] -translate-x-1/2 ${
+                                isStepDone ? 'bg-teal' : 'bg-slate-100'
+                              }`} />
+                            )}
+                            
+                            {/* Step Icon */}
+                            <div className="relative z-10">
+                              {isStepDone ? (
+                                <div className="w-5 h-5 rounded-full bg-teal text-white flex items-center justify-center text-[10px] font-bold">
+                                  ✓
+                                </div>
+                              ) : isStepActive ? (
+                                <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold animate-pulse">
+                                  •
+                                </div>
+                              ) : (
+                                <div className="w-5 h-5 rounded-full bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center text-[10px]">
+                                  ○
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Step Details */}
+                            <div className="flex-1 min-w-0 pb-1">
+                              <h5 className={`text-xs font-bold ${
+                                isStepActive ? 'text-teal font-extrabold' : isStepDone ? 'text-slate-805' : 'text-slate-400'
+                              }`}>
+                                {step.title}
+                              </h5>
+                              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{step.date}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* RRN copy section */}
+                    <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100/50">
+                      <div className="min-w-0">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Refund reference number (RRN)</span>
+                        <span className="text-xs font-mono font-bold text-slate-700 block mt-0.5 truncate">
+                          {ref.rrn || '103460748988'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(ref.rrn || '103460748988');
+                          alert('RRN copied to clipboard!');
+                        }}
+                        className="p-2 bg-white hover:bg-slate-100 border border-slate-205 rounded-lg text-teal cursor-pointer shrink-0 transition-all active:scale-95 flex items-center justify-center"
+                        title="Copy RRN"
+                      >
+                        <FiCopy className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Feedback Rating Card */}
+                    <div className="flex justify-between items-center bg-slate-50/50 border border-slate-100/80 p-3 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center">
+                          <FiStar className="w-4 h-4 fill-amber-500 text-amber-505" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-700">How were your ordered items?</span>
+                      </div>
+                      <button
+                        onClick={() => alert('Thank you for rating your items!')}
+                        className="px-3.5 py-1.5 bg-[#1e7e34] hover:bg-[#155a24] text-white text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer transition-colors shadow-sm outline-none"
+                      >
+                        Rate now
+                      </button>
+                    </div>
+
+                    {/* Bill details */}
+                    <div className="border-t border-slate-100 pt-3">
+                      <h5 className="text-[11px] font-extrabold text-slate-805 uppercase tracking-wider mb-2.5">Bill details</h5>
+                      <div className="flex flex-col gap-2 text-[11px] text-slate-500 font-semibold">
+                        <div className="flex justify-between">
+                          <span>MRP</span>
+                          <span>₹{ref.billDetails?.mrp || (ref.amount + 104)}</span>
+                        </div>
+                        <div className="flex justify-between text-teal">
+                          <span>Product discount</span>
+                          <span>-₹{ref.billDetails?.discount || 56}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-slate-700">
+                          <span>Item total</span>
+                          <span>₹{ref.billDetails?.itemTotal || (ref.amount + 48)}</span>
+                        </div>
+                        <div className="flex justify-between text-teal">
+                          <span>Flat ₹50 OFF</span>
+                          <span>-₹50</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Handling charge</span>
+                          <span>+₹2</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Delivery charges</span>
+                          <span className="text-emerald-600 font-extrabold uppercase text-[9.5px]">FREE</span>
+                        </div>
+                        <div className="flex justify-between font-black text-slate-805 border-t border-dashed border-slate-100 pt-2 text-xs">
+                          <span>Bill total</span>
+                          <span>₹{ref.amount}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Repeat Order Action */}
+                    <button
+                      onClick={() => {
+                        alert('Items re-added to cart!');
+                        navigate('/cart');
+                      }}
+                      className="w-full py-3 bg-[#1e7e34] hover:bg-[#155a24] text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer shadow-sm transition-all active:scale-[0.99] flex flex-col items-center justify-center leading-tight mt-1 outline-none"
+                    >
+                      <span>Repeat Order</span>
+                      <span className="text-[8px] font-bold text-emerald-200 mt-0.5 tracking-wider">VIEW CART ON NEXT STEP</span>
+                    </button>
+
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-xs text-slate-400 font-bold py-4 text-center uppercase tracking-wide bg-slate-50/50 border border-dashed border-slate-200 rounded-xl">No active refund tracking records.</p>
+            )}
+          </div>
+        );
       case 'help':
         return (
           <div className="flex flex-col gap-3 text-xs select-none">
@@ -1065,98 +1616,180 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto pb-16 px-4 bg-white select-none font-sans min-h-screen">
+    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 bg-transparent select-none font-sans min-h-screen">
       
-      {/* 1. Header Card - Hey, [First Name]! */}
-      <div className="p-5 border border-slate-100 shadow-premium rounded-3xl flex items-center justify-between relative overflow-hidden bg-white select-none mt-4">
-        {/* Aesthetic background rings */}
-        <div className="absolute top-0 right-0 w-24 h-24 bg-teal-light/20 rounded-full filter blur-2xl" />
+      <div className="flex flex-col gap-6 sm:grid sm:grid-cols-[250px_1fr] md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr] sm:gap-6 md:gap-8">
         
-        <div className="flex items-center gap-4 z-10">
-          <div className="w-14 h-14 rounded-full bg-teal text-white text-xl font-black flex items-center justify-center shadow-sm shrink-0">
-            {firstName[0]?.toUpperCase() || 'U'}
-          </div>
-          <div>
-            <h2 className="text-base font-black text-slate-805 leading-snug">Hey, {firstName}!</h2>
-            <p className="text-xs text-slate-400 font-semibold mt-1 block">
-              +91 {user?.phone || '98765 43210'}
-            </p>
-          </div>
-        </div>
+        {/* Left Side: Sidebar */}
+        <div className="flex flex-col gap-4">
+          
+          {/* 1. Header Card - Hey, [First Name]! */}
+          <div className="p-3.5 border border-slate-100 shadow-premium rounded-2xl flex items-center justify-between relative overflow-hidden bg-white select-none">
+            {/* Aesthetic background rings */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-teal-light/20 rounded-full filter blur-2xl" />
+            
+            <div className="flex items-center gap-3 z-10">
+              <div className="w-11 h-11 rounded-full bg-teal text-white text-sm font-black flex items-center justify-center shadow-sm shrink-0">
+                {firstName[0]?.toUpperCase() || 'U'}
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-slate-805 leading-none">Hey, {firstName}!</h2>
+                <p className="text-[11px] text-slate-400 font-bold mt-1 block">
+                  +91 {user?.phone || '98765 43210'}
+                </p>
+              </div>
+            </div>
 
-        {/* Edit Profile Button (top right) */}
-        <button 
-          onClick={handleOpenEditProfile}
-          className="p-2.5 bg-slate-50 hover:bg-slate-100 text-teal hover:text-teal-dark rounded-xl transition-all border-0 cursor-pointer outline-none flex items-center gap-1 text-[10px] font-black uppercase tracking-wider z-10"
-        >
-          <FiEdit className="w-3.5 h-3.5" /> Edit Profile
-        </button>
-      </div>
-
-      {/* 2. Premium Membership Banner */}
-      <div className="bg-gradient-to-r from-teal-dark to-teal bg-teal border border-teal/15 p-5 rounded-[24px] text-white flex items-center justify-between gap-4 mt-4 shadow-sm select-none relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
-        <div className="z-10">
-          <span className="text-[7.5px] bg-white/20 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">E-MEDICLUB PREMIUM</span>
-          <h4 className="text-xs font-black mt-2 leading-none">Join Care Premium Plan</h4>
-          <p className="text-[9.5px] text-teal-light font-bold mt-1 leading-snug">Save up to ₹500 on drugs & enjoy free physician checkups!</p>
-        </div>
-        <button 
-          onClick={() => alert("Care Premium Activated! Enjoy free consults & medicine cashbacks.")}
-          className="px-4 py-2 bg-white hover:bg-slate-50 text-teal text-[10px] font-black uppercase tracking-wider rounded-xl shadow-sm border-0 cursor-pointer shrink-0 z-10 outline-none"
-        >
-          Join Now
-        </button>
-      </div>
-
-      {/* 3. Menu List with Icons & Right Arrow Chevrons */}
-      <div className="mt-6 flex flex-col bg-white rounded-3xl border border-slate-100 overflow-hidden divide-y divide-slate-50 shadow-premium">
-        {menuItems.map((item) => (
-          <div key={item.key} className="flex flex-col">
-            <button
-              onClick={() => {
-                if (item.key === 'logout') {
-                  handleLogout();
-                } else {
-                  toggleTab(item.key);
-                }
-              }}
-              className="w-full py-4.5 px-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors border-0 bg-transparent text-left cursor-pointer outline-none"
+            {/* Edit Profile Button (top right) */}
+            <button 
+              onClick={handleOpenEditProfile}
+              className="p-2 bg-slate-50 hover:bg-slate-100 text-teal hover:text-teal-dark rounded-xl transition-all border-0 cursor-pointer outline-none flex items-center gap-1 text-[9px] font-black uppercase tracking-wider z-10"
             >
-              <div className="flex items-center gap-3.5">
-                <div className="text-teal text-base shrink-0 flex items-center">
-                  {item.icon}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-slate-700">{item.label}</span>
-                  {item.badge && (
-                    <span className="text-[7.5px] bg-teal text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
-                      {item.badge}
+              <FiEdit className="w-3 h-3" /> Edit Profile
+            </button>
+          </div>
+
+          {/* 2. Premium Membership Banner */}
+          <div className="bg-gradient-to-r from-teal-dark to-teal bg-teal border border-teal/15 p-3.5 rounded-2xl text-white flex items-center justify-between gap-3 shadow-sm select-none relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+            <div className="z-10 text-left">
+              <span className="text-[7px] bg-white/20 text-white font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">PREMIUM CARE</span>
+              <h4 className="text-xs font-black mt-1 leading-none">Join Care Premium Plan</h4>
+              <p className="text-[9px] text-teal-light font-bold mt-0.5 leading-snug">Save up to ₹500 on drugs & enjoy free physician checkups!</p>
+            </div>
+            <button 
+              onClick={() => alert("Care Premium Activated! Enjoy free consults & medicine cashbacks.")}
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-teal text-[9px] font-black uppercase tracking-wider rounded-xl shadow-sm border-0 cursor-pointer shrink-0 z-10 outline-none"
+            >
+              Join Now
+            </button>
+          </div>
+
+          {/* 3. Menu List grouped in styled card decks */}
+          <div className="flex flex-col gap-3.5 mt-0.5 select-none">
+            {menuSections.map((section, secIdx) => (
+              <div key={secIdx} className="flex flex-col text-left">
+                {/* Section label */}
+                <div className="text-[9px] text-slate-405 font-black uppercase tracking-widest pl-3.5 mb-1.5 mt-2 flex items-center gap-1.5">
+                  <span>{section.title}</span>
+                  {section.titleBadge && (
+                    <span className="text-[7px] bg-blue-50 text-blue-600 border border-blue-100/50 font-black px-1 py-0.5 rounded tracking-wider uppercase">
+                      {section.titleBadge}
                     </span>
                   )}
                 </div>
+
+                {/* Section card group container */}
+                <div className="flex flex-col bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50 shadow-premium">
+                  {section.items.map((item) => {
+                    const isTabActive = activeTab === item.key;
+                    return (
+                      <div key={item.key} className="flex flex-col">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (item.key === 'logout') {
+                              handleLogout();
+                            } else {
+                              toggleTab(item.key);
+                            }
+                          }}
+                          className={`w-full py-2.5 px-3.5 flex items-center justify-between transition-colors border-0 bg-transparent text-left cursor-pointer outline-none ${
+                            isTabActive ? 'sm:bg-teal-light/20' : 'hover:bg-slate-55/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                            <div className="text-sm text-teal shrink-0 flex items-center">
+                              {item.icon}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center flex-wrap gap-1.5">
+                                <span className={`text-[11.5px] font-black truncate leading-tight ${
+                                  item.isDestructive ? 'text-rose-600' : isTabActive ? 'text-teal font-extrabold' : 'text-slate-705'
+                                }`}>
+                                  {item.label}
+                                </span>
+                                {item.badge && (
+                                  <span className="text-[7px] bg-teal text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
+                              {item.subLabel && (
+                                <span className="text-[9px] text-slate-400 font-bold block mt-0.5 truncate leading-none">
+                                  {item.subLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {item.activeBadge && (
+                              <span className="text-[8px] bg-blue-50 text-blue-600 border border-blue-100/50 font-black px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                {item.activeBadge}
+                              </span>
+                            )}
+                            <div 
+                              className="text-slate-350 shrink-0 transition-transform duration-300 sm:hidden" 
+                              style={{ transform: isTabActive ? 'rotate(90deg)' : 'none' }}
+                            >
+                              <FiChevronRight className="w-3.5 h-3.5" />
+                            </div>
+                            <FiChevronRight className="w-3.5 h-3.5 text-teal hidden sm:block shrink-0" />
+                          </div>
+                        </button>
+                        
+                        {/* Collapsible content section - Mobile Only */}
+                        <div className="sm:hidden">
+                          <AnimatePresence initial={false}>
+                            {isTabActive && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden bg-slate-50/45 border-t border-slate-50 px-4 py-3"
+                              >
+                                {renderTabContent(item.key)}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="text-slate-350 shrink-0 transition-transform duration-300" style={{ transform: activeTab === item.key ? 'rotate(90deg)' : 'none' }}>
-                <FiChevronRight className="w-4 h-4" />
-              </div>
-            </button>
-            
-            {/* Collapsible content section */}
-            <AnimatePresence initial={false}>
-              {activeTab === item.key && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="overflow-hidden bg-slate-50/30 border-t border-slate-50 px-5 py-4"
-                >
-                  {renderTabContent(item.key)}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Right Side: Active content details - Desktop Only */}
+        <div className="hidden sm:flex flex-col bg-white border border-slate-100 rounded-3xl p-6 min-h-[500px] shadow-premium">
+          {activeTab ? (
+            <div>
+              <div className="border-b border-slate-100 pb-3 mb-5 flex items-center justify-between">
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-800">
+                  {menuSections.flatMap(s => s.items).find(i => i.key === activeTab)?.label}
+                </h3>
+              </div>
+              <div className="animate-fade-in">
+                {renderTabContent(activeTab)}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center flex-1 text-center py-20 text-slate-400 gap-4 select-none">
+              <span className="text-4xl">👤</span>
+              <div>
+                <h4 className="font-black text-slate-700 text-sm uppercase tracking-wide">Please select an activity tab</h4>
+                <p className="text-[10.5px] font-semibold text-slate-400 max-w-xs mt-1 leading-relaxed">
+                  Choose from orders, lab bookings, consultations, or settings on the left sidebar to manage your care.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* Global Prescription Upload Drawer Overlay */}

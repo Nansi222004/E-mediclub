@@ -76,7 +76,6 @@ export default function DoctorCard({ doctor, onViewProfile }) {
               src={doctor.avatar || fallbackAvatar}
               alt={doctor.name}
               className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
-              loading="lazy"
               onError={(e) => {
                 e.currentTarget.src = fallbackAvatar;
               }}

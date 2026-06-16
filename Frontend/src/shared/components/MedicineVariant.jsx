@@ -84,14 +84,14 @@ export default function MedicineVariant({ product, selectedVariant, onChange }) 
 
   return (
     <div className="flex flex-col gap-1 mt-2">
-      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Select Size / Pack</span>
+      <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase tracking-wider">Select Size / Pack</span>
       <select
         value={selectedVariant ? selectedVariant.label : ''}
         onChange={(e) => {
           const selected = variants.find(v => v.label === e.target.value);
           if (selected) onChange(selected);
         }}
-        className="w-full bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-xl pl-3.5 pr-9 py-2 text-[11px] font-extrabold text-slate-700 outline-none focus:border-forest/20 transition-all cursor-pointer min-h-[40px]"
+        className="w-full bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-lg pl-2 pr-6 py-1.5 text-[10px] sm:text-[11px] font-extrabold text-slate-700 outline-none focus:border-forest/20 transition-all cursor-pointer min-h-[32px]"
       >
         {variants.map((v) => (
           <option key={v.label} value={v.label}>

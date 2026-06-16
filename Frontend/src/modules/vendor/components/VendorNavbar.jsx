@@ -23,23 +23,23 @@ export default function VendorNavbar({ toggleSidebar }) {
         >
           <FiMenu className="text-xl" />
         </button>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-black text-slate-800 tracking-wide uppercase leading-none">
-              {kycDetails.storeName}
+        <div className="flex flex-col">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base sm:text-lg font-bold text-slate-800 leading-tight">
+              <span className="hidden sm:inline">Welcome back, </span>{kycDetails.storeName || 'MedPlus Wellness Pharmacy'}
             </h2>
             {kycDetails.status === 'verified' ? (
-              <span className="flex items-center gap-0.5 text-[8px] bg-teal-light text-teal border border-teal/10 px-2 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 leading-none">
+              <span className="flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 hidden sm:flex">
                 <FiCheckCircle className="text-[10px]" /> Verified Seller
               </span>
             ) : (
-              <span className="text-[8px] bg-gold-light text-gold-dark border border-gold/10 px-2 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 leading-none">
+              <span className="flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100 hidden sm:flex">
                 KYC Pending
               </span>
             )}
           </div>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">
-            Store Manager Terminal
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 hidden sm:block">
+            Monday, June 12, 2026
           </p>
         </div>
       </div>

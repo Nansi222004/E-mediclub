@@ -2925,33 +2925,108 @@ const productSlice = createSlice({
       }
 
       if (normalizedCity) {
-        // Dynamic Pan-India doctor rewrite
-        state.doctors = (state.doctors || []).map(doc => ({
-          ...doc,
-          city: normalizedCity,
-          pincode: pincode || doc.pincode || "110001",
-          state: st || doc.state || "Delhi",
-          hospital: `${normalizedCity} City Hospital`,
-          bio: `${doc.name} is a dedicated ${doc.specialty} specialist in ${normalizedCity}.`,
-          address: `${district || normalizedCity} Health Clinic, ${normalizedCity}`
+        // Deterministic pseudo-random number generator based on pincode
+        const seedStr = pincode || district || normalizedCity || "123456";
+        let seed = 0;
+        for (let i = 0; i < seedStr.length; i++) {
+          seed = seed * 31 + seedStr.charCodeAt(i);
+        }
+        
+        const pseudoRandom = () => {
+          let x = Math.sin(seed++) * 10000;
+          return x - Math.floor(x);
+        };
+
+        const firstNames = ["Aarav", "Vivaan", "Aditya", "Arjun", "Riya", "Sanya", "Neha", "Pooja", "Rahul", "Amit", "Priya", "Sneha", "Anjali", "Vikram", "Suresh", "Ramesh", "Meera", "Anita", "Karan", "Rohan"];
+        const lastNames = ["Sharma", "Patel", "Reddy", "Gupta", "Nair", "Singh", "Kumar", "Iyer", "Rao", "Deshmukh", "Joshi", "Menon", "Sen", "Bhatia", "Kulkarni", "Hegde", "Verma", "Kapoor"];
+        const labPrefixes = ["City", "Metro", "Care", "Quick", "Reliable", "Trust", "Prime", "Elite", "Apex", "Nova", "Life", "Health", "True"];
+        const labSuffixes = ["Diagnostics", "Labs", "Pathology", "Scan Center", "Health", "Testing Center", "Imaging"];        // Filter and modify doctors deterministically based on location (keep ~40%)
+        const localizedDoctors = initialDoctors.filter(() => pseudoRandom() > 0.6).map(doc => {
+          const fName = firstNames[Math.floor(pseudoRandom() * firstNames.length)];
+          const lName = lastNames[Math.floor(pseudoRandom() * lastNames.length)];
+          return {
+            ...doc,
+            id: doc.id,
+            name: `Dr. ${fName} ${lName}`,
+            city: normalizedCity,
+            pincode: pincode || doc.pincode || "110001",
+            state: st || doc.state || "Delhi",
+            hospital: `${normalizedCity} ${doc.hospital ? doc.hospital.split(' ')[0] : 'City'} Hospital`,
+            bio: `Dr. ${fName} ${lName} is a dedicated ${doc.specialty} specialist in ${normalizedCity}.`,
+            address: `${district || normalizedCity} Health Clinic, ${normalizedCity}`
+          };
+        });
+        
+        state.doctors = localizedDoctors.length > 0 ? localizedDoctors : [
+          {
+            ...initialDoctors[0],
+            name: `Dr. ${firstNames[Math.floor(pseudoRandom() * firstNames.length)]} ${lastNames[Math.floor(pseudoRandom() * lastNames.length)]}`,
+            city: normalizedCity,
+            pincode: pincode || initialDoctors[0].pincode,
+            state: st || initialDoctors[0].state,
+            hospital: `${normalizedCity} City Hospital`,
+            address: `${district || normalizedCity} Clinic, ${normalizedCity}`
+          }
+        ];
+
+        // Filter and modify labs deterministically (keep ~30%)
+        const localizedLabs = initialLabs.filter(() => pseudoRandom() > 0.7).map(lab => {
+          const prefix = labPrefixes[Math.floor(pseudoRandom() * labPrefixes.length)];
+          const suffix = labSuffixes[Math.floor(pseudoRandom() * labSuffixes.length)];
+          return {
+            ...lab,
+            id: lab.id,
+            name: `${prefix} ${suffix} ${normalizedCity}`,
+            city: normalizedCity,
+            pincode: pincode || lab.pincode || "110001",
+            state: st || lab.state || "Delhi",
+            address: `${district || normalizedCity} Diagnostics, ${normalizedCity}`
+          };
+        });
+
+        state.labs = localizedLabs.length > 0 ? localizedLabs : [
+          {
+            ...initialLabs[0],
+            name: `${labPrefixes[0]} ${labSuffixes[0]} ${normalizedCity}`,
+            city: normalizedCity,
+            pincode: pincode || initialLabs[0].pincode,
+            state: st || initialLabs[0].state,
+            address: `${district || normalizedCity} Diagnostics, ${normalizedCity}`
+          }
+        ];
+
+        // Ensure we assign tests to the generated localized labs
+        state.labTests = initialLabTests.map(test => {
+           // pick a localized lab deterministically for this test
+           const assignedLab = state.labs[Math.floor(pseudoRandom() * state.labs.length)];
+           return {
+             ...test,
+             id: test.id,
+             labId: assignedLab.id,
+             labName: assignedLab.name
+           };
+         });
+
+        // Filter and modify medicines deterministically (keep ~25% to minimize overlap)
+        const localizedMedicines = initialMedicines.filter(() => pseudoRandom() > 0.75).map(med => ({
+          ...med,
+          id: med.id,
+          vendorCity: normalizedCity,
+          vendorPincode: pincode || med.vendorPincode || "110001",
+          vendorState: st || med.vendorState || "Delhi"
         }));
 
-        // Dynamic Pan-India lab rewrite
-        state.labs = (state.labs || []).map(lab => ({
-          ...lab,
-          city: normalizedCity,
-          pincode: pincode || lab.pincode || "110001",
-          state: st || lab.state || "Delhi",
-          address: `${district || normalizedCity} Diagnostics, ${normalizedCity}`
-        }));
-
-        // Dynamic Pan-India medicine rewrite
-        state.medicines = (state.medicines || []).map(med => ({
+        state.medicines = localizedMedicines.length > 0 ? localizedMedicines : initialMedicines.slice(0, 10).map(med => ({
           ...med,
           vendorCity: normalizedCity,
           vendorPincode: pincode || med.vendorPincode || "110001",
           vendorState: st || med.vendorState || "Delhi"
         }));
+      } else {
+        state.doctors = initialDoctors;
+        state.labs = initialLabs;
+        state.labTests = initialLabTests;
+        state.medicines = initialMedicines;
       }
 
       localStorage.setItem('em_location', JSON.stringify(state.location));
@@ -2993,6 +3068,20 @@ const productSlice = createSlice({
       const booking = state.labBookings.find(b => b.id === action.payload);
       if (booking) {
         booking.status = 'Completed';
+        localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
+      }
+    },
+    cancelDoctorAppointment: (state, action) => {
+      const apt = state.appointments.find(a => a.id === action.payload);
+      if (apt) {
+        apt.status = 'Cancelled';
+        localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
+      }
+    },
+    cancelLabBooking: (state, action) => {
+      const booking = state.labBookings.find(b => b.id === action.payload);
+      if (booking) {
+        booking.status = 'Cancelled';
         localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
       }
     },
@@ -3269,6 +3358,8 @@ export const {
   bookLabPackage,
   completeDoctorAppointment,
   completeLabBooking,
+  cancelDoctorAppointment,
+  cancelLabBooking,
   updateOrderStatus,
   addMedicineCategory,
   addDoctorSpecialty,

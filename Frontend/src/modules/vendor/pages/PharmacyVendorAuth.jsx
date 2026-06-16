@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FiEye, FiEyeOff, FiMail, FiLock } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import Logo from '../../../shared/components/Logo';
-export default function DoctorLogin() {
+
+export default function PharmacyVendorAuth() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -13,9 +14,9 @@ export default function DoctorLogin() {
     e.preventDefault();
     setIsLoading(true);
     setTimeout(() => {
-      localStorage.setItem('doctorToken', 'dummy-token');
-      localStorage.setItem('doctorProfile', JSON.stringify({ name: 'Doctor User' }));
-      navigate('/vendor/doctor/dashboard');
+      localStorage.setItem('pharmacyToken', 'dummy-token');
+      localStorage.setItem('pharmacyProfile', JSON.stringify({ name: 'Pharmacy User' }));
+      navigate('/vendor/pharmacy/dashboard');
     }, 1500);
   };
 
@@ -23,7 +24,7 @@ export default function DoctorLogin() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans overflow-hidden relative">
       {/* Left side: Branding (Desktop) */}
-      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-teal-dark to-teal p-12 flex-col justify-between relative overflow-hidden text-white border-r border-teal-dark">
+      <div className="hidden lg:flex lg:w-[45%] bg-[#164E4D] p-12 flex-col justify-between relative overflow-hidden text-white border-r border-[#134241] shrink-0">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-black/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
         
@@ -34,16 +35,16 @@ export default function DoctorLogin() {
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-md mx-auto">
           <div className="w-24 h-24 bg-white/10 rounded-3xl flex items-center justify-center text-5xl shadow-2xl backdrop-blur-sm border border-white/20 mb-8">
-            👨‍⚕️
+            🏥
           </div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/20 mb-4 backdrop-blur-md">
-            <span className="text-white text-[10px] font-black tracking-widest uppercase">Clinical Partner Portal</span>
+            <span className="text-white text-[10px] font-black tracking-widest uppercase">Pharmacy Partner Portal</span>
           </div>
           <h2 className="text-3xl font-black text-white tracking-tight leading-tight">
-            Manage your practice with E Mediclub
+            Manage your pharmacy with E Mediclub
           </h2>
           <p className="text-white/80 text-sm mt-4 leading-relaxed font-medium">
-            Manage your schedule, conduct online consultations, and write digital prescriptions with ease.
+            Expand your reach, manage your inventory easily, and process online orders seamlessly.
           </p>
         </div>
 
@@ -60,14 +61,14 @@ export default function DoctorLogin() {
           <div className="flex flex-col items-center justify-center w-full mb-4">
             <Logo layout="stacked" />
             <div className="flex items-center gap-1.5 mt-3 bg-slate-50 border border-slate-100 px-4 py-1.5 rounded-full shadow-sm">
-              <span className="text-sm">👨‍⚕️</span>
-              <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Clinical Partner Portal</span>
+              <span className="text-sm">🏥</span>
+              <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Pharmacy Partner Portal</span>
             </div>
           </div>
 
           <div className="bg-white border border-slate-100 rounded-[32px] p-6 shadow-premium relative">
             <h3 className="text-2xl font-black text-slate-800 tracking-tight">Welcome back</h3>
-            <p className="text-sm text-slate-500 font-medium mt-1 mb-5">Sign in to manage your practice</p>
+            <p className="text-sm text-slate-500 font-medium mt-1 mb-5">Sign in to manage your pharmacy</p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
               <div className="flex flex-col gap-1.5">
@@ -115,12 +116,12 @@ export default function DoctorLogin() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 w-full py-3 bg-teal hover:bg-teal-dark text-white text-sm font-black rounded-xl shadow-lg shadow-teal/25 vendor-btn flex items-center justify-center"
+                className="mt-2 w-full py-3 bg-[#164E4D] hover:bg-[#134241] text-white text-sm font-black rounded-xl shadow-lg shadow-[#164E4D]/25 vendor-btn flex items-center justify-center"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  'Sign In to Doctor Portal'
+                  'Sign In to Pharmacy Portal'
                 )}
               </button>
             </form>
@@ -141,8 +142,8 @@ export default function DoctorLogin() {
 
             <p className="mt-5 text-center text-sm font-semibold text-slate-500">
               Don't have an account?{' '}
-              <Link to="/vendor/doctor/signup" className="text-teal font-black hover:underline">
-                Register as Doctor →
+              <Link to="/vendor/pharmacy/signup" className="text-teal font-black hover:underline">
+                Register Pharmacy →
               </Link>
             </p>
           </div>

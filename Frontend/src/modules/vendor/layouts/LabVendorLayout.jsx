@@ -122,6 +122,7 @@ export default function LabVendorLayout() {
               const Icon = item.icon;
               const hasSubItems = item.subItems && item.subItems.length > 0;
               const isExpanded = expandedMenu === item.name;
+              const isParentActive = hasSubItems && item.subItems.some(sub => location.pathname.startsWith(sub.path));
 
               if (hasSubItems) {
                 return (
@@ -129,10 +130,10 @@ export default function LabVendorLayout() {
                     <button
                       onClick={() => setExpandedMenu(isExpanded ? '' : item.name)}
                       className={`
-                        flex items-center justify-between px-4 py-3 rounded-r-3xl text-sm font-medium transition-all duration-200 tap-scale mr-4 w-full bg-transparent border-0 cursor-pointer
-                        ${isExpanded 
-                          ? 'bg-[#319C9B]/30 text-white border-l-4 border-[#319C9B] font-bold shadow-sm' 
-                          : 'text-[#88D4D3] hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+                        flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 border-0 cursor-pointer
+                        ${isParentActive 
+                          ? 'bg-[#0F4A4A] text-white' 
+                          : 'text-[#9ADCDA] bg-transparent hover:bg-white/10 hover:text-white'
                         }
                       `}
                     >
@@ -162,8 +163,8 @@ export default function LabVendorLayout() {
                               key={sub.name}
                               to={sub.path}
                               className={({ isActive }) => `
-                                py-2 px-3 text-xs font-medium rounded-xl transition-all duration-200
-                                ${isActive ? 'text-white bg-[#319C9B]/30 font-bold' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
+                                py-2 px-3 rounded-lg text-xs font-semibold tracking-wide transition-colors my-0.5
+                                ${isActive ? 'bg-[#207B7B] text-white' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
                               `}
                             >
                               {sub.name}
@@ -181,10 +182,10 @@ export default function LabVendorLayout() {
                   key={item.name}
                   to={item.path}
                   className={({ isActive }) => `
-                    flex items-center gap-3.5 px-4 py-3 rounded-r-3xl text-sm font-medium transition-all duration-200 tap-scale mr-4
+                    flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 tap-scale
                     ${isActive 
-                      ? 'bg-[#319C9B]/30 text-white border-l-4 border-[#319C9B] font-bold shadow-sm' 
-                      : 'text-[#88D4D3] hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+                      ? 'bg-teal text-white shadow-md' 
+                      : 'text-[#9ADCDA] hover:bg-white/10 hover:text-white'
                     }
                   `}
                 >
@@ -231,11 +232,11 @@ export default function LabVendorLayout() {
             >
               <FiMenu className="text-xl" />
             </button>
-            <div>
-              <h2 className="text-base sm:text-lg font-medium text-slate-700 tracking-wide leading-none">
-                Welcome back, Apex Diagnostics
+            <div className="flex flex-col">
+              <h2 className="text-base sm:text-lg font-bold text-slate-800 leading-tight">
+                <span className="hidden sm:inline">Welcome back, </span>Apex Diagnostics
               </h2>
-              <p className="text-xs text-slate-500 font-medium tracking-wide mt-1.5">
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 hidden sm:block">
                 Monday, 23 Oct 2023
               </p>
             </div>

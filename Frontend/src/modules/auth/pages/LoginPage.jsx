@@ -119,25 +119,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 bg-slate-50 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-white sm:bg-slate-50 font-sans sm:py-8 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white rounded-[32px] p-8 border border-slate-100 shadow-premium relative overflow-hidden"
+        className="max-w-md w-full h-screen sm:h-auto sm:rounded-[32px] p-6 sm:p-8 bg-white border-0 sm:border border-slate-100 shadow-none sm:shadow-premium relative overflow-y-auto sm:overflow-hidden flex flex-col justify-center"
       >
         {/* Mobile back button inside login card */}
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 p-2 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-500 border-0 cursor-pointer flex items-center justify-center transition-colors z-20"
+          className="absolute top-8 left-5 sm:top-6 sm:left-6 p-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 border-0 cursor-pointer flex items-center justify-center transition-all z-50 shadow-sm active:scale-95"
           aria-label="Go back"
         >
-          <FiChevronLeft className="w-5 h-5 stroke-[2.5]" />
+          <FiChevronLeft className="w-5 h-5 stroke-[3]" />
         </button>
 
         {/* Background ambient light */}
-        <div className="absolute top-0 right-0 w-28 h-28 bg-teal-light rounded-full filter blur-2xl opacity-60" />
-        <div className="absolute bottom-0 left-0 w-28 h-28 bg-forest-light rounded-full filter blur-2xl opacity-60" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-teal-light rounded-full filter blur-3xl opacity-60 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-forest-light rounded-full filter blur-3xl opacity-60 pointer-events-none" />
+
+        <div className="relative z-10">
 
         {/* Top Logo branding */}
         <div className="flex flex-col items-center justify-center mb-6">
@@ -363,6 +365,7 @@ export default function LoginPage() {
           <span className="flex items-center gap-1">
             <FiCheckCircle className="text-teal w-3.5 h-3.5" /> GENUINE CARE
           </span>
+        </div>
         </div>
       </motion.div>
     </div>

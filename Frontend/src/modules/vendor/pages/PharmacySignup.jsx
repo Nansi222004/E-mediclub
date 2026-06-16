@@ -1,24 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiArrowRight, FiCheck, FiUploadCloud, FiFileText, FiImage, FiUser } from 'react-icons/fi';
-import SplashScreen from '../components/SplashScreen';
+import { FiArrowLeft, FiArrowRight, FiCheck, FiFileText, FiImage, FiUser } from 'react-icons/fi';
+import Logo from '../../../shared/components/Logo';
 
 export default function PharmacySignup() {
-  const [showSplash, setShowSplash] = useState(true);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     fullName: '', email: '', phone: '', password: '', confirmPassword: '',
-    storeName: '', dlNumber: '', gstNumber: '', address: '', city: '', state: '', pincode: '', serviceablePincodes: '',
-    dlDoc: null, gstDoc: null, storePhoto: null, idProof: null
+    regNumber: '', specialization: 'General Physician', qualification: '', experience: '',
+    consultationType: 'Both', fee: '', clinicName: '', address: '', city: '', state: '', pincode: '',
+    regDoc: null, degreeDoc: null, profilePhoto: null, clinicPhoto: null, idProof: null
   });
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2500);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, 4));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
@@ -37,42 +32,53 @@ export default function PharmacySignup() {
     }
   };
 
-  if (showSplash) return <SplashScreen vendorType="pharmacy" />;
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] flex font-sans vendor-auth-layout">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans overflow-hidden relative">
       {/* Left side: Branding (Desktop) */}
-      <div className="hidden lg:flex flex-col items-center justify-center bg-gradient-to-br from-[#135A5A] to-teal p-12 text-white relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-teal-dark to-teal p-12 flex-col justify-between relative overflow-hidden text-white border-r border-teal-dark shrink-0">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-black/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
-        <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-          <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-4xl shadow-2xl mb-8">🏥</div>
-          <h1 className="text-4xl font-extrabold mb-4 font-['Plus_Jakarta_Sans']">Join Emediclub</h1>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full border border-white/20 mb-8 backdrop-blur-md">
-            <span>💊</span>
-            <span className="text-sm font-semibold tracking-wide">Pharmacy Partner Network</span>
+        
+        {/* Branding header */}
+        <div className="z-10 flex items-center gap-2 bg-white rounded-xl px-4 py-2 self-start shadow-lg">
+          <Logo showText={true} />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center text-center max-w-md mx-auto">
+          <div className="w-24 h-24 bg-white/10 rounded-3xl flex items-center justify-center text-5xl shadow-2xl backdrop-blur-sm border border-white/20 mb-8">
+            🏥
           </div>
-          <p className="text-white/80 text-lg leading-relaxed">
-            Expand your pharmacy's reach. Receive online orders and manage prescriptions digitally with zero hassle.
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/20 mb-4 backdrop-blur-md">
+            <span className="text-white text-[10px] font-black tracking-widest uppercase">Pharmacy Partner Portal</span>
+          </div>
+          <h2 className="text-3xl font-black text-white tracking-tight leading-tight">
+            Join E Mediclub's Pharmacy Network
+          </h2>
+          <p className="text-white/80 text-sm mt-4 leading-relaxed font-medium">
+            Expand your reach, manage your inventory easily, and process online orders.
           </p>
+        </div>
+
+        {/* Footer legalities */}
+        <div className="z-10 text-white/50 text-[10px] font-black uppercase tracking-wider">
+          © {new Date().getFullYear()} E Mediclub. All rights reserved.
         </div>
       </div>
 
       {/* Right side: Signup Form */}
-      <div className="flex-1 flex flex-col p-4 sm:p-8 overflow-y-auto">
-        <div className="w-full max-w-xl mx-auto flex-1 flex flex-col pt-8">
+      <div className="w-full lg:w-[55%] flex items-center justify-center p-6 sm:p-12 relative bg-white overflow-y-auto no-scrollbar">
+        <div className="w-full max-w-xl z-10 flex flex-col gap-4">
           
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#135A5A] to-teal rounded-xl flex items-center justify-center text-xl shadow-lg">
-              <span className="text-white">🏥</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold text-slate-800 font-['Plus_Jakarta_Sans']">Emediclub</h2>
-              <p className="text-xs font-bold text-teal">Pharmacy Partner Portal</p>
+          <div className="flex flex-col items-center justify-center w-full mb-4">
+            <Logo layout="stacked" />
+            <div className="flex items-center gap-1.5 mt-3 bg-slate-50 border border-slate-100 px-4 py-1.5 rounded-full shadow-sm">
+              <span className="text-sm">🏥</span>
+              <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Pharmacy Partner Portal</span>
             </div>
           </div>
 
-          <div className="mb-8">
+          <div className="bg-white border border-slate-100 rounded-[32px] p-6 shadow-premium relative">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-2xl font-black text-slate-800 tracking-tight">Register Pharmacy</h3>
               <span className="text-sm font-black text-teal bg-teal/10 px-3 py-1 rounded-full">
@@ -96,24 +102,24 @@ export default function PharmacySignup() {
                   <h4 className="text-lg font-black text-slate-800">Basic Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Full Name</label>
-                      <input required type="text" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pharmacy Owner Name</label>
+                      <input required type="text" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} placeholder="Full Name" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Email Address</label>
-                      <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Phone Number</label>
-                      <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Password</label>
-                      <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Confirm Password</label>
-                      <input required type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <input required type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                   </div>
                 </div>
@@ -125,36 +131,32 @@ export default function PharmacySignup() {
                   <h4 className="text-lg font-black text-slate-800">Pharmacy Details</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pharmacy / Store Name</label>
-                      <input required type="text" value={formData.storeName} onChange={e => setFormData({...formData, storeName: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pharmacy Name</label>
+                      <input required type="text" value={formData.clinicName} onChange={e => setFormData({...formData, clinicName: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Drug License Number *</label>
-                      <input required type="text" value={formData.dlNumber} onChange={e => setFormData({...formData, dlNumber: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Drug License Number</label>
+                      <input required type="text" value={formData.regNumber} onChange={e => setFormData({...formData, regNumber: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">GST Number</label>
-                      <input type="text" value={formData.gstNumber} onChange={e => setFormData({...formData, gstNumber: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
-                    </div>
-                    <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Store Address</label>
-                      <textarea required rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input resize-none" />
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pharmacist Name</label>
+                      <input required type="text" value={formData.qualification} onChange={e => setFormData({...formData, qualification: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">City</label>
-                      <input required type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Street Address</label>
+                      <textarea required rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 resize-none" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">State</label>
-                      <input required type="text" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <input required type="text" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">City</label>
+                      <input required type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pincode</label>
-                      <input required type="text" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Serviceable Pincodes (comma separated)</label>
-                      <input required type="text" value={formData.serviceablePincodes} onChange={e => setFormData({...formData, serviceablePincodes: e.target.value})} placeholder="e.g. 400001, 400002" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none vendor-input" />
+                      <input required type="text" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
                   </div>
                 </div>
@@ -165,17 +167,15 @@ export default function PharmacySignup() {
                 <div className="flex flex-col gap-5 animate-slideUp">
                   <h4 className="text-lg font-black text-slate-800">Upload Documents</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    
-                    {/* File Upload Helper */}
                     {[
-                      { id: 'dlDoc', label: 'Drug License Certificate', icon: <FiFileText /> },
-                      { id: 'gstDoc', label: 'GST Certificate (Optional)', icon: <FiFileText /> },
-                      { id: 'storePhoto', label: 'Store Front Photo', icon: <FiImage /> },
-                      { id: 'idProof', label: 'Owner ID Proof', icon: <FiUser /> }
+                      { id: 'regDoc', label: 'Drug License Certificate', icon: <FiFileText /> },
+                      { id: 'degreeDoc', label: 'GST Certificate', icon: <FiFileText /> },
+                      { id: 'profilePhoto', label: 'Pharmacy Photo', icon: <FiImage /> },
+                      { id: 'idProof', label: 'Owner Government ID', icon: <FiUser /> }
                     ].map((doc) => (
                       <div key={doc.id} className="relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-white hover:bg-slate-50 transition-colors group cursor-pointer">
-                        <input type="file" required={doc.id !== 'gstDoc'} onChange={(e) => handleFileChange(doc.id, e)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-3 ${formData[doc.id] ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 group-hover:bg-teal/10 group-hover:text-teal'} transition-colors`}>
+                        <input type="file" required onChange={(e) => handleFileChange(doc.id, e)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-3 ${formData[doc.id] ? 'bg-teal/10 text-teal' : 'bg-slate-100 text-slate-400 group-hover:bg-teal/10 group-hover:text-teal'} transition-colors`}>
                           {formData[doc.id] ? <FiCheck /> : doc.icon}
                         </div>
                         <span className="text-xs font-bold text-slate-700 text-center">{doc.label}</span>
@@ -195,9 +195,9 @@ export default function PharmacySignup() {
                     <div>
                       <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Basic Info</h5>
                       <div className="grid grid-cols-2 gap-3 text-sm font-semibold text-slate-700">
-                        <div>Name: <span className="text-slate-900">{formData.fullName}</span></div>
+                        <div className="col-span-2">Name: <span className="text-slate-900">{formData.fullName}</span></div>
                         <div>Phone: <span className="text-slate-900">{formData.phone}</span></div>
-                        <div className="col-span-2">Email: <span className="text-slate-900">{formData.email}</span></div>
+                        <div>Email: <span className="text-slate-900 truncate">{formData.email}</span></div>
                       </div>
                     </div>
                     
@@ -206,19 +206,18 @@ export default function PharmacySignup() {
                     <div>
                       <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Pharmacy Details</h5>
                       <div className="grid grid-cols-2 gap-3 text-sm font-semibold text-slate-700">
-                        <div className="col-span-2">Store: <span className="text-slate-900">{formData.storeName}</span></div>
-                        <div>DL No: <span className="text-slate-900">{formData.dlNumber}</span></div>
-                        <div>GST No: <span className="text-slate-900">{formData.gstNumber || 'N/A'}</span></div>
-                        <div className="col-span-2">Address: <span className="text-slate-900">{formData.address}, {formData.city}, {formData.state} - {formData.pincode}</span></div>
+                        <div>Pharmacy: <span className="text-slate-900">{formData.clinicName}</span></div>
+                        <div>License No: <span className="text-slate-900">{formData.regNumber}</span></div>
+                        <div className="col-span-2">Location: <span className="text-slate-900">{formData.city}, {formData.state}</span></div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-teal/10 border border-teal/20 rounded-2xl p-4 flex gap-3">
-                    <FiCheck className="text-teal text-xl shrink-0 mt-0.5" />
-                    <p className="text-xs font-semibold text-[#135A5A] leading-relaxed">
-                      By submitting, you agree to our Vendor Terms & Conditions. Your application will be reviewed within 24-48 hours.
-                    </p>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex gap-3 items-start">
+                    <input required type="checkbox" id="terms" className="mt-1 w-4 h-4 text-teal border-slate-300 rounded focus:ring-teal" />
+                    <label htmlFor="terms" className="text-xs font-semibold text-slate-600 leading-relaxed cursor-pointer">
+                      I hereby declare that the details furnished above are true and correct to the best of my knowledge. I agree to the <a href="#" className="text-teal hover:underline font-bold">Terms & Conditions</a> and <a href="#" className="text-teal hover:underline font-bold">Privacy Policy</a> of E Mediclub.
+                    </label>
                   </div>
                 </div>
               )}
@@ -239,7 +238,7 @@ export default function PharmacySignup() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-8 py-3.5 bg-teal hover:bg-[#135A5A] text-white text-sm font-black rounded-xl shadow-lg shadow-teal/25 vendor-btn flex items-center gap-2 ml-auto"
+                className="px-8 py-3.5 bg-teal hover:bg-teal-dark text-white text-sm font-black rounded-xl shadow-lg shadow-teal/25 vendor-btn flex items-center gap-2 ml-auto"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -256,7 +255,7 @@ export default function PharmacySignup() {
             <p className="text-center text-sm font-semibold text-slate-500 pb-8">
               Already have an account?{' '}
               <Link to="/vendor/pharmacy/login" className="text-teal font-black hover:underline">
-                Sign In →
+                Login instead →
               </Link>
             </p>
           )}

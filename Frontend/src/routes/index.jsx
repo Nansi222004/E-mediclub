@@ -60,10 +60,12 @@ const HomeCollections = lazy(() => import('../modules/admin/pages/HomeCollection
 const Prescriptions = lazy(() => import('../modules/admin/pages/Prescriptions'));
 
 // Multi-Vendor Auth Page Modules
-const PharmacyLogin = lazy(() => import('../modules/vendor/pages/PharmacyLogin'));
+const PharmacyVendorAuth = lazy(() => import('../modules/vendor/pages/PharmacyVendorAuth'));
 const PharmacySignup = lazy(() => import('../modules/vendor/pages/PharmacySignup'));
-const LabVendorAuth = lazy(() => import('../modules/vendor/pages/LabVendorAuth'));
-const DoctorVendorAuth = lazy(() => import('../modules/vendor/pages/DoctorVendorAuth'));
+const LabLogin = lazy(() => import('../modules/vendor/pages/LabLogin'));
+const LabSignup = lazy(() => import('../modules/vendor/pages/LabSignup'));
+const DoctorLogin = lazy(() => import('../modules/vendor/pages/DoctorLogin'));
+const DoctorSignup = lazy(() => import('../modules/vendor/pages/DoctorSignup'));
 
 const VendorForgotPasswordPage = lazy(() => import('../modules/auth/vendor/pages/VendorForgotPasswordPage'));
 const VendorVerifyOtpPage = lazy(() => import('../modules/auth/vendor/pages/VendorVerifyOtpPage'));
@@ -136,10 +138,10 @@ export default function AppRoutes() {
         <Route path="lab-tests/:testId/book" element={<LabTestBookingPage />} />
         <Route path="labs/:labId" element={<LabDetailsPage />} />
         <Route path="rate/:orderId" element={<ProductRatingsPage />} />
-        
-        {/* Auth page routed inside layout to preserve navigation bars */}
-        <Route path="login" element={<LoginPage />} />
       </Route>
+
+      {/* Auth page routed outside layout so it doesn't show navigation bars */}
+      <Route path="/login" element={<LoginPage />} />
 
       {/* 2. Super Admin Auth Public Routes */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -182,7 +184,7 @@ export default function AppRoutes() {
       </Route>
 
       {/* 4. Pharmacy Vendor Auth & Routes */}
-      <Route path="/vendor/pharmacy/login" element={<PharmacyLogin />} />
+      <Route path="/vendor/pharmacy/login" element={<PharmacyVendorAuth />} />
       <Route path="/vendor/pharmacy/signup" element={<PharmacySignup />} />
       <Route path="/vendor/pharmacy/forgot-password" element={<VendorForgotPasswordPage />} />
       
@@ -210,8 +212,8 @@ export default function AppRoutes() {
       </Route>
 
       {/* 5. Lab Vendor Auth & Routes */}
-      <Route path="/vendor/lab/login" element={<LabVendorAuth />} />
-      <Route path="/vendor/lab/signup" element={<LabVendorAuth />} />
+      <Route path="/vendor/lab/login" element={<LabLogin />} />
+      <Route path="/vendor/lab/signup" element={<LabSignup />} />
       <Route path="/vendor/lab/forgot-password" element={<VendorForgotPasswordPage />} />
 
       <Route path="/vendor/lab" element={<LabVendorLayout />}>
@@ -228,8 +230,8 @@ export default function AppRoutes() {
       </Route>
 
       {/* 6. Doctor Vendor Auth & Routes */}
-      <Route path="/vendor/doctor/login" element={<DoctorVendorAuth />} />
-      <Route path="/vendor/doctor/signup" element={<DoctorVendorAuth />} />
+      <Route path="/vendor/doctor/login" element={<DoctorLogin />} />
+      <Route path="/vendor/doctor/signup" element={<DoctorSignup />} />
       <Route path="/vendor/doctor/forgot-password" element={<VendorForgotPasswordPage />} />
       <Route path="/vendor/onboarding-pending" element={<OnboardingPending />} />
       <Route path="/vendor/verify-otp" element={<VendorVerifyOtpPage />} />

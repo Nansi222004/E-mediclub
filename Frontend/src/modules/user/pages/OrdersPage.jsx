@@ -15,12 +15,28 @@ import { updateOrderStatus, archiveOrder } from '../store/productSlice';
 export default function OrdersPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { orders = [] } = useSelector(state => state.products);
+  const { orders = [], location: locationState } = useSelector(state => state.products);
   const [activeTab, setActiveTab] = React.useState('Active');
 
   const filteredOrders = React.useMemo(() => {
     return orders.filter(ord => {
       if (ord.archived) return false;
+
+      // Filter by location
+      const selectedCity = locationState?.city?.toLowerCase() || '';
+      const selectedPin = locationState?.pincode || '';
+      
+      if (selectedCity) {
+        const orderCity = ord.city ? ord.city.toLowerCase() : '';
+        const orderPin = ord.pincode || '';
+        const addressLower = ord.deliveryAddress ? ord.deliveryAddress.toLowerCase() : '';
+        
+        const matchesCity = orderCity === selectedCity || addressLower.includes(selectedCity);
+        const matchesPin = selectedPin ? (orderPin === selectedPin || addressLower.includes(selectedPin)) : true;
+        
+        if (!matchesCity || !matchesPin) return false;
+      }
+
       if (activeTab === 'Active') {
         return ord.status !== 'Delivered';
       }
@@ -29,7 +45,7 @@ export default function OrdersPage() {
       }
       return true;
     });
-  }, [orders, activeTab]);
+  }, [orders, activeTab, locationState]);
 
   const handleArchiveOrder = (orderId, e) => {
     e.stopPropagation();
@@ -112,6 +128,22 @@ export default function OrdersPage() {
         {['Active', 'Past', 'All'].map((tab) => {
           const count = orders.filter(ord => {
             if (ord.archived) return false;
+            
+            // Filter by location
+            const selectedCity = locationState?.city?.toLowerCase() || '';
+            const selectedPin = locationState?.pincode || '';
+            
+            if (selectedCity) {
+              const orderCity = ord.city ? ord.city.toLowerCase() : '';
+              const orderPin = ord.pincode || '';
+              const addressLower = ord.deliveryAddress ? ord.deliveryAddress.toLowerCase() : '';
+              
+              const matchesCity = orderCity === selectedCity || addressLower.includes(selectedCity);
+              const matchesPin = selectedPin ? (orderPin === selectedPin || addressLower.includes(selectedPin)) : true;
+              
+              if (!matchesCity || !matchesPin) return false;
+            }
+
             if (tab === 'Active') return ord.status !== 'Delivered';
             if (tab === 'Past') return ord.status === 'Delivered';
             return true;

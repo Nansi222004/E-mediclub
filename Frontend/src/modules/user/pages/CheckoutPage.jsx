@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { FiMapPin, FiCreditCard, FiSmartphone, FiCheckCircle, FiShield, FiPlus, FiArrowLeft } from 'react-icons/fi';
 import { clearCart } from '../store/cartSlice';
-import { placeOrder } from '../store/productSlice';
+import { placeOrder, normalizeCity } from '../store/productSlice';
 import { addAddress } from '../../auth/store/authSlice';
 
 export default function CheckoutPage() {
@@ -18,10 +18,50 @@ export default function CheckoutPage() {
   // Redux Selectors
   const { items, total } = useSelector(state => state.cart);
   const { addresses } = useSelector(state => state.auth);
+  const { location: locationState } = useSelector(state => state.products || {});
+
+  const selectedCity = locationState?.city ? normalizeCity(locationState.city).toLowerCase() : '';
+  const filteredAddresses = selectedCity
+    ? addresses.filter(addr => addr.city && normalizeCity(addr.city).toLowerCase() === selectedCity)
+    : addresses;
 
   // States
   const [activeStep, setActiveStep] = useState(0); // 0: Address, 1: Payment, 2: Success (MUI is 0-indexed)
-  const [selectedAddressId, setSelectedAddressId] = useState(addresses[0]?.id || 1);
+  const [selectedAddressId, setSelectedAddressId] = useState(filteredAddresses[0]?.id || 1);
+
+  // Auto-populate address matching current location city if none exists
+  React.useEffect(() => {
+    if (!locationState?.city) return;
+    const hasMatching = addresses.some(a => a.city?.toLowerCase() === locationState.city.toLowerCase());
+    if (!hasMatching) {
+      const activeCity = locationState.city;
+      const activePin = locationState.pincode || '400001';
+      const activeState = locationState.state || 'Maharashtra';
+      
+      const autoAddress = {
+        name: `Current Location (${activeCity})`,
+        phone: '9876543210',
+        pincode: activePin,
+        addressLine: `12, Main Street, Near City Center`,
+        city: activeCity,
+        state: activeState,
+        isDefault: true
+      };
+      
+      dispatch(addAddress(autoAddress));
+    }
+  }, [locationState?.city, addresses, dispatch]);
+
+  // Auto-select address matching the active location city
+  React.useEffect(() => {
+    if (locationState?.city) {
+      const matchingAddress = addresses.find(a => a.city?.toLowerCase() === locationState.city.toLowerCase());
+      if (matchingAddress) {
+        setSelectedAddressId(matchingAddress.id);
+      }
+    }
+  }, [locationState?.city, addresses]);
+
   const [paymentMode, setPaymentMode] = useState('upi'); // 'upi' | 'card' | 'cod'
   const [generatedOrderId, setGeneratedOrderId] = useState('');
 
@@ -75,7 +115,11 @@ export default function CheckoutPage() {
       })),
       total: total,
       status: 'Ordered',
-      deliveryAddress: activeAddress ? `${activeAddress.name} (${activeAddress.city})` : 'Home'
+      deliveryAddress: activeAddress 
+        ? `${activeAddress.name} (${activeAddress.city})` 
+        : `Home Delivery (${locationState?.city || 'Mumbai'})`,
+      city: activeAddress ? activeAddress.city : (locationState?.city || ''),
+      pincode: activeAddress ? activeAddress.pincode : (locationState?.pincode || '')
     };
 
     dispatch(placeOrder(orderObj));
@@ -189,28 +233,34 @@ export default function CheckoutPage() {
               )}
             </AnimatePresence>
 
-            {/* Address listing cards */}
+             {/* Address listing cards */}
             <div className="flex flex-col gap-3">
-              {addresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  onClick={() => setSelectedAddressId(addr.id)}
-                  className={`p-4 rounded-[24px] border shadow-sm cursor-pointer transition-all flex items-start gap-3 bg-white ${
-                    selectedAddressId === addr.id ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100 hover:border-slate-300'
-                  }`}
-                >
-                  <span className={`w-4 h-4 rounded-full border-2 mt-1 shrink-0 flex items-center justify-center ${
-                    selectedAddressId === addr.id ? 'border-forest bg-forest text-white' : 'border-slate-300'
-                  }`}>
-                    {selectedAddressId === addr.id && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                  </span>
-                  <div className="flex-1 text-xs">
-                    <h4 className="font-extrabold text-slate-800">{addr.name}</h4>
-                    <p className="text-slate-500 font-semibold mt-1">{addr.addressLine}, {addr.city}, {addr.state} - {addr.pincode}</p>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1.5">PHONE: +91 {addr.phone}</p>
+              {filteredAddresses.length > 0 ? (
+                filteredAddresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    onClick={() => setSelectedAddressId(addr.id)}
+                    className={`p-4 rounded-[24px] border shadow-sm cursor-pointer transition-all flex items-start gap-3 bg-white ${
+                      selectedAddressId === addr.id ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded-full border-2 mt-1 shrink-0 flex items-center justify-center ${
+                      selectedAddressId === addr.id ? 'border-forest bg-forest text-white' : 'border-slate-300'
+                    }`}>
+                      {selectedAddressId === addr.id && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                    <div className="flex-1 text-xs">
+                      <h4 className="font-extrabold text-slate-800">{addr.name}</h4>
+                      <p className="text-slate-500 font-semibold mt-1">{addr.addressLine}, {addr.city}, {addr.state} - {addr.pincode}</p>
+                      <p className="text-[10px] text-slate-400 font-bold mt-1.5">PHONE: +91 {addr.phone}</p>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8 px-4 text-slate-405 bg-slate-50 border border-dashed border-slate-200 rounded-2xl select-none font-bold text-xs uppercase tracking-wider">
+                  No saved addresses found in {locationState?.city || 'this area'}. Please add a new address above.
                 </div>
-              ))}
+              )}
             </div>
 
             {/* Next CTA trigger using MUI Button */}

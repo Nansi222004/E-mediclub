@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiArrowRight, FiCheck, FiUploadCloud, FiFileText, FiImage, FiUser } from 'react-icons/fi';
-import SplashScreen from '../components/SplashScreen';
+import { FiArrowLeft, FiArrowRight, FiCheck, FiFileText, FiImage, FiUser } from 'react-icons/fi';
+import Logo from '../../../shared/components/Logo';
 
 export default function DoctorSignup() {
-  const [showSplash, setShowSplash] = useState(true);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,11 +14,6 @@ export default function DoctorSignup() {
     consultationType: 'Both', fee: '', clinicName: '', address: '', city: '', state: '', pincode: '',
     regDoc: null, degreeDoc: null, profilePhoto: null, clinicPhoto: null, idProof: null
   });
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2500);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, 4));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
@@ -38,42 +32,53 @@ export default function DoctorSignup() {
     }
   };
 
-  if (showSplash) return <SplashScreen vendorType="doctor" />;
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] flex font-sans vendor-auth-layout">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans overflow-hidden relative">
       {/* Left side: Branding (Desktop) */}
-      <div className="hidden lg:flex flex-col items-center justify-center bg-gradient-to-br from-teal-dark to-teal p-12 text-white relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-teal-dark to-teal p-12 flex-col justify-between relative overflow-hidden text-white border-r border-teal-dark shrink-0">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-black/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
-        <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-          <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-4xl shadow-2xl mb-8">👨‍⚕️</div>
-          <h1 className="text-4xl font-extrabold mb-4 font-['Plus_Jakarta_Sans']">Join Emediclub</h1>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full border border-white/20 mb-8 backdrop-blur-md">
-            <span>👨‍⚕️</span>
-            <span className="text-sm font-semibold tracking-wide">Clinical Partner Network</span>
+        
+        {/* Branding header */}
+        <div className="z-10 flex items-center gap-2 bg-white rounded-xl px-4 py-2 self-start shadow-lg">
+          <Logo showText={true} />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center text-center max-w-md mx-auto">
+          <div className="w-24 h-24 bg-white/10 rounded-3xl flex items-center justify-center text-5xl shadow-2xl backdrop-blur-sm border border-white/20 mb-8">
+            👨‍⚕️
           </div>
-          <p className="text-white/80 text-lg leading-relaxed">
-            Expand your practice. Offer online video consultations or accept in-clinic appointments from millions of users.
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/20 mb-4 backdrop-blur-md">
+            <span className="text-white text-[10px] font-black tracking-widest uppercase">Clinical Partner Portal</span>
+          </div>
+          <h2 className="text-3xl font-black text-white tracking-tight leading-tight">
+            Join E Mediclub's Healthcare Network
+          </h2>
+          <p className="text-white/80 text-sm mt-4 leading-relaxed font-medium">
+            Reach more patients, manage your schedule easily, and offer digital prescriptions.
           </p>
+        </div>
+
+        {/* Footer legalities */}
+        <div className="z-10 text-white/50 text-[10px] font-black uppercase tracking-wider">
+          © {new Date().getFullYear()} E Mediclub. All rights reserved.
         </div>
       </div>
 
       {/* Right side: Signup Form */}
-      <div className="flex-1 flex flex-col p-4 sm:p-8 overflow-y-auto">
-        <div className="w-full max-w-xl mx-auto flex-1 flex flex-col pt-8">
+      <div className="w-full lg:w-[55%] flex items-center justify-center p-6 sm:p-12 relative bg-white overflow-y-auto no-scrollbar">
+        <div className="w-full max-w-xl z-10 flex flex-col gap-4">
           
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-teal-dark to-teal rounded-xl flex items-center justify-center text-xl shadow-lg">
-              <span className="text-white">👨‍⚕️</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold text-slate-800 font-['Plus_Jakarta_Sans']">Emediclub</h2>
-              <p className="text-xs font-bold text-teal">Clinical Partner Portal</p>
+          <div className="flex flex-col items-center justify-center w-full mb-4">
+            <Logo layout="stacked" />
+            <div className="flex items-center gap-1.5 mt-3 bg-slate-50 border border-slate-100 px-4 py-1.5 rounded-full shadow-sm">
+              <span className="text-sm">👨‍⚕️</span>
+              <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Clinical Partner Portal</span>
             </div>
           </div>
 
-          <div className="mb-8">
+          <div className="bg-white border border-slate-100 rounded-[32px] p-6 shadow-premium relative">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-2xl font-black text-slate-800 tracking-tight">Register as Doctor</h3>
               <span className="text-sm font-black text-teal bg-teal/10 px-3 py-1 rounded-full">
@@ -180,6 +185,10 @@ export default function DoctorSignup() {
                           <textarea required rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 resize-none" />
                         </div>
                         <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">State</label>
+                          <input required type="text" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">City</label>
                           <input required type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                         </div>
@@ -199,10 +208,10 @@ export default function DoctorSignup() {
                   <h4 className="text-lg font-black text-slate-800">Upload Documents</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
-                      { id: 'regDoc', label: 'Medical Registration', icon: <FiFileText /> },
+                      { id: 'regDoc', label: 'Medical License Upload', icon: <FiFileText /> },
                       { id: 'degreeDoc', label: 'Degree Certificate', icon: <FiFileText /> },
-                      { id: 'profilePhoto', label: 'Professional Photo', icon: <FiImage /> },
-                      { id: 'idProof', label: 'Govt ID Proof', icon: <FiUser /> }
+                      { id: 'profilePhoto', label: 'Doctor Profile Photo', icon: <FiImage /> },
+                      { id: 'idProof', label: 'Government ID Upload', icon: <FiUser /> }
                     ].map((doc) => (
                       <div key={doc.id} className="relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-white hover:bg-slate-50 transition-colors group cursor-pointer">
                         <input type="file" required onChange={(e) => handleFileChange(doc.id, e)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
@@ -259,11 +268,11 @@ export default function DoctorSignup() {
                     </div>
                   </div>
 
-                  <div className="bg-teal/10 border border-teal/20 rounded-2xl p-4 flex gap-3">
-                    <FiCheck className="text-teal text-xl shrink-0 mt-0.5" />
-                    <p className="text-xs font-semibold text-[#164E4D] leading-relaxed">
-                      By submitting, you agree to our Clinical Partner Terms & Conditions. Your application will be verified within 24-48 hours.
-                    </p>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex gap-3 items-start">
+                    <input required type="checkbox" id="terms" className="mt-1 w-4 h-4 text-teal border-slate-300 rounded focus:ring-teal" />
+                    <label htmlFor="terms" className="text-xs font-semibold text-slate-600 leading-relaxed cursor-pointer">
+                      I hereby declare that the details furnished above are true and correct to the best of my knowledge. I agree to the <a href="#" className="text-teal hover:underline font-bold">Terms & Conditions</a> and <a href="#" className="text-teal hover:underline font-bold">Privacy Policy</a> of E Mediclub.
+                    </label>
                   </div>
                 </div>
               )}

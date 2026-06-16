@@ -217,6 +217,9 @@ export default function LabTestBookingPage() {
       }
 
       const associatedLab = labs.find(l => l.id === test.labId || l.name === test.labName);
+      const bookingCity = associatedLab?.city || locationState?.city || 'Mumbai';
+      const bookingPincode = associatedLab?.pincode || locationState?.pincode || '400001';
+      const bookingState = associatedLab?.state || locationState?.state || 'Maharashtra';
 
       const formData = new FormData();
       formData.append('id', bookingRef);
@@ -224,9 +227,9 @@ export default function LabTestBookingPage() {
       formData.append('address', selectedAddrStr);
       formData.append('price', test.discountPrice || test.price);
       formData.append('date', preferredDate);
-      formData.append('city', associatedLab ? associatedLab.city : '');
-      formData.append('pincode', associatedLab ? associatedLab.pincode : '');
-      formData.append('state', associatedLab ? associatedLab.state : '');
+      formData.append('city', bookingCity);
+      formData.append('pincode', bookingPincode);
+      formData.append('state', bookingState);
 
       if (prescriptionFile) {
         formData.append('file', prescriptionFile);
@@ -252,8 +255,8 @@ export default function LabTestBookingPage() {
         paymentMethod: paymentMethod,
         paymentStatus: 'Paid',
         amountPaid: test.discountPrice || test.price,
-        city: associatedLab ? associatedLab.city : '',
-        pincode: associatedLab ? associatedLab.pincode : ''
+        city: bookingCity,
+        pincode: bookingPincode
       };
 
       const response = await apiClient.post('/api/labs/book', formData, {
