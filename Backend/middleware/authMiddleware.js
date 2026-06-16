@@ -23,7 +23,9 @@ const protect = async (req, res, next) => {
   // Development bypass for mock tokens
   if (token.startsWith('MOCK-JWT-TOKEN-')) {
     try {
-      let user = await User.findOne({ email: 'ramesh@gmail.com' });
+      let user = await User.findOne({ 
+        $or: [{ email: 'ramesh@gmail.com' }, { phone: '9876543210' }] 
+      });
       if (!user) {
         user = await User.create({
           name: 'Ramesh Kumar',
@@ -38,6 +40,7 @@ const protect = async (req, res, next) => {
       req.token = token;
       return next();
     } catch (err) {
+      console.error('Mock token bypass error:', err);
       return ApiResponse.error(res, 500, 'Failed to handle mock token bypass');
     }
   }
