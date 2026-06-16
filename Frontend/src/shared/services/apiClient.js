@@ -10,6 +10,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token =
     localStorage.getItem("em_token") ||
+    localStorage.getItem("em_vendor_token") ||
+    localStorage.getItem("em_admin_token") ||
     localStorage.getItem("token") ||
     localStorage.getItem("adminToken") ||
     localStorage.getItem("userToken");
