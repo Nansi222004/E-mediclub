@@ -76,6 +76,69 @@ const labSchema = new mongoose.Schema(
     address: {
       type: String,
       trim: true
+    },
+    ownerName: {
+      type: String
+    },
+    mobileNumber: {
+      type: String
+    },
+    emailAddress: {
+      type: String
+    },
+    labBanner: {
+      type: String
+    },
+    aboutLaboratory: {
+      type: String
+    },
+    establishedYear: {
+      type: String
+    },
+    workingHours: {
+      type: String
+    },
+    nablCertificateUrl: {
+      type: String
+    },
+    isoCertificateUrl: {
+      type: String
+    },
+    collectionRadius: {
+      type: Number // in km
+    },
+    collectionCharges: {
+      type: Number
+    },
+    reportDeliveryTime: {
+      type: String
+    },
+    sameDayReports: {
+      type: Boolean,
+      default: false
+    },
+    expressReports: {
+      type: Boolean,
+      default: false
+    },
+    digitalReports: {
+      type: Boolean,
+      default: true
+    },
+    labLicenseUrl: {
+      type: String
+    },
+    governmentIdUrl: {
+      type: String
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Rejected'],
+      default: 'Pending'
+    },
+    vendorUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     }
   },
   {

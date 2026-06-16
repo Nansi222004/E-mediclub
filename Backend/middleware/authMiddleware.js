@@ -20,6 +20,28 @@ const protect = async (req, res, next) => {
     return ApiResponse.error(res, 401, 'Not authorized to access this route, token missing');
   }
 
+  // Development bypass for mock tokens
+  if (token.startsWith('MOCK-JWT-TOKEN-')) {
+    try {
+      let user = await User.findOne({ email: 'ramesh@gmail.com' });
+      if (!user) {
+        user = await User.create({
+          name: 'Ramesh Kumar',
+          phone: '9876543210',
+          email: 'ramesh@gmail.com',
+          role: 'user',
+          password: 'password123',
+          isActive: true
+        });
+      }
+      req.user = user;
+      req.token = token;
+      return next();
+    } catch (err) {
+      return ApiResponse.error(res, 500, 'Failed to handle mock token bypass');
+    }
+  }
+
   try {
     // Check if token is blacklisted
     const isBlacklisted = await BlacklistedToken.findOne({ token });

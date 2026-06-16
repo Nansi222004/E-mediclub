@@ -101,6 +101,63 @@ const doctorSchema = new mongoose.Schema(
     address: {
       type: String,
       trim: true
+    },
+    gender: {
+      type: String,
+      enum: ['Male', 'Female', 'Other', 'Prefer not to say']
+    },
+    dateOfBirth: {
+      type: Date
+    },
+    medicalCouncil: {
+      type: String
+    },
+    clinicName: {
+      type: String
+    },
+    clinicLogo: {
+      type: String
+    },
+    clinicImages: [{
+      type: String
+    }],
+    receptionImages: [{
+      type: String
+    }],
+    consultationRoomImages: [{
+      type: String
+    }],
+    degreeCertificateUrl: {
+      type: String
+    },
+    medicalLicenseUrl: {
+      type: String
+    },
+    governmentIdUrl: {
+      type: String
+    },
+    consultationDuration: {
+      type: Number, // in minutes
+      default: 15
+    },
+    morningSlots: [{
+      type: String
+    }],
+    eveningSlots: [{
+      type: String
+    }],
+    emergencyAvailability: {
+      type: Boolean,
+      default: false
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Rejected'],
+      default: 'Pending'
+    },
+    vendorUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     }
   },
   {

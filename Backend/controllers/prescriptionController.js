@@ -1,3 +1,4 @@
+const path = require('path');
 const Prescription = require('../models/Prescription');
 const ApiResponse = require('../utils/ApiResponse');
 
@@ -11,10 +12,16 @@ const uploadPrescription = async (req, res, next) => {
     }
 
     const { notes } = req.body;
+    let fileUrl = req.file.path;
+
+    if (fileUrl && !fileUrl.startsWith('http')) {
+      const relativePath = path.relative(path.join(__dirname, '../'), fileUrl).replace(/\\/g, '/');
+      fileUrl = `/${relativePath}`;
+    }
 
     const prescription = await Prescription.create({
       userId: req.user.id,
-      fileUrl: req.file.path, // This is the Cloudinary URL
+      fileUrl: fileUrl,
       notes: notes || '',
       uploadedAt: Date.now()
     });

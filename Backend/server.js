@@ -5,6 +5,7 @@ try {
 } catch (e) {
   console.error('Failed to set custom DNS servers:', e.message);
 }
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -23,6 +24,9 @@ const errorHandler = require('./middleware/errorMiddleware');
 const User = require('./models/User');
 
 const app = express();
+
+// Serve static uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect Database
 connectDB();
