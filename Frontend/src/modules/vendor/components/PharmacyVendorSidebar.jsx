@@ -8,7 +8,7 @@ import {
   FiGrid, FiShoppingBag, FiLayers, FiPackage, FiFolder, 
   FiArchive, FiTag, FiUsers, FiTruck, FiDollarSign, 
   FiPieChart, FiBell, FiUser, FiSettings, FiLogOut, 
-  FiArrowLeft, FiChevronDown
+  FiArrowLeft, FiChevronDown, FiMapPin, FiStar
 } from 'react-icons/fi';
 
 export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
@@ -21,48 +21,20 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
 
   const menuItems = [
     { name: 'Dashboard', path: '/vendor/pharmacy/dashboard', icon: FiGrid },
-    { 
-      name: 'Orders', 
-      icon: FiShoppingBag,
-      subItems: [
-        { name: 'New Orders', path: '/vendor/pharmacy/orders/new' },
-        { name: 'Processing', path: '/vendor/pharmacy/orders/processing' },
-        { name: 'Ready for Dispatch', path: '/vendor/pharmacy/orders/ready' },
-        { name: 'Delivered', path: '/vendor/pharmacy/orders/delivered' },
-        { name: 'Cancelled', path: '/vendor/pharmacy/orders/cancelled' },
-      ]
-    },
-    { 
-      name: 'Prescription Orders', 
-      icon: FiLayers,
-      subItems: [
-        { name: 'Pending Verification', path: '/vendor/pharmacy/prescriptions/pending' },
-        { name: 'Approved', path: '/vendor/pharmacy/prescriptions/approved' },
-        { name: 'Rejected', path: '/vendor/pharmacy/prescriptions/rejected' },
-      ]
-    },
+    { name: 'Orders', path: '/vendor/pharmacy/orders', icon: FiShoppingBag },
+    { name: 'Prescription Orders', path: '/vendor/pharmacy/prescriptions', icon: FiLayers },
     { 
       name: 'Medicine Catalog', 
       icon: FiPackage,
       subItems: [
         { name: 'All Medicines', path: '/vendor/pharmacy/medicines' },
         { name: 'Add Medicine', path: '/vendor/pharmacy/medicines/add' },
+        { name: 'Prescription Medicines', path: '/vendor/pharmacy/medicines/prescriptions' },
         { name: 'Featured Medicines', path: '/vendor/pharmacy/medicines/featured' },
-        { name: 'Medicine Images', path: '/vendor/pharmacy/medicines/images' },
       ]
     },
-    { 
-      name: 'Categories', 
-      icon: FiFolder,
-      subItems: [
-        { name: 'Health Devices', path: '/vendor/pharmacy/categories/devices' },
-        { name: 'Baby Care', path: '/vendor/pharmacy/categories/baby' },
-        { name: 'Wellness', path: '/vendor/pharmacy/categories/wellness' },
-        { name: 'Ayurveda', path: '/vendor/pharmacy/categories/ayurveda' },
-        { name: 'Eye Care', path: '/vendor/pharmacy/categories/eye' },
-        { name: 'Other Categories', path: '/vendor/pharmacy/categories/others' },
-      ]
-    },
+    { name: 'Health Devices', path: '/vendor/pharmacy/health-devices', icon: FiFolder },
+
     { 
       name: 'Inventory', 
       icon: FiArchive,
@@ -70,6 +42,14 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
         { name: 'Stock Management', path: '/vendor/pharmacy/inventory/stock' },
         { name: 'Low Stock Alerts', path: '/vendor/pharmacy/inventory/alerts' },
         { name: 'Expiry Tracking', path: '/vendor/pharmacy/inventory/expiry' },
+      ]
+    },
+    { 
+      name: 'Service Areas', 
+      icon: FiMapPin,
+      subItems: [
+        { name: 'Store Location', path: '/vendor/pharmacy/service/location' },
+        { name: 'Coverage Request', path: '/vendor/pharmacy/service/coverage-request' },
       ]
     },
     { 
@@ -82,12 +62,27 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
       ]
     },
     { name: 'Customers', path: '/vendor/pharmacy/customers', icon: FiUsers },
-    { name: 'Delivery Management', path: '/vendor/pharmacy/delivery', icon: FiTruck },
     { name: 'Revenue & Payments', path: '/vendor/pharmacy/revenue', icon: FiDollarSign },
-    { name: 'Analytics', path: '/vendor/pharmacy/analytics', icon: FiPieChart },
+    { 
+      name: 'Analytics', 
+      icon: FiPieChart,
+      subItems: [
+        { name: 'Sales Analytics', path: '/vendor/pharmacy/analytics/sales' },
+        { name: 'Top Medicines', path: '/vendor/pharmacy/analytics/medicines' },
+        { name: 'Order Analytics', path: '/vendor/pharmacy/analytics/orders' },
+        { name: 'Customer Analytics', path: '/vendor/pharmacy/analytics/customers' },
+      ]
+    },
+    { 
+      name: 'Reviews & Ratings', 
+      icon: FiStar,
+      subItems: [
+        { name: 'Product Review', path: '/vendor/pharmacy/reviews/products' },
+        { name: 'Customer Feedback', path: '/vendor/pharmacy/reviews/feedback' },
+      ]
+    },
     { name: 'Notifications', path: '/vendor/pharmacy/notifications', icon: FiBell },
     { name: 'Profile', path: '/vendor/pharmacy/profile', icon: FiUser },
-    { name: 'Settings', path: '/vendor/pharmacy/settings', icon: FiSettings },
   ];
 
   const handleLogout = () => {

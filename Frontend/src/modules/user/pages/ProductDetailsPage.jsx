@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { FiStar, FiShoppingBag, FiTruck, FiShield, FiAlertTriangle, FiPlus, FiMinus, FiArrowLeft } from 'react-icons/fi';
@@ -96,6 +96,22 @@ export default function ProductDetailsPage() {
   const product = medicines.find(med => med.id === id) || medicines[0];
   const specs = getSpecsFallback(product);
 
+  const galleryImages = product.images && product.images.length > 0 
+    ? product.images 
+    : [
+        product.image,
+        'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80',
+        'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80'
+      ];
+
+  const [activeImage, setActiveImage] = useState(product?.image);
+
+  useEffect(() => {
+    if (product) {
+      setActiveImage(product.image);
+    }
+  }, [product]);
+
   // Cart matching details
   const cartItem = cartItems.find(item => item.id === product.id && item.type === 'medicine');
   const qty = cartItem ? cartItem.qty : 0;
@@ -157,13 +173,34 @@ export default function ProductDetailsPage() {
       {/* Main product showcase split grid */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-premium">
         
-        {/* Left: Product Image */}
-        <div className="w-full flex items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100 min-h-[300px] overflow-hidden group">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="max-h-80 max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
-          />
+        {/* Left: Product Image Gallery */}
+        <div className="flex flex-col gap-4">
+          <div className="w-full flex items-center justify-center p-6 bg-slate-50 rounded-3xl border border-slate-100 min-h-[320px] max-h-[360px] overflow-hidden group">
+            <img
+              src={activeImage}
+              alt={product.name}
+              className="max-h-72 max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+          {/* Thumbnails gallery */}
+          {galleryImages.length > 0 && (
+            <div className="flex flex-wrap gap-2.5 justify-center">
+              {galleryImages.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImage(imgUrl)}
+                  className={`w-16 h-16 rounded-xl border-2 p-1 bg-white flex items-center justify-center overflow-hidden transition-all outline-none ${
+                    activeImage === imgUrl 
+                      ? 'border-[#135A5A] ring-2 ring-[#135A5A]/10 scale-105' 
+                      : 'border-slate-100 hover:border-slate-300'
+                  }`}
+                >
+                  <img src={imgUrl} alt={`${product.name} thumbnail ${idx + 1}`} className="max-h-full max-w-full object-contain mix-blend-multiply" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Info details & add mechanics */}

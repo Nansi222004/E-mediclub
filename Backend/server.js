@@ -448,7 +448,7 @@ const seedMockData = async () => {
           }
 
           labsToCreate.push({
-            id: `lab-${city.toLowerCase().slice(0, 3)}-${i + 1}`,
+            id: `lab-${city.toLowerCase().replace(/\s/g, '').slice(0, 4)}-${cIdx}-${i + 1}`,
             name,
             logo: labLogos[i % labLogos.length],
             regNumber: `REG-LAB-${10000 + cIdx * 9 + i}`,

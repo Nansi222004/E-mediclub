@@ -79,6 +79,12 @@ const VendorProductManagement = lazy(() => import('../modules/vendor/pages/Vendo
 const VendorOrdersManagement = lazy(() => import('../modules/vendor/pages/VendorOrdersManagement'));
 const VendorStocksManagement = lazy(() => import('../modules/vendor/pages/VendorStocksManagement'));
 const VendorEarnings = lazy(() => import('../modules/vendor/pages/VendorEarnings'));
+const VendorNotifications = lazy(() => import('../modules/vendor/pages/VendorNotifications'));
+const VendorCustomers = lazy(() => import('../modules/vendor/pages/VendorCustomers'));
+const VendorPrescriptionManagement = lazy(() => import('../modules/vendor/pages/VendorPrescriptionManagement'));
+const VendorPrescriptionDetail = lazy(() => import('../modules/vendor/pages/VendorPrescriptionDetail'));
+const VendorMedicineAddWizard = lazy(() => import('../modules/vendor/pages/VendorMedicineAddWizard'));
+const VendorMedicineDetails = lazy(() => import('../modules/vendor/pages/VendorMedicineDetails'));
 const VendorProfile = lazy(() => import('../modules/vendor/pages/VendorProfile'));
 
 // Lab Vendor Page Modules
@@ -194,19 +200,22 @@ export default function AppRoutes() {
         
         {/* Pharmacy Specific Catalog */}
         <Route path="medicines" element={<MedicineCatalog />} />
+        <Route path="medicines/add" element={<VendorMedicineAddWizard />} />
+        <Route path="medicines/:id" element={<VendorMedicineDetails />} />
         
         {/* Fallbacks for other routes requested in the sidebar */}
         <Route path="products" element={<VendorProductManagement />} />
         <Route path="orders/*" element={<VendorOrdersManagement />} />
-        <Route path="prescriptions/*" element={<VendorOrdersManagement />} />
+        <Route path="prescriptions" element={<VendorPrescriptionManagement />} />
+        <Route path="prescriptions/:id" element={<VendorPrescriptionDetail />} />
         <Route path="categories/*" element={<VendorProductManagement />} />
         <Route path="inventory/*" element={<VendorStocksManagement />} />
         <Route path="promotions/*" element={<VendorEarnings />} />
-        <Route path="customers" element={<VendorProfile />} />
+        <Route path="customers/*" element={<VendorCustomers />} />
         <Route path="delivery" element={<VendorOrdersManagement />} />
-        <Route path="revenue" element={<VendorEarnings />} />
+        <Route path="revenue/*" element={<VendorEarnings />} />
         <Route path="analytics" element={<VendorEarnings />} />
-        <Route path="notifications" element={<VendorProfile />} />
+        <Route path="notifications" element={<VendorNotifications />} />
         <Route path="profile" element={<VendorProfile />} />
         <Route path="settings" element={<VendorProfile />} />
       </Route>

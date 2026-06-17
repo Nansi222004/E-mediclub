@@ -4,77 +4,50 @@ import { motion } from 'framer-motion';
 import { requestWithdrawal } from '../store/vendorSlice';
 import { 
   FiDollarSign, FiPlus, FiCheckCircle, FiClock, FiActivity, FiFileText, 
-  FiCalendar, FiDownload, FiTrendingUp, FiArrowUpRight, FiAward, FiInfo 
+  FiCalendar, FiDownload, FiTrendingUp, FiArrowUpRight, FiAward, FiInfo,
+  FiList, FiRefreshCw, FiClipboard
 } from 'react-icons/fi';
 
 export default function VendorEarnings() {
   const dispatch = useDispatch();
-  const { withdrawals, analytics, kycDetails, products } = useSelector(state => state.vendor);
+  const { withdrawals, analytics, kycDetails } = useSelector(state => state.vendor || { withdrawals: [], analytics: { totalRevenue: 84200, weeklySales: [] }, kycDetails: {} });
   
   // States
+  const [activeTab, setActiveTab] = useState('earnings'); // 'earnings' | 'transactions' | 'settlements' | 'refunds' | 'invoices'
   const [withdrawAmt, setWithdrawAmt] = useState("");
   const [successMsg, setSuccessMsg] = useState(false);
-  const [timeframe, setTimeframe] = useState("weekly"); // 'daily' | 'weekly' | 'monthly'
-  const [startDate, setStartDate] = useState("2026-05-01");
-  const [endDate, setEndDate] = useState("2026-05-28");
-  const [chartHoverIndex, setChartHoverIndex] = useState(null);
+  const [timeframe, setTimeframe] = useState("weekly");
 
-  // Timeframe stats mock calculation
-  const timeframeStats = useMemo(() => {
-    switch (timeframe) {
-      case 'daily':
-        return {
-          totalSales: 12000,
-          profit: 4800,
-          orders: 6,
-          topCategory: 'Allopathy',
-          chartData: [
-            { label: '09 AM', value: 800 },
-            { label: '11 AM', value: 1600 },
-            { label: '01 PM', value: 2400 },
-            { label: '03 PM', value: 1200 },
-            { label: '05 PM', value: 3100 },
-            { label: '07 PM', value: 1900 },
-            { label: '09 PM', value: 1000 }
-          ]
-        };
-      case 'monthly':
-        return {
-          totalSales: 345000,
-          profit: 138000,
-          orders: 194,
-          topCategory: 'Ayurveda',
-          chartData: [
-            { label: 'Week 1', value: 78000 },
-            { label: 'Week 2', value: 92000 },
-            { label: 'Week 3', value: 105000 },
-            { label: 'Week 4', value: 70000 }
-          ]
-        };
-      case 'weekly':
-      default:
-        return {
-          totalSales: analytics.totalRevenue, // 84200
-          profit: Math.round(analytics.totalRevenue * 0.4), // 40% margin estimate
-          orders: analytics.ordersCount, // 48
-          topCategory: 'Allopathy',
-          chartData: analytics.weeklySales.map(s => ({
-            label: s.day,
-            value: s.sales
-          }))
-        };
-    }
-  }, [timeframe, analytics]);
+  // Mock data for transactions
+  const transactions = [
+    { txId: 'TXN-90812', orderId: '#EMC-89212', customer: 'Rahul Mehta', date: '2026-06-17', amount: 1240, mode: 'UPI', status: 'Settled' },
+    { txId: 'TXN-90811', orderId: '#EMC-89211', customer: 'Sara Jacob', date: '2026-06-17', amount: 450.50, mode: 'Card', status: 'Pending' },
+    { txId: 'TXN-90810', orderId: '#EMC-89210', customer: 'Karan Singh', date: '2026-06-16', amount: 2800, mode: 'UPI', status: 'Settled' },
+    { txId: 'TXN-90809', orderId: '#EMC-89209', customer: 'Anita Desai', date: '2026-06-15', amount: 4200, mode: 'NetBanking', status: 'Settled' },
+    { txId: 'TXN-90808', orderId: '#EMC-89208', customer: 'Megha Patel', date: '2026-06-14', amount: 3500, mode: 'UPI', status: 'Settled' },
+    { txId: 'TXN-90807', orderId: '#EMC-89207', customer: 'Vikram Sharma', date: '2026-06-12', amount: 1100, mode: 'COD', status: 'Refunded' }
+  ];
 
-  // Top-selling medicines list derivation
-  const topSellingMedicines = useMemo(() => {
-    return [
-      { name: 'Paracetamol 650mg Tablets', category: 'Allopathy', unitsSold: 142, revenue: 4544, margin: '42%' },
-      { name: 'Organic Ashvagandha Daily Tablets', category: 'Ayurveda', unitsSold: 98, revenue: 29302, margin: '50%' },
-      { name: 'Amoxicillin 500mg Capsules', category: 'Allopathy', unitsSold: 64, revenue: 7168, margin: '38%' },
-      { name: 'Chyawanprash Awaleha Immune', category: 'Ayurveda', unitsSold: 55, revenue: 20900, margin: '45%' },
-    ];
-  }, []);
+  // Mock data for settlements
+  const settlements = [
+    { batchId: 'SET-9901', amount: 32000, date: '2026-06-15', status: 'Processed', utr: 'UTR98124091240' },
+    { batchId: 'SET-9900', amount: 24500, date: '2026-06-08', status: 'Processed', utr: 'UTR98122394829' },
+    { batchId: 'SET-9899', amount: 18400, date: '2026-06-01', status: 'Processed', utr: 'UTR98120923849' },
+    { batchId: 'SET-9898', amount: 12900, date: '2026-05-25', status: 'Processed', utr: 'UTR98118239482' }
+  ];
+
+  // Mock data for refunds
+  const refunds = [
+    { refundId: 'RFD-1021', orderId: '#EMC-89207', customer: 'Vikram Sharma', amount: 1100, date: '2026-06-13', status: 'Success', reason: 'Customer cancelled order before dispatch' },
+    { refundId: 'RFD-1020', orderId: '#EMC-89192', customer: 'Karan Singh', amount: 450, date: '2026-06-10', status: 'Success', reason: 'Damaged item delivery' }
+  ];
+
+  // Mock data for invoices
+  const invoices = [
+    { invoiceId: 'INV-2026-06', period: 'June 1 - June 15, 2026', totalOrders: 32, taxableAmount: 38400, gst: 4608, totalInvoice: 43008, date: '2026-06-16' },
+    { invoiceId: 'INV-2026-05', period: 'May 1 - May 31, 2026', totalOrders: 58, taxableAmount: 64200, gst: 7704, totalInvoice: 71904, date: '2026-06-01' },
+    { invoiceId: 'INV-2026-04', period: 'April 1 - April 30, 2026', totalOrders: 44, taxableAmount: 49800, gst: 5976, totalInvoice: 55776, date: '2026-05-01' }
+  ];
 
   const handleWithdrawRequest = (e) => {
     e.preventDefault();
@@ -88,368 +61,323 @@ export default function VendorEarnings() {
     }, 2500);
   };
 
-  // Mock report downloader
-  const triggerReportExport = (format) => {
-    let mimeType = "application/json";
-    let dataContent = "";
-    
-    if (format === 'csv') {
-      mimeType = "text/csv;charset=utf-8;";
-      const headers = ["Label", "Sales Revenue (₹)"];
-      const rows = timeframeStats.chartData.map(d => [d.label, d.value]);
-      
-      dataContent = [
-        headers.join(','),
-        ...rows.map(r => r.join(','))
-      ].join('\n');
-    } else {
-      dataContent = JSON.stringify({
-        storeName: kycDetails.storeName || 'MedPlus Wellness Pharmacy',
-        timeframe,
-        salesAnalytics: timeframeStats,
-        withdrawalsLogs: withdrawals
-      }, null, 2);
-    }
-    
-    const blob = new Blob([dataContent], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", url);
-    downloadAnchor.setAttribute("download", `emediclub-sales-statement-${timeframe}-${new Date().toISOString().split('T')[0]}.${format}`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    document.body.removeChild(downloadAnchor);
-    URL.revokeObjectURL(url);
-  };
-
-  // Find max chart value to scale height relatively
-  const maxChartValue = useMemo(() => {
-    const vals = timeframeStats.chartData.map(d => d.value);
-    return Math.max(...vals, 1000);
-  }, [timeframeStats]);
-
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col gap-5 overflow-hidden">
+    <div className="font-sans bg-[#F8FAF9] min-h-[calc(100vh-120px)] p-2 sm:p-4 lg:p-6 flex flex-col gap-5">
       
       {/* Header Deck */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 shrink-0">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Sales Report & Analytics</h1>
+          <h1 className="text-xl lg:text-2xl font-black text-slate-800 leading-none">Revenue & Payments</h1>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
-            Review store transaction summaries, estimate profit margins, and export payout ledger statements.
+            Monitor earnings ledger, check order payments, track banking settlements, and retrieve compliance invoices.
           </p>
-        </div>
-
-        {/* Dynamic export deck */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button 
-            onClick={() => triggerReportExport('csv')}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black tracking-wider uppercase rounded-xl transition-all cursor-pointer tap-scale"
-          >
-            <FiDownload /> Export CSV
-          </button>
-          <button 
-            onClick={() => triggerReportExport('json')}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-teal text-white text-xs font-black tracking-wider uppercase rounded-xl hover:bg-teal-dark shadow-sm transition-all cursor-pointer tap-scale"
-          >
-            <FiFileText /> Export Statement
-          </button>
         </div>
       </div>
 
-      {/* Main layout divided into left scrollable dashboard & right quick withdrawals */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* Tabs Filter Bar */}
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1.5 border-b border-slate-100 shrink-0">
+        {[
+          { id: 'earnings', name: 'Earnings', icon: FiDollarSign },
+          { id: 'transactions', name: 'Transactions', icon: FiList },
+          { id: 'settlements', name: 'Settlements', icon: FiCheckCircle },
+          { id: 'refunds', name: 'Refunds', icon: FiRefreshCw },
+          { id: 'invoices', name: 'Invoices', icon: FiFileText }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-0 cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+              activeTab === tab.id 
+                ? 'bg-[#135A5A] text-white shadow-sm' 
+                : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-850'
+            }`}
+          >
+            <tab.icon className="text-sm" />
+            <span>{tab.name}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Dynamic Tab Body */}
+      <div className="flex-1 flex flex-col gap-5">
         
-        {/* Left Columns: Interactive charts and catalog leaderboards */}
-        <div className="lg:col-span-2 overflow-y-auto pr-1 flex flex-col gap-5 custom-scrollbar pb-8">
-          
-          {/* Filters and time tabs */}
-          <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-            
-            {/* Timeframe switch */}
-            <div className="flex p-1 bg-slate-50 border border-slate-150/50 rounded-2xl w-full sm:w-auto">
-              {['daily', 'weekly', 'monthly'].map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTimeframe(t)}
-                  className={`flex-1 sm:flex-initial px-4.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer
-                    ${timeframe === t 
-                      ? 'bg-teal text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-
-            {/* Date range inputs */}
-            <div className="flex items-center gap-2 text-2xs font-semibold text-slate-400 uppercase w-full sm:w-auto">
-              <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-xl px-2 py-1">
-                <FiCalendar className="text-teal" />
-                <input 
-                  type="date" 
-                  value={startDate} 
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-transparent outline-none text-slate-600 font-bold"
-                />
-              </div>
-              <span>to</span>
-              <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-xl px-2 py-1">
-                <FiCalendar className="text-teal" />
-                <input 
-                  type="date" 
-                  value={endDate} 
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="bg-transparent outline-none text-slate-600 font-bold"
-                />
-              </div>
-            </div>
-
-          </div>
-
-          {/* KPI Dashboard cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            
-            {/* Sales KPI */}
-            <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Net Billing</span>
-              <span className="text-base font-black text-slate-800 block mt-2">₹{timeframeStats.totalSales.toLocaleString()}</span>
-              <div className="flex items-center gap-1 text-[8.5px] font-black text-teal uppercase mt-1">
-                <FiArrowUpRight /> +14.8%
-              </div>
-            </div>
-
-            {/* Profit KPI */}
-            <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Est. Profit (40%)</span>
-              <span className="text-base font-black text-slate-800 block mt-2">₹{timeframeStats.profit.toLocaleString()}</span>
-              <div className="flex items-center gap-1 text-[8.5px] font-black text-teal uppercase mt-1">
-                <FiTrendingUp /> Margin secured
-              </div>
-            </div>
-
-            {/* Orders KPI */}
-            <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Orders Count</span>
-              <span className="text-base font-black text-slate-800 block mt-2">{timeframeStats.orders} dispatches</span>
-              <div className="flex items-center gap-1 text-[8.5px] font-black text-slate-400 uppercase mt-1">
-                Fulfillment: 100%
-              </div>
-            </div>
-
-            {/* Top Therapy class KPI */}
-            <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Top Therapy</span>
-              <span className="text-base font-black text-slate-800 block mt-2 truncate">{timeframeStats.topCategory}</span>
-              <div className="flex items-center gap-1 text-[8.5px] font-black text-teal uppercase mt-1">
-                <FiAward /> Best Selling
-              </div>
-            </div>
-
-          </div>
-
-          {/* Premium Interactive Revenue Charts (HTML/SVG Custom bars uploader) */}
-          <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
-                <FiActivity className="text-teal" /> Revenue Projection Chart
-              </h3>
-              <span className="text-[9px] text-slate-400 font-extrabold uppercase flex items-center gap-1">
-                <FiInfo className="text-teal" /> Hover nodes to inspect earnings
-              </span>
-            </div>
-
-            {/* SVG Interactive Bars uploader */}
-            <div className="h-60 w-full flex items-end justify-between pt-6 px-4 pb-2 bg-slate-50/50 border border-slate-100 rounded-2xl">
-              {timeframeStats.chartData.map((data, idx) => {
-                const percentage = (data.value / maxChartValue) * 100;
-                const isHovered = chartHoverIndex === idx;
-                
-                return (
-                  <div 
-                    key={idx} 
-                    className="flex flex-col items-center gap-2 flex-1 group"
-                    onMouseEnter={() => setChartHoverIndex(idx)}
-                    onMouseLeave={() => setChartHoverIndex(null)}
-                  >
-                    
-                    {/* Tooltip on hover */}
-                    <div className={`relative h-6 flex justify-center transition-all duration-200 ${isHovered ? 'opacity-100 -translate-y-1' : 'opacity-0 scale-95 pointer-events-none'}`}>
-                      <span className="absolute bottom-1 bg-slate-800 text-white text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-premium whitespace-nowrap">
-                        ₹{data.value.toLocaleString()}
-                      </span>
-                    </div>
-
-                    {/* Bar Pillar */}
-                    <div className="w-8 sm:w-12 bg-slate-200 rounded-t-xl overflow-hidden h-40 flex items-end cursor-pointer transition-all hover:bg-slate-250">
-                      <motion.div 
-                        initial={{ height: 0 }}
-                        animate={{ height: `${percentage}%` }}
-                        transition={{ duration: 0.5, ease: 'easeOut' }}
-                        className={`w-full rounded-t-xl transition-all duration-250
-                          ${isHovered ? 'bg-teal-dark' : 'bg-teal'}`}
-                      />
-                    </div>
-
-                    {/* Node label */}
-                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider mt-1">{data.label}</span>
-
+        {/* TAB 1: EARNINGS VIEW */}
+        {activeTab === 'earnings' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+            {/* Main Stats Left */}
+            <div className="lg:col-span-2 flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Total Revenue Card */}
+                <div className="bg-[#135A5A] text-white rounded-3xl p-5 shadow-md relative overflow-hidden flex flex-col justify-between h-36">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                  <div className="flex justify-between items-start relative z-10">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-teal-100">Total Net Revenue</span>
+                    <FiDollarSign className="text-lg text-teal-100" />
                   </div>
-                );
-              })}
+                  <div className="relative z-10 mt-auto">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-none">₹{(analytics?.totalRevenue || 84200).toLocaleString('en-IN')}.00</h2>
+                    <p className="text-[9px] font-semibold text-teal-100 mt-1 flex items-center gap-1">
+                      <FiTrendingUp className="text-emerald-300" /> +15.4% growth compared to last month
+                    </p>
+                  </div>
+                </div>
+
+                {/* Available for Payout Card */}
+                <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex flex-col justify-between h-36">
+                  <div className="flex justify-between items-start">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Available Balance</span>
+                    <FiCheckCircle className="text-lg text-[#135A5A]" />
+                  </div>
+                  <div className="mt-auto">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-none text-slate-805">₹24,200.00</h2>
+                    <p className="text-[9px] font-semibold text-slate-450 mt-1">Ready for instant bank disburse</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weekly performance log */}
+              <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                  <FiActivity className="text-[#135A5A]" /> Weekly Sales Graph
+                </h3>
+                <div className="h-48 w-full flex items-end justify-between pt-6 px-4 pb-2 bg-slate-50/50 border border-slate-100 rounded-2xl">
+                  {[(analytics?.weeklySales || []).length > 0 ? analytics.weeklySales : [
+                    { day: 'Mon', sales: 12000 },
+                    { day: 'Tue', sales: 15000 },
+                    { day: 'Wed', sales: 9000 },
+                    { day: 'Thu', sales: 18000 },
+                    { day: 'Fri', sales: 22000 },
+                    { day: 'Sat', sales: 25000 },
+                    { day: 'Sun', sales: 16000 }
+                  ]].flat().map((data, idx) => {
+                    const maxVal = 30000;
+                    const percentage = (data.sales / maxVal) * 100;
+                    return (
+                      <div key={idx} className="flex flex-col items-center gap-2 flex-1 group">
+                        <div className="w-6 sm:w-10 bg-slate-200 rounded-t-lg overflow-hidden h-28 flex items-end">
+                          <div style={{ height: `${percentage}%` }} className="w-full bg-[#135A5A] rounded-t-lg group-hover:bg-[#0F4A4A] transition-colors" />
+                        </div>
+                        <span className="text-[9px] text-slate-405 font-black uppercase tracking-wider">{data.day || data.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-          </div>
+            {/* Quick Withdrawals Right */}
+            <div className="flex flex-col gap-4">
+              <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Disburse Store Revenue</h3>
+                <form onSubmit={handleWithdrawRequest} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9.5px] font-black uppercase text-slate-400 tracking-wider">Amount to Withdraw</label>
+                    <input 
+                      type="number" 
+                      required
+                      min="500"
+                      max="24200"
+                      placeholder="e.g. 5000"
+                      value={withdrawAmt}
+                      onChange={(e) => setWithdrawAmt(e.target.value)}
+                      className="px-3.5 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-black outline-none focus:border-[#135A5A]"
+                    />
+                  </div>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-2.5 text-2xs font-semibold text-slate-650">
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-slate-400 font-bold">Banking Partner</span>
+                      <span className="font-extrabold text-slate-800">{kycDetails.bankName || 'HDFC Bank'}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-slate-400 font-bold">Remittance Account</span>
+                      <span className="font-extrabold text-slate-800">*****{kycDetails.accountNo ? kycDetails.accountNo.slice(-4) : '9876'}</span>
+                    </div>
+                  </div>
+                  <button type="submit" className="py-3 bg-[#135A5A] hover:bg-[#0F4A4A] text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer border-0 shadow-premium transition-all">
+                    Confirm Disbursement
+                  </button>
+                  {successMsg && (
+                    <span className="flex items-center justify-center gap-1.5 text-teal-700 font-extrabold text-[10px] animate-bounce tracking-wide uppercase">
+                      <FiCheckCircle /> Remittance request submitted successfully!
+                    </span>
+                  )}
+                </form>
+              </div>
 
-          {/* Top-Selling Medicines Leaderboard */}
-          <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4 animate-fade-in">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
-              <FiAward className="text-teal" /> Top Selling Formulations Leaderboard
-            </h3>
-            
-            {/* Desktop Table View */}
-            <div className="hidden md:block border border-slate-100 rounded-2xl overflow-hidden bg-white">
+              {/* Withdrawals Logs */}
+              <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
+                <h3 className="text-xs font-black text-slate-805 uppercase tracking-widest">Remittance Logs</h3>
+                <div className="flex flex-col gap-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                  {withdrawals.map((w, idx) => (
+                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex justify-between items-center text-xs">
+                      <div>
+                        <span className="font-extrabold text-slate-800 block">{w.id || `WD-${idx + 100}`}</span>
+                        <span className="text-[9.5px] text-slate-400 font-medium block">{w.date} • {w.bankAccount || 'HDFC Bank'}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-black text-slate-800 block">₹{w.amount.toLocaleString()}</span>
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-150 mt-1">{w.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: TRANSACTIONS VIEW */}
+        {activeTab === 'transactions' && (
+          <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100 text-[9px] font-black uppercase text-slate-400 tracking-widest">
-                    <th className="py-3 px-4">Medicine Formulation</th>
-                    <th className="py-3 px-4">Category</th>
-                    <th className="py-3 px-4 text-center">Units Sold</th>
-                    <th className="py-3 px-4 text-right">Net Sales (₹)</th>
-                    <th className="py-3 px-4 text-center">Profit Margin</th>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Order ID</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Customer Details</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Payment Date</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Payment Mode</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Total Amount</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Status</th>
                   </tr>
                 </thead>
-                <tbody className="text-xs font-bold text-slate-650 divide-y divide-slate-50">
-                  {topSellingMedicines.map((med, index) => (
-                    <tr key={index} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="py-3.5 px-4 text-slate-850 font-extrabold">{med.name}</td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-500 uppercase text-[10px]">{med.category}</td>
-                      <td className="py-3.5 px-4 text-center text-slate-600">{med.unitsSold} units</td>
-                      <td className="py-3.5 px-4 text-right font-black text-slate-800">₹{med.revenue.toLocaleString()}</td>
-                      <td className="py-3.5 px-4 text-center text-teal font-black">{med.margin} OFF</td>
+                <tbody>
+                  {transactions.map(txn => (
+                    <tr key={txn.txId} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                      <td className="p-4 text-xs font-bold text-slate-500 font-mono">{txn.txId}</td>
+                      <td className="p-4 text-xs font-bold text-slate-800 font-mono">{txn.orderId}</td>
+                      <td className="p-4 text-xs font-extrabold text-slate-850">{txn.customer}</td>
+                      <td className="p-4 text-xs font-semibold text-slate-600">{txn.date}</td>
+                      <td className="p-4 text-xs font-bold text-slate-500 uppercase">{txn.mode}</td>
+                      <td className="p-4 text-xs font-black text-slate-805">₹{txn.amount.toFixed(2)}</td>
+                      <td className="p-4">
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider ${
+                          txn.status === 'Settled' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                          txn.status === 'Refunded' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                          'bg-amber-50 text-amber-600 border border-amber-100'
+                        }`}>
+                          {txn.status}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
 
-            {/* Mobile Stacked Cards View */}
-            <div className="block md:hidden flex flex-col gap-3">
-              {topSellingMedicines.map((med, index) => (
-                <div key={index} className="bg-slate-50/50 border border-slate-100 p-4.5 rounded-2xl flex flex-col gap-2.5">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-extrabold text-slate-800 leading-snug">{med.name}</span>
-                      <span className="w-fit px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/50">
-                        {med.category}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mt-0.5 border-t border-slate-150/50 pt-2">
-                    <span>Sold: <span className="font-extrabold text-slate-800">{med.unitsSold} u</span></span>
-                    <span>Sales: <span className="font-black text-slate-800">₹{med.revenue}</span></span>
-                    <span className="text-teal font-black text-[9px] uppercase tracking-wider">{med.margin}</span>
-                  </div>
-                </div>
-              ))}
+        {/* TAB 3: SETTLEMENTS VIEW */}
+        {activeTab === 'settlements' && (
+          <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Settlement ID</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">UTR / Reference No</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Total Net Amount</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Processed Date</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Transfer Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {settlements.map(set => (
+                    <tr key={set.batchId} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                      <td className="p-4 text-xs font-bold text-slate-800 font-mono">{set.batchId}</td>
+                      <td className="p-4 text-xs font-bold text-slate-500 font-mono">{set.utr}</td>
+                      <td className="p-4 text-xs font-black text-[#135A5A]">₹{set.amount.toLocaleString('en-IN')}.00</td>
+                      <td className="p-4 text-xs font-semibold text-slate-600">{set.date}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100">
+                          {set.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
           </div>
+        )}
 
-        </div>
-
-        {/* Right Column: Banking payouts and withdrawal form */}
-        <div className="overflow-y-auto pr-1 flex flex-col gap-5 custom-scrollbar pb-8">
-          
-          {/* Withdrawal trigger form */}
-          <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
-              <FiPlus className="text-teal" /> Disburse Store Revenue
-            </h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-2 flex items-center gap-1">
-              Transfer available balances immediately to your verified coordinates.
-            </p>
-
-            <form onSubmit={handleWithdrawRequest} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-[9.5px] font-black uppercase text-slate-400 tracking-wider">Amount to Withdraw</label>
-                  <span className="text-[10px] text-teal font-extrabold uppercase">Max: ₹24,200</span>
-                </div>
-                <input 
-                  type="number" 
-                  required
-                  min="500"
-                  max="24200"
-                  placeholder="e.g. 5000"
-                  value={withdrawAmt}
-                  onChange={(e) => setWithdrawAmt(e.target.value)}
-                  className="px-3.5 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-black outline-none focus:border-teal"
-                />
-                <span className="text-[8.5px] text-slate-400 font-semibold uppercase mt-0.5">Disbursal limit thresholds: ₹500 - ₹24,200</span>
-              </div>
-
-              {/* Remittance coordinates details */}
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-2.5 text-2xs font-semibold text-slate-600">
-                <span className="text-slate-400 font-black uppercase tracking-wider block border-b border-slate-150/50 pb-1.5">remittance details</span>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-500 font-bold">Banking Partner</span>
-                  <span className="font-extrabold text-slate-700">{kycDetails.bankName || 'HDFC Bank'}</span>
-                </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-500 font-bold">Remittance Account</span>
-                  <span className="font-extrabold text-slate-700">*****{kycDetails.accountNo ? kycDetails.accountNo.slice(-4) : '6543'}</span>
-                </div>
-              </div>
-
-              <button 
-                type="submit"
-                className="py-3 bg-teal hover:bg-teal-dark text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-premium transition-all cursor-pointer tap-scale"
-              >
-                Confirm Disbursement
-              </button>
-
-              {successMsg && (
-                <span className="flex items-center justify-center gap-1 text-teal font-extrabold text-[10px] animate-bounce mt-1 uppercase tracking-wider">
-                  <FiCheckCircle /> Remittance request submitted successfully!
-                </span>
-              )}
-            </form>
-
-          </div>
-
-          {/* Withdrawal Logs */}
-          <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
-              <FiClock className="text-teal" /> Remittance ledger logs
-            </h3>
-            
-            <div className="flex flex-col gap-3">
-              {withdrawals.map((w) => (
-                <div key={w.id} className="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex justify-between items-center text-xs">
-                  <div>
-                    <span className="font-extrabold text-slate-850 block">{w.id}</span>
-                    <span className="text-[9.5px] text-slate-450 mt-0.5 block font-medium">{w.date} • {w.bankAccount}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-black text-slate-850 block">₹{w.amount.toLocaleString()}</span>
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider mt-1 border
-                      ${w.status === 'approved' 
-                        ? 'bg-teal-light/20 text-teal border-teal/10' 
-                        : 'bg-gold-light/25 text-gold-dark border-gold/15'
-                      }`}
-                    >
-                      {w.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+        {/* TAB 4: REFUNDS VIEW */}
+        {activeTab === 'refunds' && (
+          <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Refund ID</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Order ID</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Customer Details</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Refund Reason</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Date Issued</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Refund Amount</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Refund Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refunds.map(ref => (
+                    <tr key={ref.refundId} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                      <td className="p-4 text-xs font-bold text-slate-500 font-mono">{ref.refundId}</td>
+                      <td className="p-4 text-xs font-bold text-slate-805 font-mono">{ref.orderId}</td>
+                      <td className="p-4 text-xs font-extrabold text-slate-850">{ref.customer}</td>
+                      <td className="p-4 text-xs font-semibold text-slate-600 truncate max-w-[200px]" title={ref.reason}>{ref.reason}</td>
+                      <td className="p-4 text-xs font-semibold text-slate-500">{ref.date}</td>
+                      <td className="p-4 text-xs font-black text-rose-600 font-semibold">₹{ref.amount.toFixed(2)}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100">
+                          {ref.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
           </div>
+        )}
 
-        </div>
+        {/* TAB 5: INVOICES VIEW */}
+        {activeTab === 'invoices' && (
+          <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Invoice ID</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400">Billing Cycle Period</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center">Orders Fulfilled</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right">Taxable value</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right">GST (18%)</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right">Invoice Total</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map(inv => (
+                    <tr key={inv.invoiceId} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                      <td className="p-4 text-xs font-black text-slate-805">{inv.invoiceId}</td>
+                      <td className="p-4 text-xs font-semibold text-slate-650">{inv.period}</td>
+                      <td className="p-4 text-xs font-semibold text-slate-600 text-center">{inv.totalOrders} items</td>
+                      <td className="p-4 text-xs font-semibold text-slate-700 text-right">₹{inv.taxableAmount.toLocaleString('en-IN')}.00</td>
+                      <td className="p-4 text-xs font-semibold text-slate-700 text-right">₹{inv.gst.toLocaleString('en-IN')}.00</td>
+                      <td className="p-4 text-xs font-black text-slate-850 text-right">₹{inv.totalInvoice.toLocaleString('en-IN')}.00</td>
+                      <td className="p-4 text-center">
+                        <button className="px-3 py-1.5 bg-slate-50 hover:bg-[#135A5A] hover:text-white text-slate-650 text-xs font-bold uppercase tracking-wider border border-slate-200 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 mx-auto">
+                          <FiDownload className="text-xs" />
+                          <span>PDF</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
       </div>
 

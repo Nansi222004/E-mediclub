@@ -8,6 +8,19 @@
   font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
+/* Force Admin Sidebar (aside) to use the exact same font family as vendor sidebars */
+.admin-layout aside,
+.admin-layout aside *:not(.logo-text-cursive) {
+  font-family: 'Outfit', 'Inter', sans-serif !important;
+}
+
+/* Ensure Logo Cursive Text retains Great Vibes font-family */
+.logo-text-cursive,
+.admin-layout .logo-text-cursive,
+.admin-layout aside .logo-text-cursive {
+  font-family: 'Great Vibes', cursive !important;
+}
+
 /* ── PAGE LABELS (e.g. "ADMIN DASHBOARD") ── */
 .admin-page-label {
   font-size: 11px;

@@ -41,7 +41,7 @@ export default function Logo({ showText = true, layout = 'horizontal' }) {
               fontFamily: "'Great Vibes', cursive", 
               color: '#9B2C3A' 
             }} 
-            className="text-3xl sm:text-4xl font-bold select-none mt-1.5 block"
+            className="logo-text-cursive text-3xl sm:text-4xl font-bold select-none mt-1.5 block"
           >
             Emediclub
           </span>
@@ -70,7 +70,7 @@ export default function Logo({ showText = true, layout = 'horizontal' }) {
             fontFamily: "'Great Vibes', cursive", 
             color: '#9B2C3A' 
           }} 
-          className="text-xl sm:text-2xl md:text-3xl font-bold shrink-0 tracking-wide select-none leading-none pt-1"
+          className="logo-text-cursive text-xl sm:text-2xl font-bold shrink-0 tracking-wide select-none leading-none pt-1"
         >
           Emediclub
         </span>

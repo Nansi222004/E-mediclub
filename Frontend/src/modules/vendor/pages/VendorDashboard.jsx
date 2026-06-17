@@ -1,18 +1,117 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { 
-  FiEye, FiTrendingUp, FiShoppingBag, FiClock, FiCheckCircle, FiFileText, FiPlus
+  FiEye, FiTrendingUp, FiShoppingBag, FiClock, FiCheckCircle, FiFileText, FiPlus,
+  FiMapPin, FiMap, FiStar, FiUsers, FiDollarSign
 } from 'react-icons/fi';
 
 export default function VendorDashboard() {
-  const { kycDetails } = useSelector(state => state.vendor || { kycDetails: {} });
+  const { kycDetails, orders } = useSelector(state => state.vendor || { kycDetails: {}, orders: [] });
   const storeName = kycDetails?.storeName || 'MedPlus Wellness Pharmacy';
+
+  const [analyticsTab, setAnalyticsTab] = useState('Daily');
+
+  // Map Redux orders to Dashboard Recent Orders format
+  const mappedRecentOrders = orders.map(order => ({
+    id: order.id,
+    customer: order.customerName,
+    status: order.status === 'pending' ? 'PROCESSING' : order.status === 'shipped' ? 'READY' : 'DELIVERED',
+    amount: `₹${order.totalAmount.toLocaleString('en-IN')}.00`
+  }));
+
+  // Fallback default list from reference screenshot if Redux is empty
+  const defaultRecentOrders = [
+    { id: '#EMC-89212', customer: 'Rahul Mehta', status: 'PROCESSING', amount: '₹1,240.00' },
+    { id: '#EMC-89211', customer: 'Sara Jacob', status: 'READY', amount: '₹450.50' },
+    { id: '#EMC-89210', customer: 'Karan Singh', status: 'PROCESSING', amount: '₹2,800.00' }
+  ];
+
+  // Combine Redux orders with default orders
+  const displayOrders = [...mappedRecentOrders, ...defaultRecentOrders].slice(0, 5);
+
+  // Mapped unique customers from Redux orders
+  const mappedCustomers = orders.map((order, index) => ({
+    name: order.customerName,
+    email: `${order.customerName.toLowerCase().replace(' ', '.')}@gmail.com`,
+    badge: index === 0 ? 'NEW' : '1 Order'
+  }));
+
+  const defaultCustomers = [
+    { name: 'Anita Desai', email: 'anita.d@gmail.com', badge: 'NEW' },
+    { name: 'Vikram Sharma', email: 'v.sharma@outlook.com', badge: '3 Orders' },
+    { name: 'Sneha Kapoor', email: 'sneha.k@yahoo.com', badge: '1 Order' }
+  ];
+
+  // Combine Redux customers with default ones
+  const displayCustomers = [...mappedCustomers, ...defaultCustomers].filter(
+    (c, i, self) => self.findIndex(t => t.name === c.name) === i
+  ).slice(0, 4);
+
+  // Pharmacy Vendor Dashboard KPIs
+  const kpis = [
+    { 
+      name: "Today's Orders", 
+      value: "48", 
+      icon: FiShoppingBag, 
+      color: "text-teal-600 bg-teal-50 border-teal-100", 
+      subtext: "12 completed" 
+    },
+    { 
+      name: "Pending Orders", 
+      value: "12", 
+      icon: FiClock, 
+      color: "text-amber-600 bg-amber-50 border-amber-100", 
+      subtext: "Awaiting dispatch" 
+    },
+    { 
+      name: "Prescription Orders", 
+      value: "15", 
+      icon: FiFileText, 
+      color: "text-indigo-600 bg-indigo-50 border-indigo-100", 
+      subtext: "8 verified" 
+    },
+    { 
+      name: "Active Medicines", 
+      value: "1,120", 
+      icon: FiCheckCircle, 
+      color: "text-emerald-600 bg-emerald-50 border-emerald-100", 
+      subtext: "Listed in catalog" 
+    },
+    { 
+      name: "Out of Stock", 
+      value: "12", 
+      icon: FiEye, 
+      color: "text-rose-600 bg-rose-50 border-rose-100", 
+      subtext: "Needs reorder" 
+    },
+    { 
+      name: "Low Stock", 
+      value: "45", 
+      icon: FiClock, 
+      color: "text-orange-600 bg-orange-50 border-orange-100", 
+      subtext: "Critical inventory" 
+    },
+    { 
+      name: "Average Rating", 
+      value: "4.8", 
+      icon: FiStar, 
+      color: "text-yellow-600 bg-yellow-50 border-yellow-100", 
+      subtext: "Based on 320 reviews" 
+    },
+    { 
+      name: "Total Customers", 
+      value: "1,840", 
+      icon: FiUsers, 
+      color: "text-violet-600 bg-violet-50 border-violet-100", 
+      subtext: "Repeat purchasers" 
+    }
+  ];
 
   return (
     <div className="font-sans bg-[#F8FAF9] min-h-screen">
       
       {/* Container - Compact Desktop Responsive Layout */}
-      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 flex flex-col gap-1.5 pt-1 lg:pt-2">
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 flex flex-col gap-3 pt-1 lg:pt-2">
         
         {/* Header Greeting */}
         <div className="flex flex-col mt-1">
@@ -21,127 +120,72 @@ export default function VendorDashboard() {
         </div>
 
         {/* Responsive Desktop Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
           
           {/* LEFT COLUMN: Main Metrics (Takes up 7 columns on Desktop) */}
-          <div className="lg:col-span-7 flex flex-col gap-2">
+          <div className="lg:col-span-7 flex flex-col gap-3">
             
-            {/* Revenue Today Card */}
-            <div className="bg-[#135A5A] rounded-xl p-3 lg:p-4 text-white shadow-md shadow-[#135A5A]/10 relative overflow-hidden flex flex-col justify-between min-h-[80px] lg:min-h-[100px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-400/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none" />
+            {/* Sales & Revenue Header Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               
-              <div className="flex justify-between items-start relative z-10 mb-1">
-                <span className="text-[9px] font-black uppercase tracking-widest text-teal-100">Revenue Today</span>
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/20">
-                  <span className="text-xs">💵</span>
-                </div>
-              </div>
-              
-              <div className="relative z-10 flex items-end justify-between">
-                <h2 className="text-2xl lg:text-3xl font-black tracking-tight leading-none">₹4,280.50</h2>
-                <p className="text-[9px] font-semibold text-teal-100 flex items-center gap-1">
-                  <FiTrendingUp className="text-emerald-300" /> <span className="text-white">+12%</span> today
-                </p>
-              </div>
-            </div>
-
-            {/* 6 KPIs Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-              <div className="bg-white border border-slate-100 rounded-lg p-2 flex flex-col justify-between shadow-sm">
-                <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-wider">Total Meds</span>
-                <div className="flex items-end justify-between mt-1">
-                  <span className="text-lg lg:text-xl font-black text-[#135A5A] leading-none">1,248</span>
-                  <FiPlus className="text-slate-200 text-sm mb-0.5" />
-                </div>
-              </div>
-              
-              <div className="bg-white border border-slate-100 rounded-lg p-2 flex flex-col justify-between shadow-sm">
-                <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-wider">Active Meds</span>
-                <div className="flex items-end justify-between mt-1">
-                  <span className="text-lg lg:text-xl font-black text-emerald-600 leading-none">1,120</span>
-                  <FiCheckCircle className="text-slate-200 text-sm mb-0.5" />
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-100 rounded-lg p-2 flex flex-col justify-between shadow-sm">
-                <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-wider">Scripts</span>
-                <div className="flex items-end justify-between mt-1">
-                  <span className="text-lg lg:text-xl font-black text-[#135A5A] leading-none">42</span>
-                  <FiFileText className="text-slate-200 text-sm mb-0.5" />
-                </div>
-              </div>
-              
-              <div className="bg-white border border-slate-100 rounded-lg p-2 flex flex-col justify-between shadow-sm">
-                <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-wider">Out of Stock</span>
-                <div className="flex items-end justify-between mt-1">
-                  <span className="text-lg lg:text-xl font-black text-[#9A3D4A] leading-none">18</span>
-                  <FiEye className="text-slate-200 text-sm mb-0.5" />
-                </div>
-              </div>
-              
-              <div className="bg-white border border-slate-100 rounded-lg p-2 flex flex-col justify-between shadow-sm">
-                <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-wider">Low Stock</span>
-                <div className="flex items-end justify-between mt-1">
-                  <span className="text-lg lg:text-xl font-black text-amber-500 leading-none">35</span>
-                  <FiClock className="text-slate-200 text-sm mb-0.5" />
-                </div>
-              </div>
-              
-              <div className="bg-white border border-slate-100 rounded-lg p-2 flex flex-col justify-between shadow-sm">
-                <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-wider">Pending Deliv</span>
-                <div className="flex items-end justify-between mt-1">
-                  <span className="text-lg lg:text-xl font-black text-indigo-500 leading-none">12</span>
-                  <FiShoppingBag className="text-slate-200 text-sm mb-0.5" />
-                </div>
-              </div>
-            </div>
-
-            {/* Monthly Revenue Strip */}
-            <div className="bg-slate-100 rounded-lg p-2 lg:p-3 flex items-center justify-between border border-slate-200/60 shadow-inner">
-              <div className="flex flex-col">
-                <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Monthly Revenue</span>
-                <span className="text-lg lg:text-xl font-black text-slate-800">₹102,450.00</span>
-              </div>
-              <span className="text-[9px] font-black text-[#135A5A] bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">+8.4%</span>
-            </div>
-
-            {/* Weekly Performance */}
-            <div className="flex flex-col gap-1.5 mt-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs lg:text-sm font-extrabold text-slate-800">Performance</h3>
-                <div className="flex bg-slate-100 rounded-lg p-0.5">
-                  <button className="px-2 lg:px-3 py-1 text-[8px] lg:text-[9px] font-black rounded-md bg-white shadow-sm text-[#135A5A] cursor-pointer border-0">Weekly</button>
-                  <button className="px-2 lg:px-3 py-1 text-[8px] lg:text-[9px] font-bold rounded-md text-slate-500 hover:text-slate-700 bg-transparent cursor-pointer border-0 transition-colors">Monthly</button>
-                </div>
-              </div>
-              <div className="bg-white border border-slate-100 rounded-xl p-2 lg:p-3 h-24 lg:h-32 shadow-sm flex flex-col justify-end relative pt-6 lg:pt-8">
-                {/* Mock Chart Area */}
-                <div className="absolute inset-0 p-2 lg:p-3 flex items-end justify-between px-3 lg:px-5 pb-5 lg:pb-7 pt-6 lg:pt-8">
-                  {[40, 60, 30, 80, 50, 70, 90].map((h, i) => {
-                    const currentDayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-                    const isToday = i === currentDayIdx;
-                    return (
-                      <div key={i} className="h-full flex items-end relative group cursor-pointer w-3 lg:w-6">
-                        <div 
-                          className={`w-full rounded-t-md transition-all duration-300 bg-[#135A5A] ${isToday ? 'opacity-100 shadow-md' : 'opacity-20 group-hover:opacity-100 group-hover:shadow-md'}`} 
-                          style={{ height: `${h}%` }}
-                        ></div>
-                        {/* Tooltip */}
-                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-20 pointer-events-none shadow-md">
-                          ₹{(h * 42).toLocaleString()}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* Revenue Today Card */}
+              <div className="bg-[#135A5A] rounded-xl p-3 lg:p-4 text-white shadow-md shadow-[#135A5A]/10 relative overflow-hidden flex flex-col justify-between min-h-[90px] lg:min-h-[110px]">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-400/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none" />
+                
+                <div className="flex justify-between items-start relative z-10 mb-1">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-teal-100">Revenue Today</span>
+                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                    <FiDollarSign className="text-xs text-white" />
+                  </div>
                 </div>
                 
-                {/* X-axis Labels */}
-                <div className="flex justify-between w-full text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 border-t border-slate-50 pt-2">
-                  <span>Mon</span><span>Tue</span><span>Wed</span><span className="text-[#135A5A]">Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                <div className="relative z-10 flex items-end justify-between">
+                  <h2 className="text-2xl lg:text-3xl font-black tracking-tight leading-none">₹4,280.50</h2>
+                  <p className="text-[9px] font-semibold text-teal-100 flex items-center gap-1">
+                    <FiTrendingUp className="text-emerald-300 animate-pulse" /> <span className="text-white">+12%</span> today
+                  </p>
                 </div>
               </div>
+
+              {/* Monthly Revenue Strip */}
+              <div className="bg-white border border-slate-100 rounded-xl p-3 lg:p-4 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[90px] lg:min-h-[110px]">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-full -mr-8 -mt-8 pointer-events-none" />
+                
+                <div className="flex justify-between items-start mb-1">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Revenue This Month</span>
+                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200/40">
+                    <FiTrendingUp className="text-xs text-[#135A5A]" />
+                  </div>
+                </div>
+                
+                <div className="flex items-end justify-between">
+                  <h2 className="text-2xl lg:text-3xl font-black tracking-tight leading-none text-slate-800">₹102,450.00</h2>
+                  <span className="text-[9px] font-black text-[#135A5A] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">+8.4%</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* 10 KPIs Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+              {kpis.map((kpi, index) => {
+                const IconComponent = kpi.icon;
+                return (
+                  <div key={index} className="bg-white border border-slate-100 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start gap-1">
+                      <span className="text-[9px] lg:text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight">{kpi.name}</span>
+                      <div className={`p-1.5 rounded-lg border ${kpi.color} shrink-0`}>
+                        <IconComponent className="text-sm" />
+                      </div>
+                    </div>
+                    <div className="mt-2.5">
+                      <h3 className="text-xl lg:text-2xl font-black text-slate-850 leading-none">{kpi.value}</h3>
+                      <p className="text-[9px] text-slate-400 font-semibold mt-1 truncate">{kpi.subtext}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
           </div>
@@ -204,6 +248,371 @@ export default function VendorDashboard() {
               </button>
             </div>
 
+          </div>
+
+        </div>
+
+        {/* REVENUE & ORDER SUMMARY SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mt-1">
+          
+          {/* Revenue Analytics Card */}
+          <div className="lg:col-span-8 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[320px]">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-2">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Revenue Analytics</h3>
+              <div className="flex bg-slate-100 rounded-lg p-0.5">
+                {['Daily', 'Weekly', 'Monthly'].map(tab => (
+                  <button 
+                    key={tab}
+                    onClick={() => setAnalyticsTab(tab)}
+                    className={`px-3 py-1 text-[9px] font-black rounded-md transition-all cursor-pointer border-0 ${
+                      analyticsTab === tab 
+                        ? 'bg-white text-[#135A5A] shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-700 bg-transparent'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Multi-layered Revenue Chart Visual */}
+            <div className="flex-1 flex flex-col justify-end pt-4 min-h-[180px]">
+              <div className="flex justify-between items-end h-[160px] px-2 lg:px-4">
+                {[
+                  { label: 'Mon', h1: 45, h2: 30 },
+                  { label: 'Tue', h1: 65, h2: 40 },
+                  { label: 'Wed', h1: 85, h2: 85 },
+                  { label: 'Thu', h1: 50, h2: 35 },
+                  { label: 'Fri', h1: 75, h2: 55 },
+                  { label: 'Sat', h1: 90, h2: 75 },
+                  { label: 'Sun', h1: 70, h2: 45 },
+                ].map((item, idx) => (
+                  <div key={idx} className="h-full flex flex-col justify-end items-center w-8 lg:w-14 group relative cursor-pointer">
+                    
+                    {/* Multi-layered Stacked Bar Container */}
+                    <div className="w-5 lg:w-9 h-full flex items-end relative rounded-t-md overflow-hidden bg-slate-50">
+                      {/* Background lighter layer */}
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 bg-[#85BDBA]/35 transition-all duration-300 rounded-t-md"
+                        style={{ height: `${item.h1}%` }}
+                      />
+                      {/* Foreground darker layer */}
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 bg-[#135A5A] transition-all duration-300 rounded-t-md"
+                        style={{ height: `${item.h2}%` }}
+                      />
+                    </div>
+
+                    {/* Tooltip on hover */}
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-20 pointer-events-none shadow-md">
+                      <div>Potential: ₹{(item.h1 * 60).toLocaleString()}</div>
+                      <div className="text-emerald-300">Revenue: ₹{(item.h2 * 60).toLocaleString()}</div>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* X-Axis Labels */}
+              <div className="flex justify-between w-full text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-100 mt-3 pt-2 px-2 lg:px-4">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
+                  <span key={i} className="w-8 lg:w-14 text-center">{day}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Order Summary & Fulfillment Card */}
+          <div className="lg:col-span-4 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[320px]">
+            <div className="border-b border-slate-50 pb-3 mb-2">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Order Summary</h3>
+            </div>
+
+            {/* List of Order States */}
+            <div className="flex flex-col gap-2 my-2">
+              {[
+                { label: 'New Orders', count: 32, dotColor: 'bg-blue-300' },
+                { label: 'Processing', count: 18, dotColor: 'bg-emerald-600' },
+                { label: 'Ready to Ship', count: 22, dotColor: 'bg-teal-800' },
+                { label: 'Delivered', count: 145, dotColor: 'bg-teal-500' },
+                { label: 'Cancelled', count: 3, dotColor: 'bg-rose-600' }
+              ].map((item, index) => (
+                <div key={index} className="flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-2 text-slate-600 font-semibold">
+                    <span className={`w-2 h-2 rounded-full ${item.dotColor}`} />
+                    <span>{item.label}</span>
+                  </div>
+                  <span className="font-black text-slate-850 text-[13px]">{item.count}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Fulfillment circular donut gauge */}
+            <div className="flex justify-center items-center pt-2 relative">
+              <div className="relative flex items-center justify-center">
+                {/* SVG circular donut */}
+                <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke="#F1F5F9" strokeWidth="10" fill="transparent" />
+                  <circle 
+                    cx="50" 
+                    cy="50" 
+                    r="40" 
+                    stroke="#135A5A" 
+                    strokeWidth="10" 
+                    fill="transparent" 
+                    strokeDasharray="251.2" 
+                    strokeDashoffset={251.2 * (1 - 0.88)} 
+                    strokeLinecap="round" 
+                  />
+                </svg>
+                {/* Centered percentage text inside donut */}
+                <div className="absolute flex flex-col items-center justify-center">
+                  <span className="text-base font-black text-slate-850 leading-none">88%</span>
+                  <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Fulfillment</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* RX REQUESTS & INVENTORY HEALTH SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mt-1">
+          
+          {/* Rx Requests */}
+          <div className="lg:col-span-6 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[190px]">
+            <div className="flex justify-between items-center border-b border-slate-50 pb-2.5 mb-2.5">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Rx Requests</h3>
+              <button className="text-[10px] font-black uppercase text-[#135A5A] hover:underline cursor-pointer border-0 bg-transparent">View All</button>
+            </div>
+            <div className="flex-1 flex flex-col gap-3">
+              {[
+                { name: 'Amit K.', desc: 'Amoxicillin 500mg • Uploaded 2m ago' },
+                { name: 'Priya S.', desc: 'Lipitor 10mg • Uploaded 15m ago' }
+              ].map((rx, idx) => (
+                <div key={idx} className="flex justify-between items-center py-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
+                      <FiFileText className="text-base" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-800">{rx.name}</h4>
+                      <p className="text-[9.5px] text-slate-400 font-semibold mt-0.5">{rx.desc}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="w-7 h-7 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 flex items-center justify-center cursor-pointer transition-colors border-0">
+                      <span className="text-xs font-bold">✓</span>
+                    </button>
+                    <button className="w-7 h-7 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 flex items-center justify-center cursor-pointer transition-colors border-0">
+                      <span className="text-xs font-bold">✗</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Inventory Health */}
+          <div className="lg:col-span-6 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[190px]">
+            <div className="border-b border-slate-50 pb-2.5 mb-2.5">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Inventory Health</h3>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2.5 flex-1">
+              <div className="bg-blue-50/40 border border-blue-100/50 rounded-xl p-3 flex flex-col justify-center">
+                <span className="text-[8.5px] font-black uppercase tracking-wider text-blue-500">Expiring Soon</span>
+                <span className="text-lg font-black text-slate-850 my-0.5">112 Items</span>
+                <span className="text-[7.5px] font-bold text-slate-450">Action required within 30 days</span>
+              </div>
+              <div className="bg-rose-50/40 border border-rose-100/50 rounded-xl p-3 flex flex-col justify-center">
+                <span className="text-[8.5px] font-black uppercase tracking-wider text-rose-600">Out of Stock</span>
+                <span className="text-lg font-black text-rose-600 my-0.5">12 Items</span>
+                <span className="text-[7.5px] font-bold text-slate-450">Losing potential revenue</span>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="bg-[#135A5A] h-full rounded-full transition-all duration-500" style={{ width: '75%' }}></div>
+              </div>
+              <div className="flex justify-between items-center text-[8.5px] font-black text-slate-400 uppercase tracking-widest mt-2">
+                <span>Overall Health: <span className="text-[#135A5A]">Good (75%)</span></span>
+                <span>Goal: 95%</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* HEALTH DEVICES & TOP SELLING MEDICINES SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mt-1">
+          
+          {/* Health Devices Card */}
+          <div className="lg:col-span-5 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[260px]">
+            <div className="border-b border-slate-50 pb-2.5 mb-2.5">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Health Devices</h3>
+            </div>
+
+            <div className="flex-1 flex flex-col gap-3 justify-center">
+              {[
+                { name: 'Accu-Chek Blood Glucose Monitor', stock: '45 Units', price: '₹975', status: 'In Stock', badgeColor: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
+                { name: 'Omron Automatic BP Monitor', stock: '18 Units', price: '₹2,499', status: 'Low Stock', badgeColor: 'text-orange-600 bg-orange-50 border-orange-100' },
+                { name: 'Dr Trust Pulse Oximeter', stock: '120 Units', price: '₹1,199', status: 'In Stock', badgeColor: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
+                { name: 'Digital Infrared Thermometer', stock: '0 Units', price: '₹850', status: 'Out of Stock', badgeColor: 'text-rose-600 bg-rose-50 border-rose-100' }
+              ].map((device, idx) => (
+                <div key={idx} className="flex justify-between items-center py-0.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#135A5A]/5 text-[#135A5A] border border-teal-50 flex items-center justify-center shrink-0">
+                      <span className="text-sm">🩺</span>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-slate-800 truncate leading-tight">{device.name}</h4>
+                      <p className="text-[9.5px] text-slate-400 font-semibold mt-0.5">{device.stock} • {device.price}</p>
+                    </div>
+                  </div>
+                  <span className={`text-[8.5px] font-black px-2 py-0.5 rounded border shrink-0 ${device.badgeColor}`}>
+                    {device.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Selling Medicines */}
+          <div className="lg:col-span-7 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[260px]">
+            <div className="border-b border-slate-50 pb-2.5 mb-2.5">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Top Selling Medicines</h3>
+            </div>
+
+            {/* Medicines List Table */}
+            <div className="flex-1 overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left">
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicine Name</th>
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</th>
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Sales</th>
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trend</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {[
+                    { name: 'Paracetamol 500mg', cat: 'Pain Relief', sales: '1,240', trend: 'up' },
+                    { name: 'Vitamin C 1000mg', cat: 'Supplements', sales: '890', trend: 'up' },
+                    { name: 'Metformin 500mg', cat: 'Diabetes', sales: '750', trend: 'neutral' }
+                  ].map((med, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-2.5 flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-md bg-[#135A5A]/10 flex items-center justify-center text-[#135A5A]">
+                          <span className="text-xs">💊</span>
+                        </div>
+                        <span className="text-[12.5px] font-extrabold text-slate-800">{med.name}</span>
+                      </td>
+                      <td className="py-2.5 text-xs text-slate-500 font-semibold">{med.cat}</td>
+                      <td className="py-2.5 text-xs text-slate-800 font-black text-right">{med.sales}</td>
+                      <td className="py-2.5 text-center">
+                        <div className="flex justify-center">
+                          {med.trend === 'up' ? (
+                            <span className="text-emerald-500 font-bold">↗</span>
+                          ) : (
+                            <span className="text-slate-400 font-bold">→</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        {/* RECENT ORDERS & RECENT CUSTOMERS SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mt-1 pb-8">
+          
+          {/* Recent Orders (Takes 8 columns) */}
+          <div className="lg:col-span-8 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[265px]">
+            <div className="flex justify-between items-center border-b border-slate-50 pb-2.5 mb-2.5">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Recent Orders</h3>
+              <button className="text-[10px] font-black uppercase tracking-wider text-teal-700 bg-teal-50 hover:bg-teal-100/80 px-2.5 py-1 rounded transition-colors cursor-pointer border-0">Export CSV</button>
+            </div>
+            
+            <div className="flex-1 overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left">
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order ID</th>
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                    <th className="py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {displayOrders.map((order, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-2.5 text-[12.5px] font-black text-teal-700">#{order.id.replace('#', '')}</td>
+                      <td className="py-2.5 text-xs text-slate-700 font-semibold">{order.customer}</td>
+                      <td className="py-2.5">
+                        <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full border ${
+                          order.status === 'PROCESSING' 
+                            ? 'text-amber-600 bg-amber-50 border-amber-100' 
+                            : order.status === 'READY' 
+                              ? 'text-teal-700 bg-teal-50 border-teal-100' 
+                              : 'text-emerald-600 bg-emerald-50 border-emerald-100'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-xs text-slate-800 font-black text-right">{order.amount}</td>
+                      <td className="py-2.5 text-center">
+                        <button className="p-1 rounded bg-slate-50 hover:bg-slate-100 text-slate-500 transition-colors border-0 cursor-pointer">
+                          <FiEye className="text-xs" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Recent Customers (Takes 4 columns) */}
+          <div className="lg:col-span-4 bg-white border border-slate-100 rounded-2xl p-4 lg:p-5 shadow-sm flex flex-col justify-between min-h-[265px]">
+            <div className="border-b border-slate-50 pb-2.5 mb-2.5">
+              <h3 className="text-sm lg:text-base font-extrabold text-slate-800">Recent Customers</h3>
+            </div>
+            
+            <div className="flex-1 flex flex-col gap-3 justify-center">
+              {displayCustomers.map((customer, idx) => (
+                <div key={idx} className="flex justify-between items-center">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                      <FiUsers className="text-xs" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-slate-800 truncate leading-none">{customer.name}</h4>
+                      <span className="text-[9px] text-slate-400 font-semibold truncate mt-0.5 block">{customer.email}</span>
+                    </div>
+                  </div>
+                  <span className={`text-[8.5px] font-black px-2 py-0.5 rounded shrink-0 ${
+                    customer.badge === 'NEW' 
+                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-100' 
+                      : 'text-slate-500 bg-slate-50 border border-slate-100'
+                  }`}>
+                    {customer.badge}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button className="w-full mt-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-[#135A5A] text-[9.5px] font-black uppercase tracking-wider rounded-lg transition-colors border border-teal-100/50 cursor-pointer">
+              View Customer CRM
+            </button>
           </div>
 
         </div>
