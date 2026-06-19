@@ -103,6 +103,27 @@ const pharmacySchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    pharmacistRegistrationNumber: {
+      type: String
+    },
+    landmark: {
+      type: String
+    },
+    pharmacistCertificateUrl: {
+      type: String
+    },
+    panCardUrl: {
+      type: String
+    },
+    gstCertificateUrl: {
+      type: String
+    },
+    logoUrl: {
+      type: String
+    },
+    storeFrontImageUrl: {
+      type: String
+    },
     verificationStatus: {
       type: String,
       enum: ['Pending', 'Approved', 'Rejected'],

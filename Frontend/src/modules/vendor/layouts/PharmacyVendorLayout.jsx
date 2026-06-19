@@ -15,7 +15,7 @@ export default function PharmacyVendorLayout() {
 
   useEffect(() => {
     const handleResize = () => {
-      const isMobileScreen = window.innerWidth < 768;
+      const isMobileScreen = window.innerWidth < 1024;
       setIsMobile(isMobileScreen);
       if (isMobileScreen) {
         setIsSidebarOpen(false);

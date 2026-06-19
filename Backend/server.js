@@ -478,7 +478,7 @@ const seedMockData = async () => {
         const productsToCreate = [];
         productTemplates.forEach((template, prodIdx) => {
           productsToCreate.push({
-            id: `med-${city.toLowerCase().slice(0, 3)}-${prodIdx + 1}`,
+            id: `med-${city.toLowerCase().replace(/\s/g, '').slice(0, 3)}-${cIdx}-${prodIdx + 1}`,
             name: template.name,
             category: template.category,
             brand: template.brand,
@@ -493,7 +493,7 @@ const seedMockData = async () => {
           });
         });
         await Product.create(productsToCreate);
-        console.log(`Seeded 6 products for ${city}.`);
+        console.log(`Seeded ${productsToCreate.length} products for ${city}.`);
       }
     }
 

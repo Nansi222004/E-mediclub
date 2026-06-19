@@ -11,6 +11,7 @@ export default function VendorNavbar({ toggleSidebar }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const { kycDetails } = useSelector(state => state.vendor);
+  const { vendorUser } = useSelector(state => state.vendorAuth || {});
 
   return (
     <header className="sticky top-0 z-30 h-20 glass-navbar px-4 sm:px-6 flex items-center justify-between shadow-sm">
@@ -111,7 +112,7 @@ export default function VendorNavbar({ toggleSidebar }) {
                   className="absolute right-0 mt-3 w-64 bg-white border border-slate-100 rounded-3xl shadow-premium z-20 overflow-hidden p-3 flex flex-col gap-2"
                 >
                   <div className="px-3 py-2 border-b border-slate-50 text-left">
-                    <h4 className="text-xs font-black text-slate-850 truncate">{kycDetails.storeName || 'MedPlus Wellness Pharmacy'}</h4>
+                    <h4 className="text-xs font-black text-slate-855 truncate">{kycDetails.storeName || 'MedPlus Wellness Pharmacy'}</h4>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-[10px] text-slate-500 font-semibold">Store Operator</span>
                       <span className="text-[7.5px] bg-teal-light text-teal border border-teal/10 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 leading-none">
@@ -131,8 +132,15 @@ export default function VendorNavbar({ toggleSidebar }) {
                   <button 
                     onClick={() => {
                       setShowProfileDropdown(false);
+                      const role = vendorUser?.role || vendorUser?.vendorType;
                       dispatch(vendorLogout());
-                      navigate('/vendor/auth');
+                      if (role === 'doctor_vendor' || role === 'doctor') {
+                        navigate('/vendor/doctor/login');
+                      } else if (role === 'lab_vendor' || role === 'lab') {
+                        navigate('/vendor/lab/login');
+                      } else {
+                        navigate('/vendor/pharmacy/login');
+                      }
                     }}
                     className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-coral-light/20 hover:bg-coral-light/50 text-xs font-black uppercase text-coral text-left w-full transition-colors shrink-0"
                   >

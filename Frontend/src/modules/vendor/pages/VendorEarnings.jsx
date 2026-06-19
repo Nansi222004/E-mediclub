@@ -1,7 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { requestWithdrawal } from '../store/vendorSlice';
+import { 
+  getTodayRevenue, 
+  getMonthlyRevenue, 
+  mockOrders 
+} from './pharmacyVendorMockData';
 import { 
   FiDollarSign, FiPlus, FiCheckCircle, FiClock, FiActivity, FiFileText, 
   FiCalendar, FiDownload, FiTrendingUp, FiArrowUpRight, FiAward, FiInfo,
@@ -12,21 +18,81 @@ export default function VendorEarnings() {
   const dispatch = useDispatch();
   const { withdrawals, analytics, kycDetails } = useSelector(state => state.vendor || { withdrawals: [], analytics: { totalRevenue: 84200, weeklySales: [] }, kycDetails: {} });
   
+  const [searchParams] = useSearchParams();
+  const filter = searchParams.get('filter');
+
   // States
   const [activeTab, setActiveTab] = useState('earnings'); // 'earnings' | 'transactions' | 'settlements' | 'refunds' | 'invoices'
   const [withdrawAmt, setWithdrawAmt] = useState("");
   const [successMsg, setSuccessMsg] = useState(false);
   const [timeframe, setTimeframe] = useState("weekly");
 
-  // Mock data for transactions
-  const transactions = [
-    { txId: 'TXN-90812', orderId: '#EMC-89212', customer: 'Rahul Mehta', date: '2026-06-17', amount: 1240, mode: 'UPI', status: 'Settled' },
-    { txId: 'TXN-90811', orderId: '#EMC-89211', customer: 'Sara Jacob', date: '2026-06-17', amount: 450.50, mode: 'Card', status: 'Pending' },
-    { txId: 'TXN-90810', orderId: '#EMC-89210', customer: 'Karan Singh', date: '2026-06-16', amount: 2800, mode: 'UPI', status: 'Settled' },
-    { txId: 'TXN-90809', orderId: '#EMC-89209', customer: 'Anita Desai', date: '2026-06-15', amount: 4200, mode: 'NetBanking', status: 'Settled' },
-    { txId: 'TXN-90808', orderId: '#EMC-89208', customer: 'Megha Patel', date: '2026-06-14', amount: 3500, mode: 'UPI', status: 'Settled' },
-    { txId: 'TXN-90807', orderId: '#EMC-89207', customer: 'Vikram Sharma', date: '2026-06-12', amount: 1100, mode: 'COD', status: 'Refunded' }
-  ];
+  useEffect(() => {
+    if (filter === 'today') {
+      setTimeframe('daily');
+    } else if (filter === 'week') {
+      setTimeframe('weekly');
+    } else if (filter === 'month') {
+      setTimeframe('monthly');
+    }
+  }, [filter]);
+
+  const transactions = useMemo(() => {
+    return mockOrders.map((o, idx) => ({
+      txId: `TXN-90${800 + idx}`,
+      orderId: o.id,
+      customer: o.customerName,
+      date: o.orderDate,
+      amount: o.totalAmount,
+      mode: o.paymentMethod.includes('UPI') ? 'UPI' : 'Card',
+      status: o.paymentStatus === 'Paid' ? 'Settled' : (o.paymentStatus === 'Refunded' ? 'Refunded' : 'Pending')
+    }));
+  }, []);
+
+  const displaySalesData = useMemo(() => {
+    if (timeframe === 'daily') {
+      const total = getTodayRevenue();
+      return [
+        { label: '9 AM', sales: Math.round(total * 0.15) },
+        { label: '12 PM', sales: Math.round(total * 0.25) },
+        { label: '3 PM', sales: Math.round(total * 0.20) },
+        { label: '6 PM', sales: Math.round(total * 0.30) },
+        { label: '9 PM', sales: Math.round(total * 0.10) }
+      ];
+    }
+    if (timeframe === 'monthly') {
+      const total = getMonthlyRevenue();
+      return [
+        { label: 'Wk 1', sales: Math.round(total * 0.22) },
+        { label: 'Wk 2', sales: Math.round(total * 0.28) },
+        { label: 'Wk 3', sales: Math.round(total * 0.24) },
+        { label: 'Wk 4', sales: Math.round(total * 0.26) }
+      ];
+    }
+    // all time or weekly
+    const total = mockOrders.filter(o => o.paymentStatus === 'Paid').reduce((acc, curr) => acc + curr.totalAmount, 0);
+    return [
+      { label: 'Mon', sales: Math.round(total * 0.12) },
+      { label: 'Tue', sales: Math.round(total * 0.15) },
+      { label: 'Wed', sales: Math.round(total * 0.10) },
+      { label: 'Thu', sales: Math.round(total * 0.18) },
+      { label: 'Fri', sales: Math.round(total * 0.22) },
+      { label: 'Sat', sales: Math.round(total * 0.13) },
+      { label: 'Sun', sales: Math.round(total * 0.10) }
+    ];
+  }, [timeframe]);
+
+  const displayTransactions = useMemo(() => {
+    if (timeframe === 'daily') {
+      const todayStr = new Date().toISOString().substring(0, 10);
+      return transactions.filter(t => t.date === todayStr);
+    }
+    if (timeframe === 'monthly') {
+      const currentMonth = new Date().toISOString().substring(0, 7);
+      return transactions.filter(t => t.date.startsWith(currentMonth));
+    }
+    return transactions;
+  }, [timeframe, transactions]);
 
   // Mock data for settlements
   const settlements = [
@@ -67,7 +133,9 @@ export default function VendorEarnings() {
       {/* Header Deck */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 shrink-0">
         <div>
-          <h1 className="text-xl lg:text-2xl font-black text-slate-800 leading-none">Revenue & Payments</h1>
+          <h1 className="text-xl lg:text-2xl font-black text-slate-800 leading-none">
+            {timeframe === 'daily' ? 'Revenue Today' : timeframe === 'monthly' ? 'Revenue This Month' : 'Total Revenue'}
+          </h1>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
             Monitor earnings ledger, check order payments, track banking settlements, and retrieve compliance invoices.
           </p>
@@ -111,13 +179,26 @@ export default function VendorEarnings() {
                 <div className="bg-[#135A5A] text-white rounded-3xl p-5 shadow-md relative overflow-hidden flex flex-col justify-between h-36">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
                   <div className="flex justify-between items-start relative z-10">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-teal-100">Total Net Revenue</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-teal-100">
+                      {timeframe === 'daily' ? 'Revenue Today' : timeframe === 'monthly' ? 'Revenue This Month' : 'Total Net Revenue'}
+                    </span>
                     <FiDollarSign className="text-lg text-teal-100" />
                   </div>
                   <div className="relative z-10 mt-auto">
-                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-none">₹{(analytics?.totalRevenue || 84200).toLocaleString('en-IN')}.00</h2>
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-none">
+                      ₹{timeframe === 'daily' 
+                        ? getTodayRevenue().toLocaleString('en-IN', { minimumFractionDigits: 2 }) 
+                        : timeframe === 'monthly' 
+                          ? getMonthlyRevenue().toLocaleString('en-IN', { minimumFractionDigits: 2 }) 
+                          : mockOrders.filter(o => o.paymentStatus === 'Paid').reduce((acc, curr) => acc + curr.totalAmount, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </h2>
                     <p className="text-[9px] font-semibold text-teal-100 mt-1 flex items-center gap-1">
-                      <FiTrendingUp className="text-emerald-300" /> +15.4% growth compared to last month
+                      <FiTrendingUp className="text-emerald-300" /> 
+                      {timeframe === 'daily' 
+                        ? '+12.0% growth today' 
+                        : timeframe === 'monthly' 
+                          ? '+8.4% growth this month' 
+                          : '+15.4% growth compared to last month'}
                     </p>
                   </div>
                 </div>
@@ -135,29 +216,36 @@ export default function VendorEarnings() {
                 </div>
               </div>
 
-              {/* Weekly performance log */}
+              {/* Performance log */}
               <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
-                  <FiActivity className="text-[#135A5A]" /> Weekly Sales Graph
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center justify-between gap-1.5 w-full">
+                  <span className="flex items-center gap-1.5">
+                    <FiActivity className="text-[#135A5A]" /> 
+                    {timeframe === 'daily' ? 'Daily Sales Graph' : timeframe === 'monthly' ? 'Monthly Sales Graph' : 'Weekly Sales Graph'}
+                  </span>
+                  <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
+                    {['daily', 'weekly', 'monthly'].map(t => (
+                      <button 
+                        key={t}
+                        type="button"
+                        onClick={() => setTimeframe(t)}
+                        className={`px-2.5 py-1 text-[9px] font-black rounded-md transition-all cursor-pointer border-0 ${timeframe === t ? 'bg-white text-[#135A5A] shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent'}`}
+                      >
+                        {t === 'daily' ? 'Today' : t === 'weekly' ? 'Weekly' : 'Monthly'}
+                      </button>
+                    ))}
+                  </div>
                 </h3>
                 <div className="h-48 w-full flex items-end justify-between pt-6 px-4 pb-2 bg-slate-50/50 border border-slate-100 rounded-2xl">
-                  {[(analytics?.weeklySales || []).length > 0 ? analytics.weeklySales : [
-                    { day: 'Mon', sales: 12000 },
-                    { day: 'Tue', sales: 15000 },
-                    { day: 'Wed', sales: 9000 },
-                    { day: 'Thu', sales: 18000 },
-                    { day: 'Fri', sales: 22000 },
-                    { day: 'Sat', sales: 25000 },
-                    { day: 'Sun', sales: 16000 }
-                  ]].flat().map((data, idx) => {
-                    const maxVal = 30000;
+                  {displaySalesData.map((data, idx) => {
+                    const maxVal = timeframe === 'daily' ? 3000 : 35000;
                     const percentage = (data.sales / maxVal) * 100;
                     return (
                       <div key={idx} className="flex flex-col items-center gap-2 flex-1 group">
                         <div className="w-6 sm:w-10 bg-slate-200 rounded-t-lg overflow-hidden h-28 flex items-end">
                           <div style={{ height: `${percentage}%` }} className="w-full bg-[#135A5A] rounded-t-lg group-hover:bg-[#0F4A4A] transition-colors" />
                         </div>
-                        <span className="text-[9px] text-slate-405 font-black uppercase tracking-wider">{data.day || data.label}</span>
+                        <span className="text-[9px] text-slate-405 font-black uppercase tracking-wider">{data.label}</span>
                       </div>
                     );
                   })}
@@ -243,7 +331,7 @@ export default function VendorEarnings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map(txn => (
+                  {displayTransactions.map(txn => (
                     <tr key={txn.txId} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
                       <td className="p-4 text-xs font-bold text-slate-500 font-mono">{txn.txId}</td>
                       <td className="p-4 text-xs font-bold text-slate-800 font-mono">{txn.orderId}</td>

@@ -57,5 +57,6 @@ module.exports = {
   uploadPrescription,
   uploadProfilePhoto,
   uploadLabReport,
-  uploadMedicineImage
+  uploadMedicineImage,
+  createUploadMiddleware
 };

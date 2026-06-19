@@ -1,55 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   FiUsers, FiShoppingBag, FiStar, FiFileText, FiSearch, FiEye, FiActivity, FiTrendingUp, FiArrowUpRight
 } from 'react-icons/fi';
+import { customers, mockOrders, mockPrescriptions } from './pharmacyVendorMockData';
 
 export default function VendorCustomers() {
   const [activeTab, setActiveTab] = useState('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  // High quality mock data for customers list
-  const customers = [
-    { id: 'CUST-001', name: 'Rahul Mehta', email: 'rahul.mehta@gmail.com', phone: '+91 98765 43210', totalOrders: 14, totalSpent: 12400, city: 'Mumbai', lastActive: '2 mins ago', loyaltyTier: 'Platinum' },
-    { id: 'CUST-002', name: 'Sara Jacob', email: 'sara.jacob@yahoo.com', phone: '+91 87654 32109', totalOrders: 8, totalSpent: 6200, city: 'Bengaluru', lastActive: '15 mins ago', loyaltyTier: 'Gold' },
-    { id: 'CUST-003', name: 'Karan Singh', email: 'karan.singh@outlook.com', phone: '+91 76543 21098', totalOrders: 3, totalSpent: 2800, city: 'Delhi NCR', lastActive: '1 hour ago', loyaltyTier: 'Silver' },
-    { id: 'CUST-004', name: 'Anita Desai', email: 'anita.d@gmail.com', phone: '+91 65432 10987', totalOrders: 19, totalSpent: 18450, city: 'Pune', lastActive: '1 day ago', loyaltyTier: 'Platinum' },
-    { id: 'CUST-005', name: 'Vikram Sharma', email: 'v.sharma@gmail.com', phone: '+91 99887 76655', totalOrders: 12, totalSpent: 9800, city: 'Hyderabad', lastActive: '2 days ago', loyaltyTier: 'Gold' },
-    { id: 'CUST-006', name: 'Sneha Kapoor', email: 'sneha.k@yahoo.com', phone: '+91 88776 65544', totalOrders: 2, totalSpent: 1450, city: 'Mumbai', lastActive: '3 days ago', loyaltyTier: 'Silver' },
-    { id: 'CUST-007', name: 'Amit K.', email: 'amit.k@outlook.com', phone: '+91 77665 54433', totalOrders: 6, totalSpent: 5120, city: 'Delhi NCR', lastActive: '4 days ago', loyaltyTier: 'Gold' },
-    { id: 'CUST-008', name: 'Megha Patel', email: 'megha.p@gmail.com', phone: '+91 66554 43322', totalOrders: 22, totalSpent: 24300, city: 'Pune', lastActive: '1 week ago', loyaltyTier: 'Platinum' }
-  ];
+  // Derive order history from the shared mockOrders array
+  const orderHistory = useMemo(() => {
+    return mockOrders.map(o => ({
+      orderId: o.id,
+      customerName: o.customerName,
+      items: o.products.map(p => `${p.name} x${p.qty}`).join(', '),
+      date: o.orderDate,
+      status: o.status,
+      amount: o.totalAmount
+    }));
+  }, []);
 
-  // Mock data for order history
-  const orderHistory = [
-    { orderId: '#EMC-89212', customerName: 'Rahul Mehta', items: 'Amoxicillin 500mg x2, Paracetamol x1', date: '2026-06-17', status: 'Delivered', amount: 1240 },
-    { orderId: '#EMC-89211', customerName: 'Sara Jacob', items: 'Metformin 1000mg x3', date: '2026-06-17', status: 'Ready for Dispatch', amount: 450.50 },
-    { orderId: '#EMC-89210', customerName: 'Karan Singh', items: 'Multivitamins Gold x1, Cough Syrup x2', date: '2026-06-16', status: 'Delivered', amount: 2800 },
-    { orderId: '#EMC-89209', customerName: 'Anita Desai', items: 'BP Monitor Device x1, Sanitizer x5', date: '2026-06-15', status: 'Delivered', amount: 4200 },
-    { orderId: '#EMC-89208', customerName: 'Megha Patel', items: 'Insulin Pen x2, Needles pack x1', date: '2026-06-14', status: 'Delivered', amount: 3500 },
-    { orderId: '#EMC-89207', customerName: 'Vikram Sharma', items: 'Asthma Inhaler x2', date: '2026-06-12', status: 'Cancelled', amount: 1100 }
-  ];
+  // Derive prescription history from shared mockPrescriptions
+  const prescriptionHistory = useMemo(() => {
+    return mockPrescriptions.map(p => ({
+      rxId: p.prescriptionId,
+      customerName: p.customerName,
+      doctor: 'Dr. Nitin Verma',
+      date: '2026-06-17',
+      status: p.status === 'ORDER_CREATED' ? 'Converted to Order' : (p.status === 'REJECTED' ? 'Rejected' : 'Pending Verification'),
+      medicine: p.extractedMedicines.map(m => m.name).join(', ') || 'Prescription Upload'
+    }));
+  }, []);
 
-  // Filter and sort for Frequent Customers
-  const frequentCustomers = [...customers]
-    .filter(c => c.totalOrders >= 5)
-    .sort((a, b) => b.totalOrders - a.totalOrders);
+  // Filter and sort for Frequent Customers from the shared customers array
+  const frequentCustomers = useMemo(() => {
+    return [...customers]
+      .filter(c => c.totalOrders >= 5)
+      .sort((a, b) => b.totalOrders - a.totalOrders)
+      .slice(0, 30); // limit to top 30 frequent for render efficiency
+  }, []);
 
-  // Mock data for prescription history
-  const prescriptionHistory = [
-    { rxId: 'RX-9081', customerName: 'Amit K.', doctor: 'Dr. Nitin Verma', date: '2026-06-17', status: 'Converted to Order', medicine: 'Amoxicillin 500mg' },
-    { rxId: 'RX-9080', customerName: 'Rahul Mehta', doctor: 'Dr. Archana Sen', date: '2026-06-16', status: 'Approved & Quoted', medicine: 'Atorvastatin 20mg' },
-    { rxId: 'RX-9079', customerName: 'Sara Jacob', doctor: 'Dr. Nitin Verma', date: '2026-06-15', status: 'Pending Verification', medicine: 'Metformin 1000mg' },
-    { rxId: 'RX-9078', customerName: 'Megha Patel', doctor: 'Self Uploaded', date: '2026-06-12', status: 'Converted to Order', medicine: 'Lantus Insulin 100IU' }
-  ];
-
-  // Filtering logic based on search
-  const filteredCustomers = customers.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone.includes(searchTerm) ||
-    c.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtering logic based on search, limited to first 50 results for optimal render speed
+  const filteredCustomers = useMemo(() => {
+    const list = customers.filter(c => 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone.includes(searchTerm) ||
+      c.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return searchTerm ? list : list.slice(0, 50);
+  }, [searchTerm]);
 
   return (
     <div className="font-sans bg-[#F8FAF9] min-h-[calc(100vh-120px)] p-2 sm:p-4 lg:p-6 flex flex-col gap-5">

@@ -79,39 +79,49 @@ export default function VendorManagement() {
   const [editingCommissionId, setEditingCommissionId] = useState(null);
   const [customRate, setCustomRate] = useState(10);
 
-  // Trigger Accept/Approve action (Simulating loading delay of 800ms)
-  const handleApprove = (id) => {
+  // Trigger Accept/Approve action
+  const handleApprove = async (id) => {
     const key = `${id}-accept`;
     setLoadingActions(prev => ({ ...prev, [key]: true }));
-    setTimeout(() => {
+    try {
+      await apiClient.put(`/api/admin/vendors/${id}/approve`);
       dispatch(approveVendor(id));
-      setLoadingActions(prev => ({ ...prev, [key]: false }));
+      setVendors(prev => prev.map(v => v._id === id || v.id === id ? { ...v, status: 'approved', kyc: 'verified' } : v));
       
       // Keep details view updated if active
-      if (selectedVendor && selectedVendor.id === id) {
+      if (selectedVendor && (selectedVendor.id === id || selectedVendor._id === id)) {
         setSelectedVendor(prev => ({ ...prev, status: 'approved', kyc: 'verified' }));
       }
-    }, 800);
+    } catch (err) {
+      console.error('Error approving vendor:', err);
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [key]: false }));
+    }
   };
 
-  // Trigger Reject action from Confirm Modal (Simulating loading delay of 800ms)
-  const handleRejectConfirm = () => {
+  // Trigger Reject action from Confirm Modal
+  const handleRejectConfirm = async () => {
     if (!vendorToReject) return;
-    const id = vendorToReject.id;
+    const id = vendorToReject._id || vendorToReject.id;
     const key = `${id}-reject`;
     setLoadingActions(prev => ({ ...prev, [key]: true }));
     
-    setTimeout(() => {
+    try {
+      await apiClient.put(`/api/admin/vendors/${id}/reject`, { reason: rejectReason });
       dispatch(rejectVendor(id));
-      setLoadingActions(prev => ({ ...prev, [key]: false }));
+      setVendors(prev => prev.map(v => v._id === id || v.id === id ? { ...v, status: 'rejected', kyc: 'rejected' } : v));
       
       // Close confirmation and update detail view if active
-      if (selectedVendor && selectedVendor.id === id) {
+      if (selectedVendor && (selectedVendor.id === id || selectedVendor._id === id)) {
         setSelectedVendor(prev => ({ ...prev, status: 'rejected', kyc: 'rejected' }));
       }
       setVendorToReject(null);
       setRejectReason("");
-    }, 800);
+    } catch (err) {
+      console.error('Error rejecting vendor:', err);
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   // Trigger Delete action from Confirm Modal (Simulating loading delay of 800ms)

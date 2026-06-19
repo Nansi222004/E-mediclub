@@ -497,6 +497,121 @@ const verifyOTP = async (req, res, next) => {
   }
 };
 
+// @desc    Register a new pharmacy vendor
+// @route   POST /api/auth/register-pharmacy
+// @access  Public
+const registerPharmacy = async (req, res, next) => {
+  try {
+    const {
+      name,
+      email,
+      phone,
+      password,
+      storeName,
+      landmark,
+      googleMapsLocation,
+      openingTime,
+      closingTime,
+      deliveryRadius,
+      homeDelivery,
+      address,
+      city,
+      state,
+      pincode,
+      drugLicenseNumber,
+      gstNumber,
+      pharmacistRegistrationNumber
+    } = req.body;
+
+    const userExists = await User.findOne({ $or: [{ email }, { phone }] });
+    if (userExists) {
+      return ApiResponse.error(res, 400, 'User with this email or phone number already exists');
+    }
+
+    const user = await User.create({
+      name,
+      phone,
+      email,
+      password,
+      role: 'pharmacy_vendor',
+      status: 'pending',
+      submittedAt: new Date()
+    });
+
+    const files = req.files || {};
+    const drugLicenseUrl = files.drugLicense ? (files.drugLicense[0].path || files.drugLicense[0].filename) : '';
+    const gstCertificateUrl = files.gstCertificate ? (files.gstCertificate[0].path || files.gstCertificate[0].filename) : '';
+    const pharmacistCertificateUrl = files.pharmacistCertificate ? (files.pharmacistCertificate[0].path || files.pharmacistCertificate[0].filename) : '';
+    const panCardUrl = files.panCard ? (files.panCard[0].path || files.panCard[0].filename) : '';
+    const logoUrl = files.logo ? (files.logo[0].path || files.logo[0].filename) : '💊';
+    const storeFrontImageUrl = files.storeFrontImage ? (files.storeFrontImage[0].path || files.storeFrontImage[0].filename) : '';
+    const governmentIdUrl = files.governmentId ? (files.governmentId[0].path || files.governmentId[0].filename) : '';
+    const pharmacyPhotoUrl = files.pharmacyPhoto ? (files.pharmacyPhoto[0].path || files.pharmacyPhoto[0].filename) : '';
+
+    const Pharmacy = require('../models/Pharmacy');
+    const pharmacy = await Pharmacy.create({
+      id: 'PHARM-' + Math.floor(100000 + Math.random() * 900000),
+      name: storeName || 'Pharmacy Store',
+      ownerName: name,
+      mobileNumber: phone,
+      emailAddress: email,
+      landmark,
+      googleMapsLocation,
+      openingTime,
+      closingTime,
+      deliveryRadius: deliveryRadius ? Number(deliveryRadius) : 5,
+      homeDelivery: homeDelivery === 'true' || homeDelivery === true,
+      address,
+      city,
+      state,
+      pincode,
+      drugLicenseNumber,
+      gstNumber,
+      pharmacistRegistrationNumber,
+      drugLicenseUrl,
+      gstCertificateUrl,
+      pharmacistCertificateUrl,
+      panCardUrl,
+      logoUrl,
+      storeFrontImageUrl,
+      governmentIdUrl,
+      images: pharmacyPhotoUrl ? [pharmacyPhotoUrl] : [],
+      verificationStatus: 'Pending',
+      vendorUserId: user._id
+    });
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return ApiResponse.success(res, 201, 'Pharmacy registered successfully', {
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        submittedAt: user.submittedAt
+      },
+      pharmacy,
+      accessToken,
+      refreshToken
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -509,4 +624,5 @@ module.exports = {
   updateProfile,
   sendOTP,
   verifyOTP,
+  registerPharmacy,
 };

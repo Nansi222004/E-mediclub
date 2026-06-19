@@ -11,12 +11,26 @@ const {
   getMe, 
   updateProfile, 
   sendOTP, 
-  verifyOTP 
+  verifyOTP,
+  registerPharmacy
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const { createUploadMiddleware } = require('../middleware/upload');
+
+const uploadPharmacyDocs = createUploadMiddleware("emediclub/pharmacy-docs").fields([
+  { name: 'drugLicense', maxCount: 1 },
+  { name: 'gstCertificate', maxCount: 1 },
+  { name: 'pharmacistCertificate', maxCount: 1 },
+  { name: 'panCard', maxCount: 1 },
+  { name: 'logo', maxCount: 1 },
+  { name: 'storeFrontImage', maxCount: 1 },
+  { name: 'governmentId', maxCount: 1 },
+  { name: 'pharmacyPhoto', maxCount: 1 }
+]);
 
 // Route configurations purely mapping to controllers
 router.post('/register', register);
+router.post('/register-pharmacy', uploadPharmacyDocs, registerPharmacy);
 router.post('/login', login);
 router.post('/logout', protect, logout);
 router.post('/refresh', refresh);

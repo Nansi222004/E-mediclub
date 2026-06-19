@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { adjustProductStock, addProduct } from '../store/vendorSlice';
 import {
   FiLayers, FiPlus, FiAlertTriangle, FiTrash2, FiSearch, FiSliders,
   FiCheckCircle, FiX, FiActivity, FiDollarSign, FiPlusCircle, FiMinusCircle
 } from 'react-icons/fi';
+import { mockInventory, getOutOfStockItems, getLowStockItems } from './pharmacyVendorMockData';
 
 const CATEGORIES = [
   'Allopathy',
@@ -20,7 +22,11 @@ const CATEGORIES = [
 
 export default function VendorStocksManagement() {
   const dispatch = useDispatch();
-  const { products } = useSelector(state => state.vendor);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get('filter');
+
+  // Use mockInventory as the source of products for Pharmacy Vendor
+  const [localProducts, setLocalProducts] = useState(mockInventory);
 
   // States
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,26 +49,24 @@ export default function VendorStocksManagement() {
   const [internalNote, setInternalNote] = useState("");
 
   // Helpers: Determine stock health label & styles
-  const getStockHealth = (qty) => {
+  const getStockHealth = (qty, reorderLevel = 10) => {
     if (qty <= 0) return { label: 'OUT OF STOCK', color: 'text-coral' };
-    if (qty < 20) return { label: 'LOW STOCK', color: 'text-gold-dark' };
+    if (qty <= reorderLevel) return { label: 'LOW STOCK', color: 'text-gold-dark' };
     return { label: 'IN STOCK', color: 'text-teal font-extrabold' };
   };
 
   // KPI Calculations (Screenshot 1 reference)
   const kpis = useMemo(() => {
     let totalInventory = 0;
-    let lowStockCount = 0;
-    let outOfStockCount = 0;
     let totalValuation = 0;
 
-    products.forEach(p => {
+    localProducts.forEach(p => {
       totalInventory += p.stock;
-      if (p.stock === 0) outOfStockCount++;
-      else if (p.stock < 20) lowStockCount++;
-
       totalValuation += (p.stock * p.price);
     });
+
+    const outOfStockCount = getOutOfStockItems(localProducts).length;
+    const lowStockCount = getLowStockItems(localProducts).length;
 
     return {
       totalInventory,
@@ -70,24 +74,31 @@ export default function VendorStocksManagement() {
       outOfStockCount,
       totalValuation
     };
-  }, [products]);
+  }, [localProducts]);
 
   // Filter products based on search & health toggles
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
+    return localProducts.filter(p => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         p.name.toLowerCase().includes(q) ||
         (p.sku && p.sku.toLowerCase().includes(q));
 
-      const matchesHealth =
-        healthFilter === 'all' ||
-        (healthFilter === 'instock' && p.stock > 0) ||
-        (healthFilter === 'outofstock' && p.stock <= 0);
+      let matchesHealth = true;
+      if (filterParam === 'out-of-stock') {
+        matchesHealth = p.stock === 0;
+      } else if (filterParam === 'low-stock') {
+        matchesHealth = p.stock > 0 && p.stock <= p.reorderLevel;
+      } else {
+        matchesHealth =
+          healthFilter === 'all' ||
+          (healthFilter === 'instock' && p.stock > 0) ||
+          (healthFilter === 'outofstock' && p.stock === 0);
+      }
 
       return matchesSearch && matchesHealth;
     });
-  }, [products, searchQuery, healthFilter]);
+  }, [localProducts, searchQuery, healthFilter, filterParam]);
 
   // Pagination Slice
   const paginatedProducts = useMemo(() => {
@@ -111,6 +122,15 @@ export default function VendorStocksManagement() {
     const qty = Number(qtyChange);
     if (!selectedProduct || qty < 0) return;
 
+    setLocalProducts(prev => prev.map(p => {
+      if (p.id === selectedProduct.id) {
+        const change = qty;
+        const newQty = adjustType === 'restock' ? p.stock + change : Math.max(0, p.stock - change);
+        return { ...p, stock: newQty, status: newQty <= 0 ? 'Out of Stock' : (newQty < 20 ? 'Low Stock' : 'In Stock') };
+      }
+      return p;
+    }));
+
     dispatch(adjustProductStock({
       id: selectedProduct.id,
       amount: qty,
@@ -123,6 +143,18 @@ export default function VendorStocksManagement() {
   const handleQuickAddProduct = (e) => {
     e.preventDefault();
     if (!newProdName || !newProdPrice || !newProdStock) return;
+
+    const newProductObj = {
+      id: `MED-400${Date.now()}`,
+      name: newProdName,
+      price: Number(newProdPrice),
+      stock: Number(newProdStock),
+      category: newProdCategory,
+      status: Number(newProdStock) <= 0 ? 'Out of Stock' : (Number(newProdStock) < 20 ? 'Low Stock' : 'In Stock'),
+      image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&auto=format&fit=crop&q=80'
+    };
+
+    setLocalProducts(prev => [newProductObj, ...prev]);
 
     dispatch(addProduct({
       name: newProdName,
@@ -219,9 +251,13 @@ export default function VendorStocksManagement() {
             ].map(pill => (
               <button
                 key={pill.id}
-                onClick={() => { setHealthFilter(pill.id); setCurrentPage(1); }}
+                onClick={() => {
+                  setHealthFilter(pill.id);
+                  setCurrentPage(1);
+                  setSearchParams({});
+                }}
                 className={`px-3 sm:px-4.5 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap
-                  ${healthFilter === pill.id
+                  ${healthFilter === pill.id && !filterParam
                     ? 'bg-teal text-white shadow-premium'
                     : 'text-slate-500 hover:text-slate-800'
                   }`}
@@ -272,7 +308,7 @@ export default function VendorStocksManagement() {
                   </tr>
                 ) : (
                   paginatedProducts.map((row) => {
-                    const health = getStockHealth(row.stock);
+                    const health = getStockHealth(row.stock, row.reorderLevel);
                     return (
                       <motion.tr
                         key={row.id}
@@ -335,7 +371,7 @@ export default function VendorStocksManagement() {
               </div>
             ) : (
               paginatedProducts.map((row) => {
-                const health = getStockHealth(row.stock);
+                const health = getStockHealth(row.stock, row.reorderLevel);
                 return (
                   <motion.div
                     key={row.id}

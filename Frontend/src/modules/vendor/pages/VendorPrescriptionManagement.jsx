@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   FiLayers, FiUploadCloud, FiSearch, FiSliders, FiCheckCircle, FiXCircle, 
   FiEye, FiTrendingUp, FiActivity, FiSettings, FiShoppingCart, FiFileText,
   FiEdit3, FiCheck, FiCpu, FiAlertCircle, FiChevronRight, FiGrid, FiList, 
   FiAward, FiPlus, FiTrash2, FiClock, FiPercent, FiArrowRight, FiUser
 } from 'react-icons/fi';
+import { mockPrescriptions, getPrescriptionOrders } from './pharmacyVendorMockData';
 
 // Pharmacy Catalog items for matching
 const STORE_CATALOG = [
@@ -15,77 +16,16 @@ const STORE_CATALOG = [
   { id: 'cat-4', name: 'Shelcal 500 Tablet', variants: ['15 tablets', '30 tablets'], price: 101.5, stock: 0 }
 ];
 
-const INITIAL_PRESCRIPTIONS = [
-  {
-    prescriptionId: 'RX10294',
-    customerId: 'cust-101',
-    customerName: 'Rahul Sharma',
-    uploadedTime: 'Today 4:30 PM',
-    prescriptionImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
-    status: 'AI_PARSED', // 'NEW', 'AI_PARSED', 'REVIEW_REQUIRED', 'MEDICINE_MATCHED', 'CUSTOMER_CART_UPDATED', 'ORDER_CREATED', 'REJECTED'
-    rejectionReason: '',
-    orderId: '',
-    paymentStatus: '',
-    orderStatus: '',
-    amount: 0,
-    extractedMedicines: [
-      { name: 'Augmentin 625', quantity: 10, confidenceScore: 98, matchedMedicineId: 'cat-1', variantId: '10 tablets', price: 164, stock: 45, matched: true },
-      { name: 'Dolo 650', quantity: 15, confidenceScore: 96, matchedMedicineId: 'cat-2', variantId: '15 tablets', price: 28, stock: 8, matched: true }
-    ]
-  },
-  {
-    prescriptionId: 'RX10295',
-    customerId: 'cust-102',
-    customerName: 'Amit Patel',
-    uploadedTime: 'Today 3:15 PM',
-    prescriptionImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
-    status: 'NEW',
-    rejectionReason: '',
-    extractedMedicines: []
-  },
-  {
-    prescriptionId: 'RX10296',
-    customerId: 'cust-103',
-    customerName: 'Priyanka Sen',
-    uploadedTime: 'Yesterday 6:00 PM',
-    prescriptionImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
-    status: 'REVIEW_REQUIRED',
-    rejectionReason: '',
-    extractedMedicines: [
-      { name: 'Pan 40', quantity: 15, confidenceScore: 45, matchedMedicineId: '', variantId: '', price: 0, stock: 0, matched: false }
-    ]
-  },
-  {
-    prescriptionId: 'RX10297',
-    customerId: 'cust-104',
-    customerName: 'Karan Malhotra',
-    uploadedTime: 'Yesterday 1:10 PM',
-    prescriptionImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
-    status: 'ORDER_CREATED',
-    rejectionReason: '',
-    orderId: 'ORD8892',
-    amount: 540,
-    paymentStatus: 'Paid',
-    orderStatus: 'Processing',
-    extractedMedicines: [
-      { name: 'Augmentin 625', quantity: 20, confidenceScore: 99, matchedMedicineId: 'cat-1', variantId: '10 tablets', price: 328, stock: 25, matched: true }
-    ]
-  },
-  {
-    prescriptionId: 'RX10298',
-    customerId: 'cust-105',
-    customerName: 'Sneha Reddy',
-    uploadedTime: '2 days ago',
-    prescriptionImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
-    status: 'REJECTED',
-    rejectionReason: 'Invalid prescription',
-    extractedMedicines: []
-  }
-];
-
 export default function VendorPrescriptionManagement() {
   const navigate = useNavigate();
-  const [prescriptions, setPrescriptions] = useState(INITIAL_PRESCRIPTIONS);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusParam = searchParams.get('status');
+
+  const initialPrescriptions = useMemo(() => {
+    return mockPrescriptions;
+  }, []);
+
+  const [prescriptions, setPrescriptions] = useState(initialPrescriptions);
   const [activeTab, setActiveTab] = useState('All'); 
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -130,8 +70,8 @@ export default function VendorPrescriptionManagement() {
     return prescriptions.filter(rx => {
       // Search filter
       const matchesSearch = 
-        rx.prescriptionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rx.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+      rx.prescriptionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rx.customerName.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Status Tab filter
       let matchesTab = true;
@@ -143,9 +83,16 @@ export default function VendorPrescriptionManagement() {
       else if (activeTab === 'Converted Orders') matchesTab = rx.status === 'ORDER_CREATED';
       else if (activeTab === 'Rejected') matchesTab = rx.status === 'REJECTED';
 
+      if (statusParam === 'pending') {
+        const pendingList = getPrescriptionOrders(prescriptions);
+        if (!pendingList.some(p => p.prescriptionId === rx.prescriptionId)) {
+          return false;
+        }
+      }
+
       return matchesSearch && matchesTab;
     });
-  }, [prescriptions, activeTab, searchTerm]);
+  }, [prescriptions, activeTab, searchTerm, statusParam]);
 
   // Drawer Controls
   const handleOpenDrawer = (rx, mode = 'view') => {
@@ -366,7 +313,10 @@ export default function VendorPrescriptionManagement() {
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key);
+                setSearchParams({});
+              }}
               className={`px-4.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border
                 ${activeTab === tab.key 
                   ? 'bg-[#135A5A] border-[#135A5A] text-white shadow-sm' 

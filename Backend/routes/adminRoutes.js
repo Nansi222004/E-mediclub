@@ -29,7 +29,9 @@ const {
   getPayments,
   getComplaints,
   getHomeCollections,
-  getPrescriptions
+  getPrescriptions,
+  approveVendor,
+  rejectVendor
 } = require('../controllers/adminController');
 const { protect } = require('../middleware/authMiddleware');
 const { adminOnly } = require('../middleware/roleMiddleware');
@@ -68,5 +70,9 @@ router.get('/payments', protect, adminOnly, getPayments);
 router.get('/complaints', protect, adminOnly, getComplaints);
 router.get('/home-collections', protect, adminOnly, getHomeCollections);
 router.get('/prescriptions', protect, adminOnly, getPrescriptions);
+
+// Vendor Approval actions
+router.put('/vendors/:id/approve', protect, adminOnly, approveVendor);
+router.put('/vendors/:id/reject', protect, adminOnly, rejectVendor);
 
 module.exports = router;

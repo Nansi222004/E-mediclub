@@ -66,7 +66,10 @@ const userSchema = new mongoose.Schema(
     city: String,
     state: String,
     pincode: String,
-    status: { type: String, enum: ['active', 'blocked'], default: 'active' },
+    status: { type: String, enum: ['active', 'blocked', 'pending', 'approved', 'rejected'], default: 'active' },
+    rejectionReason: { type: String, default: '' },
+    approvedAt: { type: Date },
+    submittedAt: { type: Date },
     profile: {
       city: String,
       state: String,

@@ -774,6 +774,55 @@ const getPrescriptions = async (req, res, next) => {
   }
 };
 
+const approveVendor = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    user.status = 'approved';
+    user.approvedAt = new Date();
+    await user.save();
+
+    const Pharmacy = require('../models/Pharmacy');
+    await Pharmacy.findOneAndUpdate(
+      { vendorUserId: user._id },
+      { verificationStatus: 'Approved' }
+    );
+
+    return res.status(200).json({ success: true, message: 'Vendor approved successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const rejectVendor = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    user.status = 'rejected';
+    user.rejectionReason = reason || '';
+    await user.save();
+
+    const Pharmacy = require('../models/Pharmacy');
+    await Pharmacy.findOneAndUpdate(
+      { vendorUserId: user._id },
+      { verificationStatus: 'Rejected' }
+    );
+
+    return res.status(200).json({ success: true, message: 'Vendor rejected successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getDashboardVendorsPharmacy,
@@ -803,5 +852,7 @@ module.exports = {
   getPayments,
   getComplaints,
   getHomeCollections,
-  getPrescriptions
+  getPrescriptions,
+  approveVendor,
+  rejectVendor
 };

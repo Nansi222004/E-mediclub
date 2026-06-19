@@ -70,6 +70,8 @@ const DoctorSignup = lazy(() => import('../modules/vendor/pages/DoctorSignup'));
 const VendorForgotPasswordPage = lazy(() => import('../modules/auth/vendor/pages/VendorForgotPasswordPage'));
 const VendorVerifyOtpPage = lazy(() => import('../modules/auth/vendor/pages/VendorVerifyOtpPage'));
 const OnboardingPending = lazy(() => import('../modules/vendor/pages/OnboardingPending'));
+const RejectedScreen = lazy(() => import('../modules/vendor/pages/RejectedScreen'));
+const ApprovedScreen = lazy(() => import('../modules/vendor/pages/ApprovedScreen'));
 
 // Multi-Vendor Page Modules (Pharmacy)
 const PharmacyVendorLayout = lazy(() => import('../modules/vendor/layouts/PharmacyVendorLayout'));
@@ -243,6 +245,8 @@ export default function AppRoutes() {
       <Route path="/vendor/doctor/signup" element={<DoctorSignup />} />
       <Route path="/vendor/doctor/forgot-password" element={<VendorForgotPasswordPage />} />
       <Route path="/vendor/onboarding-pending" element={<OnboardingPending />} />
+      <Route path="/vendor/rejected" element={<RejectedScreen />} />
+      <Route path="/vendor/approved" element={<ApprovedScreen />} />
       <Route path="/vendor/verify-otp" element={<VendorVerifyOtpPage />} />
 
       <Route path="/vendor/doctor" element={<DoctorVendorLayout />}>
