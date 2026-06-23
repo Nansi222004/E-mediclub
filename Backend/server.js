@@ -34,17 +34,7 @@ connectDB();
 // Global Middlewares
 app.use(helmet());
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'http://127.0.0.1:5175',
-    'https://e-mediclub-vert.vercel.app',
-    'https://e-mediclub-git-main-harshita845s-projects.vercel.app',
-    /\.vercel\.app$/
-  ],
+  origin: (origin, callback) => callback(null, true),
   credentials: true,
 }));
 app.use(morgan('dev'));
