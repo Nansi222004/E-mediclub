@@ -21,8 +21,18 @@ const labBookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'completed', 'cancelled'],
-      default: 'pending'
+      enum: [
+        'pending',
+        'new_booking',
+        'confirmed',
+        'collector_assigned',
+        'sample_collected',
+        'in_progress',
+        'report_uploaded',
+        'completed',
+        'cancelled'
+      ],
+      default: 'new_booking'
     },
     reportUrl: {
       type: String
@@ -42,6 +52,65 @@ const labBookingSchema = new mongoose.Schema(
     state: {
       type: String,
       required: true
+    },
+    patientName: {
+      type: String
+    },
+    patientAge: {
+      type: Number
+    },
+    patientGender: {
+      type: String
+    },
+    patientPhone: {
+      type: String
+    },
+    timeSlot: {
+      type: String
+    },
+    paymentStatus: {
+      type: String,
+      default: 'Pending'
+    },
+    paymentMethod: {
+      type: String
+    },
+    otp: {
+      type: String
+    },
+    collectorName: {
+      type: String
+    },
+    collectorPhone: {
+      type: String
+    },
+    doctorName: {
+      type: String
+    },
+    doctorRegNo: {
+      type: String
+    },
+    hasPrescription: {
+      type: Boolean,
+      default: false
+    },
+    prescriptionFileName: {
+      type: String
+    },
+    labId: {
+      type: String
+    },
+    rating: {
+      type: Number
+    },
+    reviewText: {
+      type: String
+    },
+    reviewDate: {
+      type: String
+    },
+    reviewReply: {
+      type: String
     }
   },
   {
@@ -50,3 +119,4 @@ const labBookingSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('LabBooking', labBookingSchema);
+

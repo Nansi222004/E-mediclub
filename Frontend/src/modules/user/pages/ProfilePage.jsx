@@ -9,9 +9,10 @@ import {
 } from 'react-icons/fi';
 import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile, addSavedCard, deleteSavedCard } from '../../auth/store/authSlice';
 import { addToCart } from '../store/cartSlice';
-import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, cancelLabBooking, normalizeCity } from '../store/productSlice';
+import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, cancelLabBooking, syncLabBookings, normalizeCity } from '../store/productSlice';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
+import apiClient from '../../../shared/services/apiClient';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -139,6 +140,23 @@ export default function ProfilePage() {
   React.useEffect(() => {
     localStorage.setItem('em_refunds_v2', JSON.stringify(refunds));
   }, [refunds]);
+
+  React.useEffect(() => {
+    if (activeTab === 'labs' && labBookings && labBookings.length > 0) {
+      const syncBookings = async () => {
+        try {
+          const ids = labBookings.map(b => b.id).join(',');
+          const response = await apiClient.get(`/api/labs/my-bookings?ids=${ids}`);
+          if (response.data && response.data.data) {
+            dispatch(syncLabBookings(response.data.data));
+          }
+        } catch (error) {
+          console.error('Failed to sync lab bookings:', error);
+        }
+      };
+      syncBookings();
+    }
+  }, [activeTab, labBookings, dispatch]);
 
   // Customer Feedback States
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -620,94 +638,196 @@ export default function ProfilePage() {
         const upcomingLabs = filteredLabBookings.filter(isLabBookingActiveObj);
         const pastLabs = filteredLabBookings.filter(bk => !isLabBookingActiveObj(bk));
 
+        const labSteps = [
+          { label: 'Booked', status: 'new_booking' },
+          { label: 'Confirmed', status: 'confirmed' },
+          { label: 'Agent Assigned', status: 'collector_assigned' },
+          { label: 'Collected', status: 'sample_collected' },
+          { label: 'In Lab', status: 'in_progress' },
+          { label: 'Report Ready', status: 'report_uploaded' },
+          { label: 'Completed', status: 'completed' }
+        ];
+
+        const getLabStepIndex = (status) => {
+          switch (status) {
+            case 'new_booking': return 0;
+            case 'confirmed': return 1;
+            case 'collector_assigned': return 2;
+            case 'sample_collected': return 3;
+            case 'in_progress': return 4;
+            case 'report_uploaded': return 5;
+            case 'completed': return 6;
+            default: return -1;
+          }
+        };
+
+        const renderLabBookingCard = (booking) => {
+          const currentStepIndex = getLabStepIndex(booking.status);
+          const isCancelled = booking.status === 'cancelled';
+          const reportDownloadUrl = booking.reportUrl
+            ? (booking.reportUrl.startsWith('http') ? booking.reportUrl : `http://localhost:5000/${booking.reportUrl.replace(/\\/g, '/')}`)
+            : null;
+
+          return (
+            <div key={booking.id} className="bg-white p-5 border border-slate-100 rounded-3xl flex flex-col gap-4 shadow-sm text-xs relative overflow-hidden transition-all hover:shadow-md">
+              {/* Header */}
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase block tracking-wider">Booking Reference</span>
+                  <strong className="text-slate-800 text-[10px] truncate block mt-0.5">{booking.id}</strong>
+                </div>
+                <span className={`text-[8.5px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                  isCancelled ? 'bg-rose-55 text-rose-600 border-rose-100/50' :
+                  booking.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100/50' :
+                  'bg-teal/10 text-teal border-teal/20'
+                }`}>
+                  {(booking.status || 'new_booking').replace('_', ' ')}
+                </span>
+              </div>
+
+              {/* Package and Schedule */}
+              <div className="flex gap-3 items-center bg-slate-50 p-3 rounded-2xl border border-slate-150/40">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal/10 shrink-0">
+                  <img
+                    src={booking.image || 'https://images.unsplash.com/photo-1579154261294-88752594e687?auto=format&fit=crop&w=150&h=150&q=80'}
+                    alt={booking.packageName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-extrabold text-slate-750 text-xs truncate">🔬 {booking.packageName}</h4>
+                  <p className="text-[9px] text-slate-450 uppercase font-bold tracking-wide mt-0.5 truncate">
+                    {booking.date} • {booking.timeSlot}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[9px] text-slate-405 font-bold block uppercase">Price</span>
+                  <strong className="text-slate-800 font-black">₹{booking.price || booking.amountPaid || 499}</strong>
+                </div>
+              </div>
+
+              {/* Patient Details */}
+              <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600 bg-slate-50/50 p-2.5 rounded-xl border border-dashed border-slate-200/50">
+                <div>
+                  <span className="text-slate-400 font-bold block uppercase text-[8px]">Patient Name</span>
+                  <span className="font-extrabold text-slate-700">{booking.patientName || 'Self'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold block uppercase text-[8px]">Age / Gender</span>
+                  <span className="font-extrabold text-slate-700">{booking.patientAge ? `${booking.patientAge} Yrs` : 'N/A'} ({booking.patientGender || 'N/A'})</span>
+                </div>
+                {booking.doctorName && (
+                  <div className="col-span-2 mt-1 pt-1 border-t border-slate-100">
+                    <span className="text-slate-400 font-bold block uppercase text-[8px]">Prescribing Doctor</span>
+                    <span className="font-extrabold text-slate-700">🩺 {booking.doctorName}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Collector Details */}
+              {booking.collectorName && (
+                <div className="bg-teal/5 border border-teal/10 p-3 rounded-2xl flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="text-[8px] text-teal font-black uppercase tracking-wider block">Assigned Collector Agent</span>
+                    <span className="font-extrabold text-slate-800 text-[10.5px] block mt-0.5">👤 {booking.collectorName}</span>
+                    <a href={`tel:${booking.collectorPhone}`} className="text-[9px] text-teal font-extrabold hover:underline block mt-0.5">📞 {booking.collectorPhone}</a>
+                  </div>
+                  <span className="text-[9px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-black uppercase border border-emerald-100/50 shrink-0">Dispatched</span>
+                </div>
+              )}
+
+              {/* OTP Box */}
+              {booking.otp && !['sample_collected', 'in_progress', 'report_uploaded', 'completed', 'cancelled'].includes(booking.status) && (
+                <div className="bg-amber-50 border border-amber-200/50 p-3 rounded-2xl flex justify-between items-center gap-3">
+                  <div>
+                    <span className="text-[8.5px] text-amber-600 font-black uppercase tracking-wider block">Collection verification OTP</span>
+                    <p className="text-[9px] text-slate-450 font-semibold mt-0.5">Provide this code to the agent during sample collection.</p>
+                  </div>
+                  <span className="bg-white border border-amber-300 text-amber-600 px-3 py-1 rounded-xl font-black text-sm tracking-wider shadow-sm select-all">
+                    {booking.otp}
+                  </span>
+                </div>
+              )}
+
+              {/* Timeline Stepper */}
+              {!isCancelled && currentStepIndex !== -1 && (
+                <div className="flex justify-between items-center gap-1 px-1 pt-2 border-t border-slate-50 mt-1 select-none">
+                  {labSteps.map((step, idx) => {
+                    const isDone = idx <= currentStepIndex;
+                    return (
+                      <div key={idx} className="flex flex-col items-center gap-1 flex-1 relative">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-black transition-all ${
+                          isDone ? 'bg-teal text-white shadow-sm' : 'bg-slate-100 text-slate-400'
+                        }`}>
+                          {isDone ? '✓' : idx + 1}
+                        </div>
+                        <span className={`text-[6.5px] font-extrabold tracking-tight text-center leading-tight hidden xs:block ${
+                          isDone ? 'text-slate-700' : 'text-slate-400'
+                        }`}>
+                          {step.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Footer actions */}
+              <div className="flex justify-between items-center border-t border-slate-50 pt-2.5 mt-1">
+                {reportDownloadUrl ? (
+                  <a
+                    href={reportDownloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg shadow-sm border-0 cursor-pointer transition-all decoration-transparent"
+                  >
+                    <FiDownload className="text-xs" /> Download Report
+                  </a>
+                ) : (
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                    {isCancelled ? '❌ Booking Cancelled' : '⏳ Waiting for laboratory report'}
+                  </span>
+                )}
+
+                {booking.status === 'completed' && (
+                  booking.isRated ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-500 text-xs font-bold flex items-center gap-0.5">
+                        {"★".repeat(booking.rating)}{"☆".repeat(5 - booking.rating)}
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenFeedback('lab', booking.id, booking.packageName)}
+                      className="px-3 py-1.5 bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-600 text-[10px] font-black uppercase tracking-wider rounded-xl border border-amber-200/50 cursor-pointer transition-all shadow-sm outline-none"
+                    >
+                      Rate Visit
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          );
+        };
+
         return (
           <div className="flex flex-col gap-5">
             {/* Upcoming Diagnostic Bookings */}
             {upcomingLabs.length > 0 && (
               <div className="flex flex-col gap-2.5">
-                <h5 className="text-[10px] text-teal font-black uppercase tracking-wider pl-1">Upcoming Collections</h5>
+                <h5 className="text-[10px] text-teal font-black uppercase tracking-wider pl-1">Active Diagnostic Bookings</h5>
                 <div className="flex flex-col gap-3">
-                  {upcomingLabs.map((booking) => (
-                    <div key={booking.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex justify-between items-center text-xs shadow-sm gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal/10 shrink-0">
-                          <img
-                            src={booking.image || 'https://images.unsplash.com/photo-1579154261294-88752594e687?auto=format&fit=crop&w=150&h=150&q=80'}
-                            alt={booking.packageName}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-extrabold text-slate-750 truncate">🔬 {booking.packageName}</h4>
-                          <p className="text-[9px] text-slate-405 uppercase font-bold tracking-wide mt-0.5 truncate">{booking.date} • {booking.timeSlot}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] text-teal bg-teal-light/50 border border-teal/10 px-2.5 py-0.5 rounded-full uppercase font-black">{booking.status}</span>
-                        <button 
-                          onClick={() => navigate('/lab-tests')} 
-                          className="px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer shadow-sm outline-none"
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {upcomingLabs.map(renderLabBookingCard)}
                 </div>
               </div>
             )}
 
             {/* Past Diagnostic Bookings */}
             <div className="flex flex-col gap-2.5">
-              <h5 className="text-[10px] text-slate-400 font-black uppercase tracking-wider pl-1">Past Collections History</h5>
+              <h5 className="text-[10px] text-slate-400 font-black uppercase tracking-wider pl-1">Past Collections & Completed Reports</h5>
               {pastLabs.length > 0 ? (
                 <div className="flex flex-col gap-3">
-                  {pastLabs.map((booking) => (
-                    <div key={booking.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex flex-col gap-3 text-xs shadow-sm">
-                      <div className="flex justify-between items-center gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal/10 shrink-0">
-                            <img
-                              src={booking.image || 'https://images.unsplash.com/photo-1579154261294-88752594e687?auto=format&fit=crop&w=150&h=150&q=80'}
-                              alt={booking.packageName}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="font-extrabold text-slate-750 truncate">🔬 {booking.packageName}</h4>
-                            <p className="text-[9px] text-slate-405 uppercase font-bold tracking-wide mt-0.5 truncate">{booking.date} • {booking.timeSlot}</p>
-                          </div>
-                        </div>
-                        <span className="text-[9px] text-slate-405 bg-slate-100 border border-slate-200/50 px-2.5 py-0.5 rounded-full uppercase font-black shrink-0">Completed</span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center border-t border-slate-50 pt-2.5 mt-1 select-none">
-                        {booking.isRated ? (
-                          <div className="flex flex-col gap-1 w-full">
-                            <div className="flex items-center gap-1">
-                              <span className="text-amber-500 text-sm font-bold flex items-center gap-0.5">
-                                {"★".repeat(booking.rating)}{"☆".repeat(5 - booking.rating)}
-                              </span>
-                              <span className="text-[9.5px] text-slate-500 font-extrabold uppercase ml-1">({booking.rating}.0 Rated)</span>
-                            </div>
-                            {booking.feedback && (
-                              <p className="text-[10px] text-slate-450 italic font-semibold">"{booking.feedback}"</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex justify-between items-center w-full">
-                            <span className="text-[9.5px] text-slate-400 font-bold uppercase">How was your service?</span>
-                            <button
-                              onClick={() => handleOpenFeedback('lab', booking.id, booking.packageName)}
-                              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-600 text-[10px] font-black uppercase tracking-wider rounded-xl border border-amber-200/50 cursor-pointer transition-all shadow-sm outline-none"
-                            >
-                              Rate Visit
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  {pastLabs.map(renderLabBookingCard)}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 font-bold py-2 text-center uppercase tracking-wide">No past pathology tests in history.</p>

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-const logoEmblem = '/assets/logo_emblem.png';
+const logoEmblem = '/assets/logo.png';
 
 /**
  * E Mediclub Authentic Logo Component

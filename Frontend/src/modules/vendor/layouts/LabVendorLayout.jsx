@@ -36,6 +36,15 @@ export default function LabVendorLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    const activeItem = sidebarItems.find(item => 
+      item.subItems && item.subItems.some(sub => location.pathname.startsWith(sub.path))
+    );
+    if (activeItem) {
+      setExpandedMenu(activeItem.name);
+    }
+  }, [location.pathname]);
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -51,21 +60,58 @@ export default function LabVendorLayout() {
     { 
       name: 'Test Orders', icon: FiFileText,
       subItems: [
-        { name: 'Pending', path: '/vendor/lab/orders/pending' },
+        { name: 'New Bookings', path: '/vendor/lab/orders/new' },
+        { name: 'Confirmed', path: '/vendor/lab/orders/confirmed' },
+        { name: 'Collector Assigned', path: '/vendor/lab/orders/assigned' },
+        { name: 'Sample Collected', path: '/vendor/lab/orders/collected' },
         { name: 'In Progress', path: '/vendor/lab/orders/progress' },
+        { name: 'Report Uploaded', path: '/vendor/lab/orders/uploaded' },
         { name: 'Completed', path: '/vendor/lab/orders/completed' },
+        { name: 'Cancelled', path: '/vendor/lab/orders/cancelled' },
       ]
     },
-    { name: 'Sample Collection', path: '/vendor/lab/collections', icon: FiActivity },
+    { 
+      name: 'Home Collection', icon: FiHome,
+      subItems: [
+        { name: 'New Requests', path: '/vendor/lab/collections/new' },
+        { name: 'Assigned Collections', path: '/vendor/lab/collections/assigned' },
+        { name: 'Collection Agents', path: '/vendor/lab/collections/agents' },
+      ]
+    },
+    { 
+      name: 'Tests Management', icon: FiActivity,
+      subItems: [
+        { name: 'All Tests', path: '/vendor/lab/tests/all' },
+        { name: 'Test Categories', path: '/vendor/lab/tests/categories' },
+        { name: 'Pricing', path: '/vendor/lab/tests/pricing' },
+      ]
+    },
+    { 
+      name: 'Test Packages', icon: FiLayers,
+      subItems: [
+        { name: 'All Packages', path: '/vendor/lab/packages/all' },
+        { name: 'Add Package', path: '/vendor/lab/packages/add' },
+        { name: 'Offers & Discounts', path: '/vendor/lab/packages/offers' },
+      ]
+    },
     { name: 'Upload Reports', path: '/vendor/lab/reports/upload', icon: FiUpload },
     { name: 'Report History', path: '/vendor/lab/reports/history', icon: FiClock },
-    { name: 'Test Packages', path: '/vendor/lab/packages', icon: FiLayers },
-    { name: 'Home Collection Requests', path: '/vendor/lab/home-requests', icon: FiHome },
     { name: 'Customers', path: '/vendor/lab/customers', icon: FiUsers },
+    { name: 'Reviews & Ratings', path: '/vendor/lab/reviews', icon: FiUsers },
     { name: 'Revenue', path: '/vendor/lab/revenue', icon: FiDollarSign },
     { name: 'Analytics', path: '/vendor/lab/analytics', icon: FiPieChart },
     { name: 'Notifications', path: '/vendor/lab/notifications', icon: FiBell },
-    { name: 'Profile', path: '/vendor/lab/profile', icon: FiUser },
+    { 
+      name: 'Profile', icon: FiUser,
+      subItems: [
+        { name: 'Basic Information', path: '/vendor/lab/profile/basic' },
+        { name: 'Lab Gallery', path: '/vendor/lab/profile/gallery' },
+        { name: 'Promotional Banner', path: '/vendor/lab/profile/banner' },
+        { name: 'Facilities & Amenities', path: '/vendor/lab/profile/facilities' },
+        { name: 'Accreditation', path: '/vendor/lab/profile/accreditation' },
+        { name: 'User View Preview', path: '/vendor/lab/profile/preview' },
+      ]
+    },
     { name: 'Settings', path: '/vendor/lab/settings', icon: FiSettings },
   ];
 
@@ -338,11 +384,12 @@ export default function LabVendorLayout() {
       {/* 4. Bottom mobile nav */}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around z-30 md:hidden shadow-app-bar px-2">
         {sidebarItems.map((item) => {
-          const Icon = item.icon;
+          const Icon = item.icon || FiGrid;
+          const targetPath = item.path || (item.subItems && item.subItems[0].path) || '/vendor/lab/dashboard';
           return (
             <NavLink 
-              key={item.path}
-              to={item.path}
+              key={item.name}
+              to={targetPath}
               className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
             >
               <Icon className="text-xl" />

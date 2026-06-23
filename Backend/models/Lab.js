@@ -49,14 +49,13 @@ const labSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    gallery: [{
-      type: String
-    }],
+    gallery: [mongoose.Schema.Types.Mixed],
     reviews: [{
       patientName: String,
       rating: Number,
       reviewText: String,
-      date: String
+      date: String,
+      replyText: String
     }],
     city: {
       type: String,
@@ -131,6 +130,51 @@ const labSchema = new mongoose.Schema(
     governmentIdUrl: {
       type: String
     },
+    promotionalBanner: {
+      image: String,
+      title: String,
+      subtitle: String,
+      offerText: String,
+      ctaButton: String
+    },
+    facilitiesList: {
+      nablCertified: { type: Boolean, default: false },
+      homeCollection: { type: Boolean, default: false },
+      digitalReports: { type: Boolean, default: false },
+      sameDayReports: { type: Boolean, default: false },
+      parkingAvailable: { type: Boolean, default: false },
+      wheelchairAccess: { type: Boolean, default: false },
+      emergencyTesting: { type: Boolean, default: false },
+      onlinePayments: { type: Boolean, default: false }
+    },
+    accreditations: {
+      nablCertificate: String,
+      isoCertificate: String,
+      gstCertificate: String,
+      registrationCertificate: String,
+      labLicense: String
+    },
+    testsList: [{
+      id: String,
+      name: String,
+      category: String,
+      price: Number,
+      turnaround: String,
+      code: String,
+      isActive: { type: Boolean, default: true }
+    }],
+    packagesList: [{
+      id: String,
+      name: String,
+      description: String,
+      price: Number,
+      discountPrice: Number,
+      discountPercent: Number,
+      turnaround: String,
+      fastingRequired: String,
+      tests: [String],
+      isActive: { type: Boolean, default: true }
+    }],
     verificationStatus: {
       type: String,
       enum: ['Pending', 'Approved', 'Rejected'],

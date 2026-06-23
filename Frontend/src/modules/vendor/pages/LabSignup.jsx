@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { FiArrowLeft, FiArrowRight, FiCheck, FiUploadCloud, FiFileText, FiImage, FiUser } from 'react-icons/fi';
 import Logo from '../../../shared/components/Logo';
+import apiClient from '../../../shared/services/apiClient';
+import { vendorLoginSuccess } from '../../auth/vendor/store/vendorAuthSlice';
 
 export default function LabSignup() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [formData, setFormData] = useState({
     fullName: '', email: '', phone: '', password: '', confirmPassword: '',
@@ -18,12 +23,55 @@ export default function LabSignup() {
   const handleNext = () => setStep(prev => Math.min(prev + 1, 4));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
     setIsLoading(true);
-    setTimeout(() => {
-      navigate('/vendor/onboarding-pending', { state: { type: 'lab' } });
-    }, 2000);
+    setError("");
+    try {
+      const response = await apiClient.post('/api/auth/register', {
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: 'lab_vendor'
+      });
+      const { user, accessToken } = response.data.data;
+      
+      localStorage.setItem('labToken', accessToken);
+      localStorage.setItem('labProfile', JSON.stringify(user));
+      dispatch(vendorLoginSuccess({ user, token: accessToken }));
+
+      // Save lab details to profile
+      await apiClient.put('/api/labs/vendor/profile', {
+        name: formData.labName,
+        city: formData.city,
+        pincode: formData.pincode,
+        state: formData.state,
+        address: formData.address,
+        mobileNumber: formData.phone,
+        emailAddress: formData.email,
+        ownerName: formData.fullName,
+        facilitiesList: {
+          nablCertified: formData.nablNumber ? true : false,
+          homeCollection: formData.homeCollection,
+          digitalReports: true,
+          sameDayReports: true,
+          parkingAvailable: false,
+          wheelchairAccess: false,
+          emergencyTesting: false,
+          onlinePayments: true
+        }
+      });
+
+      navigate('/vendor/lab/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Registration failed");
+      setIsLoading(false);
+    }
   };
 
   const handleFileChange = (field, e) => {
@@ -31,7 +79,6 @@ export default function LabSignup() {
       setFormData({ ...formData, [field]: e.target.files[0] });
     }
   };
-
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans overflow-hidden relative">
@@ -92,6 +139,12 @@ export default function LabSignup() {
                 <div key={i} className={`h-full flex-1 transition-all duration-500 ${step >= i ? 'bg-teal' : 'bg-transparent'}`} />
               ))}
             </div>
+
+            {error && (
+              <div className="mt-4 p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs font-bold">
+                ⚠️ {error}
+              </div>
+            )}
           </div>
 
           <form onSubmit={step === 4 ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }} className="flex-1 flex flex-col">
@@ -248,11 +301,11 @@ export default function LabSignup() {
             {/* Bottom Actions */}
             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between gap-4 pb-8">
               {step > 1 ? (
-                <button type="button" onClick={handleBack} className="px-6 py-3.5 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-2">
+                <button type="button" onClick={handleBack} className="px-6 py-3.5 bg-white border border-slate-200 text-slate-650 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-2">
                   <FiArrowLeft /> Back
                 </button>
               ) : (
-                <Link to="/vendor/lab/login" className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                <Link to="/vendor/lab/login" className="text-sm font-bold text-slate-505 hover:text-slate-800 transition-colors">
                   Cancel
                 </Link>
               )}

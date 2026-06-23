@@ -92,9 +92,15 @@ const VendorProfile = lazy(() => import('../modules/vendor/pages/VendorProfile')
 // Lab Vendor Page Modules
 const LabVendorLayout = lazy(() => import('../modules/vendor/layouts/LabVendorLayout'));
 const LabVendorDashboard = lazy(() => import('../modules/vendor/pages/LabVendorDashboard'));
-const LabVendorTests = lazy(() => import('../modules/vendor/pages/LabVendorTests'));
-const LabVendorBookings = lazy(() => import('../modules/vendor/pages/LabVendorBookings'));
 const LabVendorProfile = lazy(() => import('../modules/vendor/pages/LabVendorProfile'));
+const TestOrders = lazy(() => import('../modules/vendor/pages/TestOrders'));
+const HomeCollection = lazy(() => import('../modules/vendor/pages/HomeCollection'));
+const TestsManagement = lazy(() => import('../modules/vendor/pages/TestsManagement'));
+const TestPackages = lazy(() => import('../modules/vendor/pages/TestPackages'));
+const UploadReportsPage = lazy(() => import('../modules/vendor/pages/UploadReportsPage'));
+const ReportHistory = lazy(() => import('../modules/vendor/pages/ReportHistory'));
+const Customers = lazy(() => import('../modules/vendor/pages/Customers'));
+const ReviewsRatings = lazy(() => import('../modules/vendor/pages/ReviewsRatings'));
 
 // Doctor Vendor Page Modules
 const DoctorVendorLayout = lazy(() => import('../modules/vendor/layouts/DoctorVendorLayout'));
@@ -230,14 +236,20 @@ export default function AppRoutes() {
       <Route path="/vendor/lab" element={<LabVendorLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<LabVendorDashboard />} />
-        <Route path="tests" element={<LabVendorTests />} />
-        <Route path="tests/add" element={<LabVendorTests />} />
-        <Route path="bookings" element={<LabVendorBookings />} />
-        <Route path="bookings/home-collections" element={<LabVendorBookings />} />
-        <Route path="reports" element={<LabVendorBookings />} />
-        <Route path="earnings" element={<VendorEarnings />} />
-        <Route path="profile" element={<LabVendorProfile />} />
-        <Route path="settings" element={<LabVendorProfile />} />
+        <Route path="orders/:status" element={<TestOrders />} />
+        <Route path="collections/:tab" element={<HomeCollection />} />
+        <Route path="tests/:tab" element={<TestsManagement />} />
+        <Route path="packages/:tab" element={<TestPackages />} />
+        <Route path="reports/upload" element={<UploadReportsPage />} />
+        <Route path="reports/history" element={<ReportHistory />} />
+        <Route path="customers" element={<Customers />} />
+        <Route path="reviews" element={<ReviewsRatings />} />
+        <Route path="revenue" element={<VendorEarnings />} />
+        <Route path="analytics" element={<VendorEarnings />} />
+        <Route path="notifications" element={<VendorNotifications />} />
+        <Route path="profile/:tab" element={<LabVendorProfile />} />
+        <Route path="profile" element={<Navigate to="profile/basic" replace />} />
+        <Route path="settings" element={<LabVendorProfile defaultTab="settings" />} />
       </Route>
 
       {/* 6. Doctor Vendor Auth & Routes */}

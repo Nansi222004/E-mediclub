@@ -3057,6 +3057,21 @@ const productSlice = createSlice({
       state.labBookings.unshift(action.payload);
       localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
     },
+    syncLabBookings: (state, action) => {
+      const updatedBookings = action.payload || [];
+      updatedBookings.forEach(updated => {
+        const index = state.labBookings.findIndex(b => b.id === updated.id);
+        if (index !== -1) {
+          state.labBookings[index] = {
+            ...state.labBookings[index],
+            ...updated
+          };
+        } else {
+          state.labBookings.push(updated);
+        }
+      });
+      localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
+    },
     completeDoctorAppointment: (state, action) => {
       const apt = state.appointments.find(a => a.id === action.payload);
       if (apt) {
@@ -3356,6 +3371,7 @@ export const {
   placeOrder,
   bookDoctorAppointment,
   bookLabPackage,
+  syncLabBookings,
   completeDoctorAppointment,
   completeLabBooking,
   cancelDoctorAppointment,

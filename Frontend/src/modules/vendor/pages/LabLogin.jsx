@@ -1,25 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { FiEye, FiEyeOff, FiMail, FiLock } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import Logo from '../../../shared/components/Logo';
+import apiClient from '../../../shared/services/apiClient';
+import { vendorLoginSuccess } from '../../auth/vendor/store/vendorAuthSlice';
 
 export default function LabLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      localStorage.setItem('labToken', 'dummy-token');
-      localStorage.setItem('labProfile', JSON.stringify({ name: 'Lab User' }));
+    setErrorMsg("");
+    try {
+      const response = await apiClient.post('/api/auth/login', {
+        emailOrPhone: formData.email,
+        password: formData.password
+      });
+      const { user, accessToken } = response.data.data;
+      if (user.role !== 'lab_vendor') {
+        setErrorMsg("Access denied. This portal is for Lab Vendors only.");
+        setIsLoading(false);
+        return;
+      }
+      localStorage.setItem('labToken', accessToken);
+      localStorage.setItem('labProfile', JSON.stringify(user));
+      dispatch(vendorLoginSuccess({ user, token: accessToken }));
       navigate('/vendor/lab/dashboard');
-    }, 1500);
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.message || "Invalid login credentials");
+      setIsLoading(false);
+    }
   };
-
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans overflow-hidden relative">
@@ -69,6 +88,12 @@ export default function LabLogin() {
           <div className="bg-white border border-slate-100 rounded-[32px] p-6 shadow-premium relative">
             <h3 className="text-2xl font-black text-slate-800 tracking-tight">Welcome back</h3>
             <p className="text-sm text-slate-500 font-medium mt-1 mb-5">Sign in to manage your lab</p>
+
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-rose-550/10 border border-rose-500/10 text-rose-600 rounded-xl text-xs font-bold">
+                ⚠️ {errorMsg}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
               <div className="flex flex-col gap-1.5">

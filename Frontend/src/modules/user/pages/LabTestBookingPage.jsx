@@ -235,12 +235,29 @@ export default function LabTestBookingPage() {
       formData.append('city', bookingCity);
       formData.append('pincode', bookingPincode);
       formData.append('state', bookingState);
+      formData.append('patientName', patientName.trim());
+      formData.append('patientAge', patientAge);
+      formData.append('patientGender', patientGender);
+      formData.append('patientPhone', patientPhone.trim());
+      formData.append('timeSlot', preferredTimeSlot);
+      formData.append('paymentStatus', 'Paid');
+      formData.append('paymentMethod', paymentMethod);
+      formData.append('doctorName', doctorName.trim() || 'Self / General Wellness');
+      formData.append('doctorRegNo', doctorRegNo.trim() || 'N/A');
+      formData.append('labId', test.labId || 'LAB-101');
 
       if (prescriptionFile) {
         formData.append('file', prescriptionFile);
       }
 
-      // We still update Redux for optimistic local state or other components relying on it
+      const response = await apiClient.post('/api/labs/book', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const savedBooking = response.data.data;
+
       const newBooking = {
         id: bookingRef,
         testId: test.id,
@@ -256,24 +273,15 @@ export default function LabTestBookingPage() {
         doctorRegNo: doctorRegNo.trim() || 'N/A',
         hasPrescription: !!prescriptionFile,
         prescriptionFileName: prescriptionFile ? prescriptionFile.name : null,
-        status: 'Scheduled',
+        status: savedBooking.status || 'new_booking',
+        otp: savedBooking.otp,
         paymentMethod: paymentMethod,
         paymentStatus: 'Paid',
         amountPaid: test.discountPrice || test.price,
         city: bookingCity,
-        pincode: bookingPincode
+        pincode: bookingPincode,
+        reportUrl: savedBooking.reportUrl || null
       };
-
-      const response = await apiClient.post('/api/labs/book', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      // If the backend returns a reportUrl, we can add it to the Redux state
-      if (response.data?.data?.reportUrl) {
-        newBooking.reportUrl = response.data.data.reportUrl;
-      }
 
       dispatch(bookLabPackage(newBooking));
       setIsPaying(false);
