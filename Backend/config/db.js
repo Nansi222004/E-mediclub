@@ -1,8 +1,26 @@
 const mongoose = require('mongoose');
 
-const connectDB = async () => {
+// Helper to mask password in MongoDB URI for safe logging
+const maskMongoUri = (uri) => {
+  if (!uri) return 'Not set';
   try {
-    const dbUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/e-mediclub';
+    return uri.replace(/(mongodb(?:\+srv)?:\/\/[^:]+:)([^@]+)(@.+)/, '$1******$3');
+  } catch (e) {
+    return 'Masking failed';
+  }
+};
+
+const connectDB = async () => {
+  const dbUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+  if (!dbUri) {
+    console.error("CRITICAL ERROR: MongoDB connection URI is missing! Please configure MONGODB_URI or MONGO_URI in your environment variables.");
+    process.exit(1);
+  }
+
+  console.log(`Attempting to connect to MongoDB using URI: ${maskMongoUri(dbUri)}`);
+
+  try {
     const conn = await mongoose.connect(dbUri);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     console.log(`Database: ${conn.connection.name}`);
