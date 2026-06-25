@@ -1,30 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { FiSmartphone } from 'react-icons/fi';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema } from '../../schemas/auth.schema';
 
 export default function LoginForm({ onSendOtp, loading }) {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [error, setError] = useState('');
-
-  const handleChange = (e) => {
-    const val = e.target.value.replace(/\D/g, ''); // Allow only digits
-    setPhoneNumber(val);
-    
-    // Live validation
-    if (val && val.length < 10) {
-      setError('Mobile number must be 10 digits');
-    } else {
-      setError('');
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(loginSchema),
+    mode: 'onChange',
+    defaultValues: {
+      phone: ''
     }
-  };
+  });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (phoneNumber.length < 10) {
-      setError('Please enter a valid 10-digit mobile number');
-      return;
-    }
-    onSendOtp(phoneNumber);
+  const onValidSubmit = (data) => {
+    onSendOtp(data.phone);
   };
 
   return (
@@ -33,7 +24,7 @@ export default function LoginForm({ onSendOtp, loading }) {
       initial={{ opacity: 0, x: -15 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 15 }}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onValidSubmit)}
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
@@ -51,13 +42,16 @@ export default function LoginForm({ onSendOtp, loading }) {
             required
             maxLength={10}
             placeholder="Enter 10-digit number"
-            value={phoneNumber}
-            onChange={handleChange}
-            className={`w-full pl-22 pr-4 py-3 bg-slate-50 border ${error ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal-500'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium font-mono`}
+            {...register('phone', {
+              onChange: (e) => {
+                e.target.value = e.target.value.replace(/\D/g, '');
+              }
+            })}
+            className={`w-full pl-22 pr-4 py-3 bg-slate-50 border ${errors.phone ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal-500'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium font-mono`}
           />
         </div>
-        {error && (
-          <p className="text-coral text-xs font-bold leading-tight px-1 mt-1">{error}</p>
+        {errors.phone && (
+          <p className="text-coral text-xs font-bold leading-tight px-1 mt-1">{errors.phone.message}</p>
         )}
       </div>
 

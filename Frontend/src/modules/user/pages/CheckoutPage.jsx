@@ -10,6 +10,9 @@ import { FiMapPin, FiCreditCard, FiSmartphone, FiCheckCircle, FiShield, FiPlus, 
 import { clearCart } from '../store/cartSlice';
 import { placeOrder, normalizeCity } from '../store/productSlice';
 import { addAddress, addSavedCard } from '../../auth/store/authSlice';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { addressSchema } from '../schemas/checkout.schema';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -101,37 +104,40 @@ export default function CheckoutPage() {
 
   // Add new address state
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [newAddrName, setNewAddrName] = useState('');
-  const [newAddrPhone, setNewAddrPhone] = useState('');
-  const [newAddrPin, setNewAddrPin] = useState('');
-  const [newAddrLine, setNewAddrLine] = useState('');
-  const [newAddrCity, setNewAddrCity] = useState('');
-  const [newAddrState, setNewAddrState] = useState('');
   const [newAddrType, setNewAddrType] = useState('Home');
+
+  const { register: registerAddress, handleSubmit: handleAddressSubmit, reset: resetAddress, formState: { errors: addressErrors } } = useForm({
+    resolver: zodResolver(addressSchema),
+    mode: 'onChange',
+    defaultValues: {
+      fullName: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      phone: '',
+      country: 'India'
+    }
+  });
 
   const steps = ['Verify Address', 'Secure Payment'];
 
-  const handleAddNewAddress = (e) => {
-    e.preventDefault();
+  const onAddressSubmit = (data) => {
     const newAddressObj = {
-      name: newAddrName,
-      phone: newAddrPhone,
-      pincode: newAddrPin,
-      addressLine: newAddrLine,
-      city: newAddrCity,
-      state: newAddrState,
+      name: data.fullName,
+      phone: data.phone,
+      pincode: data.zipCode,
+      addressLine: `${data.addressLine1}${data.addressLine2 ? ', ' + data.addressLine2 : ''}`,
+      city: data.city,
+      state: data.state,
       type: newAddrType,
-      isDefault: addresses.length === 0
+      isDefault: addresses.length === 0,
+      country: data.country
     };
     dispatch(addAddress(newAddressObj));
     setShowAddressForm(false);
-    // Reset inputs
-    setNewAddrName('');
-    setNewAddrPhone('');
-    setNewAddrPin('');
-    setNewAddrLine('');
-    setNewAddrCity('');
-    setNewAddrState('');
+    resetAddress();
     setNewAddrType('Home');
   };
 
@@ -248,59 +254,67 @@ export default function CheckoutPage() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  onSubmit={handleAddNewAddress}
+                  onSubmit={handleAddressSubmit(onAddressSubmit)}
                   className="bg-white p-6 rounded-[24px] border border-slate-200/60 shadow-sm flex flex-col gap-4"
                 >
                   <div className="grid grid-cols-2 gap-4">
                     <TextField
-                      label="Receiver Name"
+                      label="Receiver Name *"
                       variant="outlined"
                       size="small"
-                      required
-                      value={newAddrName}
-                      onChange={(e) => setNewAddrName(e.target.value)}
+                      {...registerAddress('fullName')}
+                      error={!!addressErrors.fullName}
+                      helperText={addressErrors.fullName?.message}
                     />
                     <TextField
-                      label="Receiver Phone"
+                      label="Receiver Phone *"
                       variant="outlined"
                       size="small"
-                      required
-                      value={newAddrPhone}
-                      onChange={(e) => setNewAddrPhone(e.target.value)}
+                      {...registerAddress('phone')}
+                      error={!!addressErrors.phone}
+                      helperText={addressErrors.phone?.message}
                     />
                   </div>
                   <TextField
-                    label="Pincode"
+                    label="Pincode *"
                     variant="outlined"
                     size="small"
-                    required
-                    value={newAddrPin}
-                    onChange={(e) => setNewAddrPin(e.target.value)}
+                    {...registerAddress('zipCode')}
+                    error={!!addressErrors.zipCode}
+                    helperText={addressErrors.zipCode?.message}
                   />
                   <TextField
-                    label="Address Line (Flat, Street name)"
+                    label="Address Line 1 (Flat, Street name) *"
                     variant="outlined"
                     size="small"
-                    required
-                    value={newAddrLine}
-                    onChange={(e) => setNewAddrLine(e.target.value)}
+                    {...registerAddress('addressLine1')}
+                    error={!!addressErrors.addressLine1}
+                    helperText={addressErrors.addressLine1?.message}
+                  />
+                  <TextField
+                    label="Address Line 2 (Optional)"
+                    variant="outlined"
+                    size="small"
+                    {...registerAddress('addressLine2')}
+                    error={!!addressErrors.addressLine2}
+                    helperText={addressErrors.addressLine2?.message}
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <TextField
-                      label="City"
+                      label="City *"
                       variant="outlined"
                       size="small"
-                      required
-                      value={newAddrCity}
-                      onChange={(e) => setNewAddrCity(e.target.value)}
+                      {...registerAddress('city')}
+                      error={!!addressErrors.city}
+                      helperText={addressErrors.city?.message}
                     />
                     <TextField
-                      label="State"
+                      label="State *"
                       variant="outlined"
                       size="small"
-                      required
-                      value={newAddrState}
-                      onChange={(e) => setNewAddrState(e.target.value)}
+                      {...registerAddress('state')}
+                      error={!!addressErrors.state}
+                      helperText={addressErrors.state?.message}
                     />
                   </div>
                   <div className="flex flex-col gap-2">

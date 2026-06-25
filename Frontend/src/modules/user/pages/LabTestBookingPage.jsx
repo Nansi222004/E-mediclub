@@ -8,6 +8,9 @@ import {
 } from 'react-icons/fi';
 import { bookLabPackage, normalizeCity } from '../store/productSlice';
 import apiClient from "../../../shared/services/apiClient";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { labBookingPatientSchema } from '../schemas/lab.schema';
 
 export default function LabTestBookingPage() {
   const { testId } = useParams();
@@ -44,11 +47,26 @@ export default function LabTestBookingPage() {
   // 6: Success Animation / Summary
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Form states
-  const [patientName, setPatientName] = useState('');
-  const [patientAge, setPatientAge] = useState('');
-  const [patientGender, setPatientGender] = useState('Male');
-  const [patientPhone, setPatientPhone] = useState('');
+  // Form setup using React Hook Form
+  const { register, trigger, watch, formState: { errors } } = useForm({
+    resolver: zodResolver(labBookingPatientSchema),
+    mode: 'onChange',
+    defaultValues: {
+      patientName: '',
+      patientAge: '',
+      patientGender: 'Male',
+      patientPhone: '',
+      doctorName: '',
+      doctorRegNo: ''
+    }
+  });
+
+  const patientName = watch('patientName');
+  const patientAge = watch('patientAge');
+  const patientGender = watch('patientGender');
+  const patientPhone = watch('patientPhone');
+  const doctorName = watch('doctorName');
+  const doctorRegNo = watch('doctorRegNo');
 
   // Address selection states
   const [selectedAddressId, setSelectedAddressId] = useState('');
@@ -67,8 +85,6 @@ export default function LabTestBookingPage() {
   const [preferredTimeSlot, setPreferredTimeSlot] = useState('');
 
   // Referring Doctor states
-  const [doctorName, setDoctorName] = useState('');
-  const [doctorRegNo, setDoctorRegNo] = useState('');
   const [prescriptionFile, setPrescriptionFile] = useState(null);
 
   // Dummy Payment Gateway states
@@ -158,19 +174,11 @@ export default function LabTestBookingPage() {
       setCurrentStep(2);
     }
     else if (currentStep === 2) {
-      if (!patientName.trim()) {
-        setValidationError('Patient Full Name is required.');
-        return;
-      }
-      if (!patientAge || isNaN(patientAge) || parseInt(patientAge) <= 0) {
-        setValidationError('Please enter a valid Patient Age.');
-        return;
-      }
-      if (!patientPhone.trim()) {
-        setValidationError('Phone Number is required.');
-        return;
-      }
-      setCurrentStep(3);
+      trigger(['patientName', 'patientAge', 'patientGender', 'patientPhone', 'doctorName', 'doctorRegNo']).then(isValid => {
+        if (isValid) {
+          setCurrentStep(3);
+        }
+      });
     }
     else if (currentStep === 3) {
       if (test.homeCollection) {
@@ -414,49 +422,46 @@ export default function LabTestBookingPage() {
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Full Name *</label>
                 <input
                   type="text"
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
+                  {...register('patientName')}
                   placeholder="e.g. Aditi Sharma"
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400"
-                  required
+                  className={`px-4 py-3 rounded-xl border bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 outline-none text-xs font-bold transition-all placeholder:text-slate-400 ${errors.patientName ? 'border-coral focus:ring-coral-light focus:border-coral' : 'border-slate-100 focus:ring-teal/30 focus:border-teal/30'}`}
                 />
+                {errors.patientName && <p className="text-coral text-[10px] font-bold mt-0.5">{errors.patientName.message}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Age (Years) *</label>
                 <input
                   type="number"
-                  value={patientAge}
-                  onChange={(e) => setPatientAge(e.target.value)}
+                  {...register('patientAge')}
                   placeholder="e.g. 35"
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400"
-                  required
+                  className={`px-4 py-3 rounded-xl border bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 outline-none text-xs font-bold transition-all placeholder:text-slate-400 ${errors.patientAge ? 'border-coral focus:ring-coral-light focus:border-coral' : 'border-slate-100 focus:ring-teal/30 focus:border-teal/30'}`}
                 />
+                {errors.patientAge && <p className="text-coral text-[10px] font-bold mt-0.5">{errors.patientAge.message}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Gender *</label>
                 <select
-                  value={patientGender}
-                  onChange={(e) => setPatientGender(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer"
+                  {...register('patientGender')}
+                  className={`px-4 py-3 rounded-xl border bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 outline-none text-xs font-bold transition-all cursor-pointer ${errors.patientGender ? 'border-coral focus:ring-coral-light focus:border-coral' : 'border-slate-100 focus:ring-teal/30 focus:border-teal/30'}`}
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
                 </select>
+                {errors.patientGender && <p className="text-coral text-[10px] font-bold mt-0.5">{errors.patientGender.message}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Contact Phone *</label>
                 <input
                   type="tel"
-                  value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
+                  {...register('patientPhone')}
                   placeholder="e.g. 9876543210"
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400"
-                  required
+                  className={`px-4 py-3 rounded-xl border bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 outline-none text-xs font-bold transition-all placeholder:text-slate-400 ${errors.patientPhone ? 'border-coral focus:ring-coral-light focus:border-coral' : 'border-slate-100 focus:ring-teal/30 focus:border-teal/30'}`}
                 />
+                {errors.patientPhone && <p className="text-coral text-[10px] font-bold mt-0.5">{errors.patientPhone.message}</p>}
               </div>
             </div>
 
@@ -467,15 +472,13 @@ export default function LabTestBookingPage() {
                 <input
                   type="text"
                   placeholder="Doctor Name"
-                  value={doctorName}
-                  onChange={(e) => setDoctorName(e.target.value)}
+                  {...register('doctorName')}
                   className="px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white text-xs font-bold"
                 />
                 <input
                   type="text"
                   placeholder="Doctor Registration No."
-                  value={doctorRegNo}
-                  onChange={(e) => setDoctorRegNo(e.target.value)}
+                  {...register('doctorRegNo')}
                   className="px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white text-xs font-bold"
                 />
               </div>

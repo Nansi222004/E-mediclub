@@ -7,14 +7,16 @@ const {
   updateAddress,
   deleteAddress
 } = require('../controllers/userController');
+const validate = require('../middleware/validate');
+const { addressSchema } = require('../validations/user.validation');
 
 // All address routes are protected
 router.route('/addresses')
   .get(protect, getAddresses)
-  .post(protect, addAddress);
+  .post(protect, validate(addressSchema), addAddress);
 
 router.route('/addresses/:id')
-  .put(protect, updateAddress)
+  .put(protect, validate(addressSchema), updateAddress)
   .delete(protect, deleteAddress);
 
 module.exports = router;

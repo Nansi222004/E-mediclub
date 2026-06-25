@@ -7,6 +7,9 @@ import {
   FiFileText, FiUploadCloud, FiTrash2, FiShield, FiHeart 
 } from 'react-icons/fi';
 import { bookDoctorAppointment } from '../store/productSlice';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { doctorBookingSchema } from '../schemas/doctor.schema';
 
 export default function DoctorBookingPage() {
   const { doctorId } = useParams();
@@ -17,12 +20,24 @@ export default function DoctorBookingPage() {
   const { doctors } = useSelector(state => state.products);
   const selectedDoctor = doctors.find(doc => doc.id === doctorId);
 
-  // Form input states
-  const [patientName, setPatientName] = useState('');
-  const [patientAge, setPatientAge] = useState('');
-  const [preferredTime, setPreferredTime] = useState('');
-  const [consultationType, setConsultationType] = useState('Online Consultation'); // 'Online Consultation' or 'Offline / In-Person Consultation'
-  const [additionalNotes, setAdditionalNotes] = useState('');
+  // Form setup using React Hook Form
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(doctorBookingSchema),
+    mode: 'onChange',
+    defaultValues: {
+      patientName: '',
+      patientAge: '',
+      preferredTime: '',
+      consultationType: 'Online Consultation',
+      additionalNotes: ''
+    }
+  });
+
+  const preferredTime = watch('preferredTime');
+  const consultationType = watch('consultationType');
+  const patientName = watch('patientName');
+  const patientAge = watch('patientAge');
+
   const [prescriptionFile, setPrescriptionFile] = useState(null);
   
   // UI Flow States
@@ -105,24 +120,10 @@ export default function DoctorBookingPage() {
   };
 
   // Pre-payment validation submit
-  const handleBookingSubmit = (e) => {
-    e.preventDefault();
+  const onValidSubmit = (data) => {
     setValidationError('');
 
-    if (!patientName.trim()) {
-      setValidationError('Patient Full Name is required.');
-      return;
-    }
-    if (!patientAge || isNaN(patientAge) || parseInt(patientAge) <= 0) {
-      setValidationError('Please enter a valid Patient Age.');
-      return;
-    }
-    if (!preferredTime) {
-      setValidationError('Please select a preferred appointment time slot.');
-      return;
-    }
-
-    if (consultationType === 'Online Consultation' && paymentMethod === 'cash') {
+    if (data.consultationType === 'Online Consultation' && paymentMethod === 'cash') {
       setPaymentMethod('upi');
     }
 
@@ -157,7 +158,7 @@ export default function DoctorBookingPage() {
         status: 'Scheduled',
         patientName: patientName,
         patientAge: patientAge,
-        notes: additionalNotes,
+        notes: watch('additionalNotes'),
         hasPrescription: !!prescriptionFile,
         amountPaid: selectedDoctor.fee,
         paymentStatus: 'Paid',
@@ -456,7 +457,7 @@ export default function DoctorBookingPage() {
             )}
 
             {/* Booking parameters Form */}
-            <form onSubmit={handleBookingSubmit} className="flex flex-col gap-5">
+            <form onSubmit={handleSubmit(onValidSubmit)} className="flex flex-col gap-5">
               
               {/* Form Input: Patient Name */}
               <div className="flex flex-col gap-1.5">
@@ -469,13 +470,12 @@ export default function DoctorBookingPage() {
                   </span>
                   <input
                     type="text"
-                    required
                     placeholder="e.g. Ramesh Kumar"
-                    value={patientName}
-                    onChange={(e) => setPatientName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold outline-none focus:border-teal focus:bg-white focus:ring-4 focus:ring-teal-light transition-all placeholder:text-slate-400"
+                    {...register('patientName')}
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-2xl text-xs font-semibold outline-none focus:bg-white focus:ring-4 transition-all placeholder:text-slate-400 ${errors.patientName ? 'border-coral focus:border-coral focus:ring-coral-light' : 'border-slate-100 focus:border-teal focus:ring-teal-light'}`}
                   />
                 </div>
+                {errors.patientName && <p className="text-coral text-[10px] font-bold mt-1">{errors.patientName.message}</p>}
               </div>
 
               {/* Form Input: Patient Age */}
@@ -489,15 +489,14 @@ export default function DoctorBookingPage() {
                   </span>
                   <input
                     type="number"
-                    required
                     min="1"
                     max="120"
                     placeholder="e.g. 45"
-                    value={patientAge}
-                    onChange={(e) => setPatientAge(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold outline-none focus:border-teal focus:bg-white focus:ring-4 focus:ring-teal-light transition-all placeholder:text-slate-400"
+                    {...register('patientAge')}
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-2xl text-xs font-semibold outline-none focus:bg-white focus:ring-4 transition-all placeholder:text-slate-400 ${errors.patientAge ? 'border-coral focus:border-coral focus:ring-coral-light' : 'border-slate-100 focus:border-teal focus:ring-teal-light'}`}
                   />
                 </div>
+                {errors.patientAge && <p className="text-coral text-[10px] font-bold mt-1">{errors.patientAge.message}</p>}
               </div>
 
               {/* Form Input: Preferred Time Slot Selector */}
@@ -514,7 +513,7 @@ export default function DoctorBookingPage() {
                         key={slot}
                         type="button"
                         disabled={!available}
-                        onClick={() => setPreferredTime(slot)}
+                        onClick={() => setValue('preferredTime', slot, { shouldValidate: true })}
                         className={`py-2.5 px-1 rounded-xl text-center transition-all duration-200 border ${
                           !available 
                             ? 'bg-slate-50/50 border-slate-100/50 opacity-60 cursor-not-allowed' 
@@ -535,6 +534,7 @@ export default function DoctorBookingPage() {
                     );
                   })}
                 </div>
+                {errors.preferredTime && <p className="text-coral text-[10px] font-bold mt-1">{errors.preferredTime.message}</p>}
               </div>
 
               {/* Form Input: Consultation Type Toggle */}
@@ -545,7 +545,7 @@ export default function DoctorBookingPage() {
                 <div className="grid grid-cols-2 gap-3.5 mt-0.5">
                   <button
                     type="button"
-                    onClick={() => setConsultationType('Online Consultation')}
+                    onClick={() => setValue('consultationType', 'Online Consultation', { shouldValidate: true })}
                     className={`py-3.5 border rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 tap-scale flex items-center justify-center gap-1.5 ${
                       consultationType === 'Online Consultation'
                         ? 'bg-teal/10 border-teal text-teal shadow-sm'
@@ -556,7 +556,7 @@ export default function DoctorBookingPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setConsultationType('Offline / In-Person Consultation')}
+                    onClick={() => setValue('consultationType', 'Offline / In-Person Consultation', { shouldValidate: true })}
                     className={`py-3.5 border rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 tap-scale flex items-center justify-center gap-1.5 ${
                       consultationType === 'Offline / In-Person Consultation'
                         ? 'bg-teal/10 border-teal text-teal shadow-sm'
@@ -566,6 +566,7 @@ export default function DoctorBookingPage() {
                     <span>🏥</span> In-Clinic Visit
                   </button>
                 </div>
+                {errors.consultationType && <p className="text-coral text-[10px] font-bold mt-1">{errors.consultationType.message}</p>}
               </div>
 
               {/* Form Input: Optional Prescription Attachment */}
@@ -609,8 +610,7 @@ export default function DoctorBookingPage() {
                 <textarea
                   rows="3"
                   placeholder="Describe your active clinical symptoms or current condition here..."
-                  value={additionalNotes}
-                  onChange={(e) => setAdditionalNotes(e.target.value)}
+                  {...register('additionalNotes')}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold outline-none focus:border-teal focus:bg-white focus:ring-4 focus:ring-teal-light transition-all placeholder:text-slate-400 resize-none"
                 />
               </div>
