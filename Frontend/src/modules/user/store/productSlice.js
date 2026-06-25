@@ -3092,10 +3092,14 @@ const productSlice = createSlice({
       const payload = action.payload;
       const id = typeof payload === 'object' ? payload.id : payload;
       const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const customReason = typeof payload === 'object' ? payload.customReason : '';
       const apt = state.appointments.find(a => a.id === id);
       if (apt) {
         apt.status = 'Cancelled';
         apt.cancelReason = reason;
+        apt.customReason = customReason;
+        apt.returnStatus = 'Requested';
+        apt.refundStatus = 'Pending';
         localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
       }
     },
@@ -3113,10 +3117,14 @@ const productSlice = createSlice({
       const payload = action.payload;
       const id = typeof payload === 'object' ? payload.id : payload;
       const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const customReason = typeof payload === 'object' ? payload.customReason : '';
       const booking = state.labBookings.find(b => b.id === id);
       if (booking) {
         booking.status = 'CANCELLED';
         booking.cancelReason = reason;
+        booking.customReason = customReason;
+        booking.returnStatus = 'Requested';
+        booking.refundStatus = 'Pending';
         localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
       }
     },
@@ -3142,10 +3150,14 @@ const productSlice = createSlice({
       const payload = action.payload;
       const id = typeof payload === 'object' ? payload.id : payload;
       const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const customReason = typeof payload === 'object' ? payload.customReason : '';
       const order = state.orders.find(o => o.id === id);
       if (order) {
         order.status = 'CANCELLED';
         order.cancelReason = reason;
+        order.customReason = customReason;
+        order.returnStatus = 'None';
+        order.refundStatus = 'Not Applicable';
         localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
       }
     },
@@ -3153,10 +3165,14 @@ const productSlice = createSlice({
       const payload = action.payload;
       const id = typeof payload === 'object' ? payload.id : payload;
       const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const customReason = typeof payload === 'object' ? payload.customReason : '';
       const order = state.orders.find(o => o.id === id);
       if (order) {
         order.status = 'RETURNED';
         order.returnReason = reason;
+        order.customReason = customReason;
+        order.returnStatus = 'Requested';
+        order.refundStatus = 'Pending';
         localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
       }
     },

@@ -4,6 +4,7 @@ const {
   getLabs, 
   bookLab,
   getMyLabBookings,
+  cancelLabBooking,
   getVendorBookings,
   updateBookingStatus,
   uploadBookingReport,
@@ -29,6 +30,7 @@ router.get('/', getLabs);
 // Booking routes for users
 router.post('/book', protect, uploadLabReport.single('file'), bookLab);
 router.get('/my-bookings', protect, getMyLabBookings);
+router.post('/bookings/:id/cancel', protect, cancelLabBooking);
 
 // Vendor specific routes
 router.get('/vendor/bookings', protect, authorize('lab_vendor'), getVendorBookings);

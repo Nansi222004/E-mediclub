@@ -20,6 +20,7 @@ const doctorsRoutes = require('./routes/doctorsRoutes');
 const labsRoutes = require('./routes/labsRoutes');
 const productsRoutes = require('./routes/productsRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 const errorHandler = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/vendor', vendorRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/orders', orderRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/doctors', doctorsRoutes);
 app.use('/api/labs', labsRoutes);

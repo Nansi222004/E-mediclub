@@ -16,6 +16,7 @@ if (isCloudinaryConfigured && process.env.NODE_ENV === 'production') {
     params: {
       folder: folderName,
       allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'webp'],
+      resource_type: 'auto',
     },
   });
 } else {

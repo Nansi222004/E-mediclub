@@ -95,6 +95,7 @@ export default function ProfilePage() {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [customCancelReason, setCustomCancelReason] = useState('');
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleSlot, setRescheduleSlot] = useState('');
 
@@ -2489,12 +2490,22 @@ export default function ProfilePage() {
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black uppercase text-slate-400">Why are you cancelling?</label>
                   <div className="flex flex-col gap-2 mt-1 text-slate-700 font-semibold">
-                    {['Feeling better', 'Doctor unavailable', 'Booked by mistake', 'Scheduling conflict', 'Other'].map(reason => (
+                    {['Feeling better', 'Doctor unavailable', 'Booked by mistake', 'Scheduling conflict', 'Health Issue Resolved', 'Booked Wrong Slot', 'Other'].map(reason => (
                       <label key={reason} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100">
                         <input type="radio" name="cancelReason" value={reason} checked={cancelReason === reason} onChange={(e) => setCancelReason(e.target.value)} className="accent-teal w-4 h-4" />
                         {reason}
                       </label>
                     ))}
+                    {cancelReason === 'Other' && (
+                      <div className="mt-2 px-2">
+                        <textarea
+                          placeholder="Please specify your reason"
+                          value={customCancelReason}
+                          onChange={(e) => setCustomCancelReason(e.target.value)}
+                          className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal resize-none h-20"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="bg-amber-50 p-3 rounded-xl border border-amber-200/50 flex flex-col gap-1.5">
@@ -2510,7 +2521,8 @@ export default function ProfilePage() {
                 <button
                   onClick={() => {
                     if(!cancelReason) { showToast('Please select a reason!', 'error'); return; }
-                    dispatch(cancelDoctorAppointment({ id: selectedAptDetails.id, reason: cancelReason }));
+                    if(cancelReason === 'Other' && !customCancelReason.trim()) { showToast('Please specify your reason.', 'error'); return; }
+                    dispatch(cancelDoctorAppointment({ id: selectedAptDetails.id, reason: cancelReason, customReason: customCancelReason.trim() }));
                     const newRefund = {
                       id: selectedAptDetails.id,
                       itemName: `${selectedAptDetails.doctorName} consultation`,
@@ -2529,6 +2541,7 @@ export default function ProfilePage() {
                     showToast('Appointment Cancelled!');
                     setShowCancelModal(false);
                     setCancelReason('');
+                    setCustomCancelReason('');
                   }}
                   className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer transition-colors shadow-sm"
                 >

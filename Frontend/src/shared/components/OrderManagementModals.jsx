@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiCheckCircle, FiClock, FiBox, FiTruck, FiMapPin } from 'react-icons/fi';
 import { useDispatch } from 'react-redux';
@@ -11,6 +11,8 @@ export default function OrderManagementModals({
   showToast
 }) {
   const dispatch = useDispatch();
+  const [customCancelReason, setCustomCancelReason] = useState('');
+  const [customReturnReason, setCustomReturnReason] = useState('');
 
   if (!selectedOrder) return null;
 
@@ -123,6 +125,16 @@ export default function OrderManagementModals({
                         {reason}
                       </label>
                     ))}
+                    {cancelReason === 'Other' && (
+                      <div className="mt-2 px-2">
+                        <textarea
+                          placeholder="Please specify your reason"
+                          value={customCancelReason}
+                          onChange={(e) => setCustomCancelReason(e.target.value)}
+                          className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal resize-none h-20"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -130,10 +142,12 @@ export default function OrderManagementModals({
                 <button
                   onClick={() => {
                     if(!cancelReason) { showToast('Please select a reason!', 'error'); return; }
-                    dispatch(cancelOrder({ orderId: selectedOrder.id, reason: cancelReason }));
+                    if(cancelReason === 'Other' && !customCancelReason.trim()) { showToast('Please specify your reason.', 'error'); return; }
+                    dispatch(cancelOrder({ orderId: selectedOrder.id, reason: cancelReason, customReason: customCancelReason.trim() }));
                     showToast('Order Cancelled Successfully');
                     setShowCancel(false);
                     setCancelReason('');
+                    setCustomCancelReason('');
                   }}
                   className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer transition-colors shadow-sm outline-none"
                 >
@@ -161,12 +175,22 @@ export default function OrderManagementModals({
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black uppercase text-slate-400">Why are you returning?</label>
                   <div className="flex flex-col gap-2 mt-1 text-slate-700 font-semibold">
-                    {['Defective / Damaged product', 'Incorrect item received', 'Past expiry date', 'Item missing', 'Other'].map(reason => (
+                    {['Defective / Damaged product', 'Incorrect item received', 'Past expiry date', 'Item missing', 'Doctor Changed Prescription', 'Ordered by Mistake', 'Other'].map(reason => (
                       <label key={reason} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100">
                         <input type="radio" name="orderReturnReason" value={reason} checked={returnReason === reason} onChange={(e) => setReturnReason(e.target.value)} className="accent-teal w-4 h-4" />
                         {reason}
                       </label>
                     ))}
+                    {returnReason === 'Other' && (
+                      <div className="mt-2 px-2">
+                        <textarea
+                          placeholder="Please specify your reason"
+                          value={customReturnReason}
+                          onChange={(e) => setCustomReturnReason(e.target.value)}
+                          className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal resize-none h-20"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl flex gap-2">
@@ -180,10 +204,12 @@ export default function OrderManagementModals({
                 <button
                   onClick={() => {
                     if(!returnReason) { showToast('Please select a reason!', 'error'); return; }
-                    dispatch(returnOrder({ orderId: selectedOrder.id, reason: returnReason }));
+                    if(returnReason === 'Other' && !customReturnReason.trim()) { showToast('Please specify your reason.', 'error'); return; }
+                    dispatch(returnOrder({ orderId: selectedOrder.id, reason: returnReason, customReason: customReturnReason.trim() }));
                     showToast('Return Initiated Successfully');
                     setShowReturn(false);
                     setReturnReason('');
+                    setCustomReturnReason('');
                   }}
                   className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer transition-colors shadow-sm outline-none"
                 >

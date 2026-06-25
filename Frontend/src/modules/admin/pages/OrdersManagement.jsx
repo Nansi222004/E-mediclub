@@ -78,6 +78,16 @@ export default function OrdersManagement() {
       key: 'totalAmount', 
       header: 'Total Paid',
       render: (row) => <span className="font-black text-slate-800">₹{row.totalAmount}</span>
+    },
+    {
+      key: 'returnStatus',
+      header: 'Return Status',
+      render: (row) => <span className="font-bold text-slate-600">{row.returnStatus || 'None'}</span>
+    },
+    {
+      key: 'refundStatus',
+      header: 'Refund Status',
+      render: (row) => <span className="font-bold text-slate-600">{row.refundStatus || 'Not Applicable'}</span>
     }
   ];
 
@@ -97,6 +107,30 @@ export default function OrdersManagement() {
           className="flex items-center gap-1 px-3 py-1.5 bg-teal text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-teal-dark shadow-sm transition-all cursor-pointer tap-scale"
         >
           Dispatch
+        </button>
+      )}
+
+      {row.returnStatus === 'Requested' && (
+        <button
+          onClick={() => {
+            const updated = orders.map(o => o.id === row.id ? { ...o, returnStatus: 'Approved', refundStatus: 'Processing' } : o);
+            setOrders(updated);
+          }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-600 shadow-sm transition-all cursor-pointer tap-scale"
+        >
+          Approve Return
+        </button>
+      )}
+
+      {row.refundStatus === 'Processing' && (
+        <button
+          onClick={() => {
+            const updated = orders.map(o => o.id === row.id ? { ...o, refundStatus: 'Completed' } : o);
+            setOrders(updated);
+          }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 shadow-sm transition-all cursor-pointer tap-scale"
+        >
+          Complete Refund
         </button>
       )}
     </>
