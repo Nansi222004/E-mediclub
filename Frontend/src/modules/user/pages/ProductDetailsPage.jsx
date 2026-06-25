@@ -102,6 +102,15 @@ export default function ProductDetailsPage() {
   // Find product by id
   const product = medicines?.find(med => med.id === id);
 
+  // TEMPORARY PRODUCTION DEBUGGING
+  useEffect(() => {
+    console.log("=== PRODUCTION DEBUG ===");
+    console.log("URL ID:", id);
+    console.log("MEDICINES ARRAY LENGTH:", medicines?.length);
+    console.log("MEDICINES DATA:", medicines);
+    console.log("FOUND PRODUCT:", product);
+  }, [id, medicines, product]);
+
   const [activeImage, setActiveImage] = useState(product?.image || null);
 
   useEffect(() => {
