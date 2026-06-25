@@ -100,13 +100,32 @@ export default function ProductDetailsPage() {
   const [deliveryStatus, setDeliveryStatus] = useState(null); // 'success' | 'fail' | null
 
   // Find product by id
-  const product = medicines.find(med => med.id === id) || medicines[0];
+  const product = medicines?.find(med => med.id === id);
+
+  // Early return if product is not found (either still loading or doesn't exist)
+  if (!product) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center w-full">
+        {(!medicines || medicines.length === 0) ? (
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-forest"></div>
+        ) : (
+          <>
+            <FiAlertTriangle className="w-12 h-12 text-slate-300 mb-4" />
+            <h2 className="text-xl font-bold text-slate-700">Product Not Found</h2>
+            <p className="text-slate-500 mt-2 text-sm">The medicine you're looking for doesn't exist.</p>
+            <button onClick={() => navigate(-1)} className="mt-6 bg-forest text-white px-6 py-2 rounded-xl font-bold">Go Back</button>
+          </>
+        )}
+      </div>
+    );
+  }
+
   const specs = getSpecsFallback(product);
 
-  const galleryImages = product.images && product.images.length > 0 
+  const galleryImages = product?.images?.length > 0 
     ? product.images 
     : [
-        product.image,
+        product?.image || 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80',
         'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80',
         'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80'
       ];
