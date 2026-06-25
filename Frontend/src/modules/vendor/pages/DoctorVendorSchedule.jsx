@@ -8,6 +8,8 @@ export default function DoctorVendorSchedule() {
   const [schedules, setSchedules] = useState([
     { id: 1, patientName: 'Meera Deshmukh', age: 34, gender: 'Female', slot: '10:30 AM - 11:00 AM', date: '2026-06-04', type: 'Video Consult', status: 'pending' },
     { id: 2, patientName: 'Ramesh Kumar', age: 45, gender: 'Male', slot: '11:15 AM - 11:45 AM', date: '2026-06-04', type: 'Physical Clinic Visit', status: 'pending' },
+    { id: 6, patientName: 'Arjun Das', age: 42, gender: 'Male', slot: '02:00 PM - 02:30 PM', date: '2026-06-04', type: 'Video Consult', status: 'rescheduled' },
+    { id: 7, patientName: 'Kavita Iyer', age: 28, gender: 'Female', slot: '03:00 PM - 03:30 PM', date: '2026-06-04', type: 'Physical Clinic Visit', status: 'cancelled' },
     { id: 3, patientName: 'Anoop Singh', age: 29, gender: 'Male', slot: '04:00 PM - 04:30 PM', date: '2026-06-03', type: 'Video Consult', status: 'completed' },
     { id: 4, patientName: 'Sunita Sharma', age: 52, gender: 'Female', slot: '05:00 PM - 05:30 PM', date: '2026-06-03', type: 'Video Consult', status: 'completed' },
     { id: 5, patientName: 'Vijay Chawla', age: 60, gender: 'Male', slot: '09:00 AM - 09:30 AM', date: '2026-06-02', type: 'Physical Clinic Visit', status: 'completed' },
@@ -61,6 +63,8 @@ export default function DoctorVendorSchedule() {
               <option value="all">All Appointments</option>
               <option value="pending">Awaiting Consultation</option>
               <option value="completed">Completed Sessions</option>
+              <option value="rescheduled">Rescheduled</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>
@@ -91,18 +95,25 @@ export default function DoctorVendorSchedule() {
               </div>
 
               <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end border-t border-slate-100 sm:border-0 pt-3 sm:pt-0">
-                {s.status === 'pending' ? (
+                {s.status === 'rescheduled' && (
+                  <span className="text-amber-500 font-black uppercase text-[10px] mr-2">Rescheduled</span>
+                )}
+                {s.status === 'pending' || s.status === 'rescheduled' ? (
                   <button
                     onClick={() => handleComplete(s.id)}
                     className="bg-teal hover:bg-teal-dark text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer border-0 tap-scale shadow-sm"
                   >
                     Start Session
                   </button>
-                ) : (
+                ) : s.status === 'completed' ? (
                   <span className="text-emerald-600 font-black uppercase text-[10px] flex items-center gap-1 select-none pr-2">
                     <FiCheckCircle /> Session Met
                   </span>
-                )}
+                ) : s.status === 'cancelled' ? (
+                  <span className="text-rose-600 font-black uppercase text-[10px] flex items-center gap-1 select-none pr-2">
+                    Cancelled
+                  </span>
+                ) : null}
               </div>
 
             </div>

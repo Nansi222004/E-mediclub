@@ -6,7 +6,7 @@ import {
   Box, Stepper, Step, StepLabel, TextField, Button, 
   Radio, RadioGroup, FormControlLabel, FormControl, FormLabel
 } from '@mui/material';
-import { FiMapPin, FiCreditCard, FiSmartphone, FiCheckCircle, FiShield, FiPlus, FiArrowLeft } from 'react-icons/fi';
+import { FiMapPin, FiCreditCard, FiSmartphone, FiCheckCircle, FiShield, FiPlus, FiArrowLeft, FiAlertTriangle, FiTruck } from 'react-icons/fi';
 import { clearCart } from '../store/cartSlice';
 import { placeOrder, normalizeCity } from '../store/productSlice';
 import { addAddress, addSavedCard } from '../../auth/store/authSlice';
@@ -39,8 +39,11 @@ export default function CheckoutPage() {
   const filteredCards = savedCards.filter(filterCardsByLocation);
 
   // States
+  const requiresPrescription = items.some(item => item.rxRequired);
+  const [rxUploaded, setRxUploaded] = useState(false);
   const [activeStep, setActiveStep] = useState(0); // 0: Address, 1: Payment, 2: Success (MUI is 0-indexed)
   const [selectedAddressId, setSelectedAddressId] = useState(filteredAddresses[0]?.id || 1);
+  const [deliverySlot, setDeliverySlot] = useState('today');
 
   // Card sub-states
   const [selectedCardId, setSelectedCardId] = useState('');
@@ -104,6 +107,7 @@ export default function CheckoutPage() {
   const [newAddrLine, setNewAddrLine] = useState('');
   const [newAddrCity, setNewAddrCity] = useState('');
   const [newAddrState, setNewAddrState] = useState('');
+  const [newAddrType, setNewAddrType] = useState('Home');
 
   const steps = ['Verify Address', 'Secure Payment'];
 
@@ -116,6 +120,7 @@ export default function CheckoutPage() {
       addressLine: newAddrLine,
       city: newAddrCity,
       state: newAddrState,
+      type: newAddrType,
       isDefault: addresses.length === 0
     };
     dispatch(addAddress(newAddressObj));
@@ -127,6 +132,7 @@ export default function CheckoutPage() {
     setNewAddrLine('');
     setNewAddrCity('');
     setNewAddrState('');
+    setNewAddrType('Home');
   };
 
   const handlePlaceOrder = () => {
@@ -192,6 +198,33 @@ export default function CheckoutPage() {
             exit={{ opacity: 0, x: 10 }}
             className="flex flex-col gap-6"
           >
+            {requiresPrescription && (
+              <div className="bg-rose-50 border border-rose-200 p-5 rounded-3xl flex flex-col gap-4 mb-2">
+                <h3 className="text-rose-700 font-extrabold text-sm flex items-center gap-2">
+                  <FiAlertTriangle /> Prescription Required
+                </h3>
+                <p className="text-xs text-rose-600 font-semibold">
+                  One or more items in your cart require a valid prescription. Please upload it to proceed.
+                </p>
+                {rxUploaded ? (
+                  <div className="bg-white p-3 rounded-xl border border-rose-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5"><FiCheckCircle /> Prescription_Doc_1.pdf uploaded</span>
+                    <button onClick={() => setRxUploaded(false)} className="text-[10px] text-slate-400 font-bold hover:text-rose-500 outline-none border-0 bg-transparent cursor-pointer">REMOVE</button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="contained" 
+                    onClick={() => {
+                      setTimeout(() => setRxUploaded(true), 600);
+                    }}
+                    className="bg-rose-600 hover:bg-rose-700 text-white shadow-none font-black text-xs py-2.5 rounded-xl w-fit"
+                  >
+                    UPLOAD PRESCRIPTION
+                  </Button>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-1.5">
                 <FiMapPin className="text-teal" /> Verify Shipping Address
@@ -270,6 +303,17 @@ export default function CheckoutPage() {
                       onChange={(e) => setNewAddrState(e.target.value)}
                     />
                   </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Address Type</label>
+                    <div className="flex gap-4">
+                      {['Home', 'Work', 'Other'].map(type => (
+                        <label key={type} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700">
+                          <input type="radio" name="addrType" checked={newAddrType === type} onChange={() => setNewAddrType(type)} className="accent-forest" />
+                          {type}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                   <Button 
                     type="submit"
                     variant="contained"
@@ -300,7 +344,10 @@ export default function CheckoutPage() {
                       {selectedAddressId === addr.id && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </span>
                     <div className="flex-1 text-xs">
-                      <h4 className="font-extrabold text-slate-800">{addr.name}</h4>
+                      <h4 className="font-extrabold text-slate-800 flex items-center gap-2">
+                        {addr.name} 
+                        {addr.type && <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[9px] uppercase tracking-wider">{addr.type}</span>}
+                      </h4>
                       <p className="text-slate-500 font-semibold mt-1">{addr.addressLine}, {addr.city}, {addr.state} - {addr.pincode}</p>
                       <p className="text-[10px] text-slate-400 font-bold mt-1.5">PHONE: +91 {addr.phone}</p>
                     </div>
@@ -316,6 +363,7 @@ export default function CheckoutPage() {
             {/* Next CTA trigger using MUI Button */}
             <Button
               onClick={() => setActiveStep(1)}
+              disabled={requiresPrescription && !rxUploaded}
               variant="contained"
               color="primary"
               fullWidth
@@ -343,6 +391,35 @@ export default function CheckoutPage() {
               <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-1.5">
                 <FiCreditCard className="text-teal" /> Choose Payment Option
               </h2>
+            </div>
+
+            {/* Delivery Slot Selection */}
+            <div className="flex flex-col gap-3 mb-2">
+              <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+                <FiTruck className="text-teal" /> Choose Delivery Slot
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { id: 'express', label: 'Express Delivery', desc: 'Within 2 Hours', fee: 50 },
+                  { id: 'today', label: 'Standard Today', desc: 'By 9:00 PM', fee: 0 },
+                  { id: 'tomorrow', label: 'Tomorrow', desc: 'Morning 8AM - 12PM', fee: 0 }
+                ].map(slot => (
+                  <div 
+                    key={slot.id}
+                    onClick={() => setDeliverySlot(slot.id)}
+                    className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                      deliverySlot === slot.id ? 'border-forest ring-2 ring-forest-light bg-forest-light/10' : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs font-black text-slate-800">{slot.label}</span>
+                      <Radio checked={deliverySlot === slot.id} size="small" className="p-0" color="primary" />
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 block">{slot.desc}</span>
+                    <span className="text-[10px] font-black text-emerald-600 block mt-1">{slot.fee === 0 ? 'FREE' : `+₹${slot.fee}`}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Payment options selection using MUI Radio controls */}
@@ -499,6 +576,36 @@ export default function CheckoutPage() {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Wallets */}
+              <div
+                onClick={() => setPaymentMode('wallet')}
+                className={`p-4 bg-white rounded-[24px] border shadow-sm cursor-pointer transition-all flex items-center gap-3 ${
+                  paymentMode === 'wallet' ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100'
+                }`}
+              >
+                <Radio checked={paymentMode === 'wallet'} onChange={() => setPaymentMode('wallet')} color="primary" name="payment-options" />
+                <span className="text-lg shrink-0">👛</span>
+                <div className="flex-1 text-xs">
+                  <h4 className="font-extrabold text-slate-800">Mobile Wallets</h4>
+                  <p className="text-slate-400 font-semibold text-[10px]">Amazon Pay, Mobikwik, Freecharge</p>
+                </div>
+              </div>
+
+              {/* Net Banking */}
+              <div
+                onClick={() => setPaymentMode('netbanking')}
+                className={`p-4 bg-white rounded-[24px] border shadow-sm cursor-pointer transition-all flex items-center gap-3 ${
+                  paymentMode === 'netbanking' ? 'border-forest ring-2 ring-forest-light' : 'border-slate-100'
+                }`}
+              >
+                <Radio checked={paymentMode === 'netbanking'} onChange={() => setPaymentMode('netbanking')} color="primary" name="payment-options" />
+                <span className="text-lg shrink-0">🏦</span>
+                <div className="flex-1 text-xs">
+                  <h4 className="font-extrabold text-slate-800">Net Banking</h4>
+                  <p className="text-slate-400 font-semibold text-[10px]">All major Indian banks supported</p>
+                </div>
               </div>
 
               {/* Cash on delivery */}

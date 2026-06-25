@@ -5,13 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiUser, FiMapPin, FiCalendar, FiClock, FiTrash2, FiPlus, 
   FiLogOut, FiEdit, FiCheck, FiShield, FiHeart, FiFileText, FiActivity, FiCreditCard, FiShoppingBag, FiDownload,
-  FiChevronRight, FiBell, FiChevronDown, FiX, FiInfo, FiUploadCloud, FiCopy, FiRefreshCw, FiStar
+  FiChevronRight, FiBell, FiChevronDown, FiX, FiInfo, FiUploadCloud, FiCopy, FiRefreshCw, FiStar, FiCheckCircle
 } from 'react-icons/fi';
 import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile, addSavedCard, deleteSavedCard } from '../../auth/store/authSlice';
 import { addToCart } from '../store/cartSlice';
-import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, cancelLabBooking, syncLabBookings, normalizeCity } from '../store/productSlice';
+import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, rescheduleDoctorAppointment, cancelLabBooking, syncLabBookings, normalizeCity } from '../store/productSlice';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
+import LabManagementModals from '../../../shared/components/LabManagementModals';
+import OrderManagementModals from '../../../shared/components/OrderManagementModals';
 import apiClient from '../../../shared/services/apiClient';
 
 export default function ProfilePage() {
@@ -76,6 +78,42 @@ export default function ProfilePage() {
   const [showGlobalUploadModal, setShowGlobalUploadModal] = useState(false);
   const [selectedRxForReview, setSelectedRxForReview] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // Toast and Confirm state
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const showToast = (msg, type = 'success') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+  const [confirmAction, setConfirmAction] = useState(null);
+
+  // Appointment Management Modals
+  const [showAptDetailsModal, setShowAptDetailsModal] = useState(false);
+  const [selectedAptDetails, setSelectedAptDetails] = useState(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleSlot, setRescheduleSlot] = useState('');
+
+  // Lab Management Modals
+  const [showLabDetailsModal, setShowLabDetailsModal] = useState(false);
+  const [selectedLabBooking, setSelectedLabBooking] = useState(null);
+  const [showLabRescheduleModal, setShowLabRescheduleModal] = useState(false);
+  const [showLabCancelModal, setShowLabCancelModal] = useState(false);
+  const [labCancelReason, setLabCancelReason] = useState('');
+  const [labRescheduleDate, setLabRescheduleDate] = useState('');
+  const [labRescheduleSlot, setLabRescheduleSlot] = useState('');
+
+  // Order Management Modals
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderCancelModal, setShowOrderCancelModal] = useState(false);
+  const [showOrderReturnModal, setShowOrderReturnModal] = useState(false);
+  const [orderCancelReason, setOrderCancelReason] = useState('');
+  const [orderReturnReason, setOrderReturnReason] = useState('');
 
   const [replacements, setReplacements] = useState(() => {
     const saved = localStorage.getItem('em_replacements');
@@ -518,13 +556,22 @@ export default function ProfilePage() {
 
                       <div className="flex justify-between items-center pt-2.5 border-t border-slate-50 mt-1">
                         <span className="text-slate-400 font-bold">Total charged: <strong className="text-slate-750">₹{ord.total}</strong></span>
-                        <button
-                          type="button"
-                          onClick={() => handleSimulateProgress(ord.id, ord.status)}
-                          className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 hover:text-slate-800 text-[9px] font-black uppercase tracking-wider rounded-lg border border-slate-150 cursor-pointer outline-none shrink-0"
-                        >
-                          Next Step ➔
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedOrder(ord); setShowOrderDetailsModal(true); }}
+                            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 hover:text-slate-800 text-[9px] font-black uppercase tracking-wider rounded-lg border border-slate-150 cursor-pointer outline-none shrink-0"
+                          >
+                            Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSimulateProgress(ord.id, ord.status)}
+                            className="px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[9px] font-black uppercase tracking-wider rounded-lg border-0 cursor-pointer outline-none shrink-0"
+                          >
+                            Next Step ➔
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -562,7 +609,7 @@ export default function ProfilePage() {
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => navigate('/orders')}
+                          onClick={() => { setSelectedOrder(ord); setShowOrderDetailsModal(true); }}
                           className="px-3 py-2 bg-slate-100 hover:bg-slate-205 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-colors outline-none"
                         >
                           Order Details
@@ -773,38 +820,48 @@ export default function ProfilePage() {
               )}
 
               {/* Footer actions */}
-              <div className="flex justify-between items-center border-t border-slate-50 pt-2.5 mt-1">
-                {reportDownloadUrl ? (
-                  <a
-                    href={reportDownloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg shadow-sm border-0 cursor-pointer transition-all decoration-transparent"
-                  >
-                    <FiDownload className="text-xs" /> Download Report
-                  </a>
-                ) : (
-                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                    {isCancelled ? '❌ Booking Cancelled' : '⏳ Waiting for laboratory report'}
-                  </span>
-                )}
-
-                {booking.status === 'completed' && (
-                  booking.isRated ? (
-                    <div className="flex items-center gap-1">
-                      <span className="text-amber-500 text-xs font-bold flex items-center gap-0.5">
-                        {"★".repeat(booking.rating)}{"☆".repeat(5 - booking.rating)}
-                      </span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleOpenFeedback('lab', booking.id, booking.packageName)}
-                      className="px-3 py-1.5 bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-600 text-[10px] font-black uppercase tracking-wider rounded-xl border border-amber-200/50 cursor-pointer transition-all shadow-sm outline-none"
+              <div className="flex justify-between items-center border-t border-slate-50 pt-2.5 mt-1 gap-2">
+                <div className="flex-1">
+                  {reportDownloadUrl ? (
+                    <a
+                      href={reportDownloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-fit items-center gap-1 px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg shadow-sm border-0 cursor-pointer transition-all decoration-transparent"
                     >
-                      Rate Visit
-                    </button>
-                  )
-                )}
+                      <FiDownload className="text-xs" /> Download Report
+                    </a>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                      {isCancelled ? '❌ Booking Cancelled' : '⏳ Waiting for laboratory report'}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => { setSelectedLabBooking(booking); setShowLabDetailsModal(true); }}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer shadow-sm outline-none"
+                  >
+                    Details
+                  </button>
+                  {booking.status === 'completed' && (
+                    booking.isRated ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-amber-500 text-xs font-bold flex items-center gap-0.5">
+                          {"★".repeat(booking.rating)}{"☆".repeat(5 - booking.rating)}
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleOpenFeedback('lab', booking.id, booking.packageName)}
+                        className="px-3 py-1.5 bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-600 text-[10px] font-black uppercase tracking-wider rounded-xl border border-amber-200/50 cursor-pointer transition-all shadow-sm outline-none"
+                      >
+                        Rate Visit
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -905,16 +962,24 @@ export default function ProfilePage() {
                           <p className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">{apt.date} • {apt.timeSlot}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] text-teal bg-teal-light/50 border border-teal/10 px-2.5 py-0.5 rounded-full uppercase font-black">{apt.status}</span>
-                        {apt.type.includes('Online') && (apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending') && (
+                      <div className="flex flex-col items-end gap-2 shrink-0 mt-2 sm:mt-0 border-t border-slate-50 sm:border-t-0 pt-3 sm:pt-0 w-full sm:w-auto">
+                        <span className="text-[9px] text-teal bg-teal-light/50 border border-teal/10 px-2.5 py-0.5 rounded-full uppercase font-black self-end sm:self-auto">{apt.status}</span>
+                        <div className="flex gap-2 w-full sm:w-auto justify-end">
+                          {apt.type.includes('Online') && (apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending' || apt.status === 'Rescheduled') && (
+                            <button 
+                              onClick={() => navigate('/doctor-appointments')} 
+                              className="flex-1 sm:flex-none px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer shadow-sm outline-none"
+                            >
+                              Join
+                            </button>
+                          )}
                           <button 
-                            onClick={() => navigate('/doctor-appointments')} 
-                            className="px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer shadow-sm outline-none"
+                            onClick={() => { setSelectedAptDetails(apt); setShowAptDetailsModal(true); }} 
+                            className="flex-1 sm:flex-none px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer shadow-sm outline-none"
                           >
-                            Join Call
+                            Details
                           </button>
-                        )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1062,7 +1127,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => alert(`Downloading secure clinical report PDF: ${booking.packageName.replace(/\s+/g, '_')}_Report.pdf`)}
+                    onClick={() => showToast(`Downloading secure clinical report PDF: ${booking.packageName.replace(/\s+/g, '_')}_Report.pdf`, 'success')}
                     className="p-2 bg-slate-50 text-teal hover:bg-teal hover:text-white rounded-xl border border-teal/20 cursor-pointer transition-all flex items-center gap-1 text-[10px] font-black uppercase tracking-wider outline-none shrink-0"
                   >
                     <FiDownload className="shrink-0" /> Report
@@ -1371,24 +1436,28 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (window.confirm(`Are you sure you want to cancel this booking for ${booking.packageName}?`)) {
-                        dispatch(cancelLabBooking(booking.id));
-                        const newRefund = {
-                          id: booking.id,
-                          itemName: `Lab test — ${booking.packageName}`,
-                          amount: booking.price || 799,
-                          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-                          status: 'Processing',
-                          city: locationState?.city || 'Mumbai',
-                          pincode: locationState?.pincode || '400001',
-                          steps: [
-                            { title: 'Cancellation confirmed', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
-                            { title: 'Refund processing', date: '3–5 business days', status: 'active', icon: 'refresh' },
-                            { title: `₹${booking.price || 799} credited`, date: 'Pending', status: 'pending', icon: 'check' }
-                          ]
-                        };
-                        setRefunds(prev => [newRefund, ...prev]);
-                      }
+                      setConfirmAction({
+                        message: `Are you sure you want to cancel this booking for ${booking.packageName}?`,
+                        onConfirm: () => {
+                          dispatch(cancelLabBooking(booking.id));
+                          const newRefund = {
+                            id: booking.id,
+                            itemName: `Lab test — ${booking.packageName}`,
+                            amount: booking.price || 799,
+                            date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+                            status: 'Processing',
+                            city: locationState?.city || 'Mumbai',
+                            pincode: locationState?.pincode || '400001',
+                            steps: [
+                              { title: 'Cancellation confirmed', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
+                              { title: 'Refund processing', date: '3–5 business days', status: 'active', icon: 'refresh' },
+                              { title: `₹${booking.price || 799} credited`, date: 'Pending', status: 'pending', icon: 'check' }
+                            ]
+                          };
+                          setRefunds(prev => [newRefund, ...prev]);
+                          showToast('Lab Booking Cancelled!');
+                        }
+                      });
                     }}
                     className="px-3.5 py-2 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-black text-[10px] uppercase rounded-xl transition-all border border-rose-200/50 cursor-pointer outline-none shrink-0"
                   >
@@ -1417,24 +1486,8 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (window.confirm(`Are you sure you want to cancel your appointment with ${apt.doctorName}?`)) {
-                        dispatch(cancelDoctorAppointment(apt.id));
-                        const newRefund = {
-                          id: apt.id,
-                          itemName: `${apt.doctorName} consultation`,
-                          amount: apt.fee || 499,
-                          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-                          status: 'Processing',
-                          city: locationState?.city || 'Mumbai',
-                          pincode: locationState?.pincode || '400001',
-                          steps: [
-                            { title: 'Cancellation confirmed', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
-                            { title: 'Refund processing', date: '3–5 business days', status: 'active', icon: 'refresh' },
-                            { title: `₹${apt.fee || 499} credited`, date: 'Pending', status: 'pending', icon: 'check' }
-                          ]
-                        };
-                        setRefunds(prev => [newRefund, ...prev]);
-                      }
+                      setSelectedAptDetails(apt);
+                      setShowCancelModal(true);
                     }}
                     className="px-3.5 py-2 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-black text-[10px] uppercase rounded-xl transition-all border border-rose-200/50 cursor-pointer outline-none shrink-0"
                   >
@@ -1475,7 +1528,7 @@ export default function ProfilePage() {
                       onClick={() => {
                         const alreadyExists = refunds.some(r => r.id === `RF-${ord.id}`);
                         if (alreadyExists) {
-                          alert("A return request has already been raised for this order.");
+                          showToast("A return request has already been raised for this order.", 'error');
                           return;
                         }
                         const newRefund = {
@@ -1494,7 +1547,7 @@ export default function ProfilePage() {
                           ]
                         };
                         setRefunds(prev => [newRefund, ...prev]);
-                        alert('Return request raised. Refund will be processed after item pick-up!');
+                        showToast('Return request raised. Refund will be processed after item pick-up!');
                       }}
                       className="flex-1 py-2 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-black text-[10px] uppercase rounded-xl transition-all border border-rose-200/50 cursor-pointer outline-none"
                     >
@@ -1505,7 +1558,7 @@ export default function ProfilePage() {
                       onClick={() => {
                         const alreadyExists = replacements.some(r => r.id === `RP-${ord.id}`);
                         if (alreadyExists) {
-                          alert("A replacement request has already been raised for this order.");
+                          showToast("A replacement request has already been raised for this order.", 'error');
                           return;
                         }
                         const newReplacement = {
@@ -1523,7 +1576,7 @@ export default function ProfilePage() {
                           ]
                         };
                         setReplacements(prev => [newReplacement, ...prev]);
-                        alert('Replacement request raised. Courier will pick up and replace the item!');
+                        showToast('Replacement request raised. Courier will pick up and replace the item!');
                       }}
                       className="flex-1 py-2 bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-600 font-black text-[10px] uppercase rounded-xl transition-all border border-amber-200/50 cursor-pointer outline-none"
                     >
@@ -2255,6 +2308,283 @@ export default function ProfilePage() {
         onClose={() => setShowReviewModal(false)}
         prescription={selectedRxForReview}
       />
+
+      {/* Appointment Details Modal */}
+      <AnimatePresence>
+        {showAptDetailsModal && selectedAptDetails && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 select-none"
+          >
+            <div onClick={() => setShowAptDetailsModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm cursor-pointer" />
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-premium z-10 border border-slate-100 flex flex-col"
+            >
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 className="text-sm font-black text-slate-800">Appointment Details</h3>
+                <button onClick={() => setShowAptDetailsModal(false)} className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
+                  <FiX className="text-slate-500" />
+                </button>
+              </div>
+              <div className="p-5 flex flex-col gap-4 text-xs">
+                {selectedAptDetails.status === 'Cancelled' && (
+                  <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl flex flex-col gap-1 text-rose-800 shadow-sm animate-fade-in">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-600">Appointment Cancelled</span>
+                    <strong className="text-xs">Reason: {selectedAptDetails.cancelReason || 'No reason provided'}</strong>
+                  </div>
+                )}
+                {selectedAptDetails.status === 'Rescheduled' && (
+                  <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl flex flex-col gap-1 text-amber-800 shadow-sm animate-fade-in">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-600">Appointment Rescheduled</span>
+                    <strong className="text-xs">New time: {selectedAptDetails.date} • {selectedAptDetails.timeSlot}</strong>
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 text-slate-600">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Doctor</span>
+                  <strong className="text-sm text-slate-800">{selectedAptDetails.doctorName}</strong>
+                </div>
+                <div className="flex flex-col gap-1 text-slate-600">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Date & Time</span>
+                  <strong className="text-slate-800">{selectedAptDetails.date} • {selectedAptDetails.timeSlot}</strong>
+                </div>
+                <div className="flex flex-col gap-1 text-slate-600">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Patient</span>
+                  <strong className="text-slate-800">{selectedAptDetails.patientName || 'Self'}</strong>
+                </div>
+                <div className="flex flex-col gap-1 text-slate-600">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Mode</span>
+                  <strong className="text-slate-800">{selectedAptDetails.type}</strong>
+                </div>
+                <div className="flex flex-col gap-1 text-slate-600">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Payment Status</span>
+                  <strong className="text-emerald-600 font-black">Paid (₹{selectedAptDetails.fee || 499})</strong>
+                </div>
+              </div>
+              {(selectedAptDetails.status === 'Scheduled' || selectedAptDetails.status === 'Confirmed' || selectedAptDetails.status === 'Pending' || selectedAptDetails.status === 'Rescheduled') && (
+                <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
+                  <button
+                    onClick={() => { showToast('Downloading Invoice...', 'success'); setShowAptDetailsModal(false); }}
+                    className="flex-[0.7] py-3 bg-white text-slate-600 hover:bg-slate-100 text-[10px] font-black uppercase rounded-xl border border-slate-200 cursor-pointer transition-colors whitespace-nowrap"
+                  >
+                    Invoice
+                  </button>
+                  <button
+                    onClick={() => { setShowAptDetailsModal(false); setShowRescheduleModal(true); }}
+                    className="flex-1 py-3 bg-amber-50 text-amber-600 hover:bg-amber-100 text-[10px] font-black uppercase rounded-xl border border-amber-200 cursor-pointer transition-colors"
+                  >
+                    Reschedule
+                  </button>
+                  <button
+                    onClick={() => { setShowAptDetailsModal(false); setShowCancelModal(true); }}
+                    className="flex-1 py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-black uppercase rounded-xl border border-rose-200 cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reschedule Modal */}
+      <AnimatePresence>
+        {showRescheduleModal && selectedAptDetails && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 select-none"
+          >
+            <div onClick={() => setShowRescheduleModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm cursor-pointer" />
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-premium z-10 border border-slate-100 flex flex-col"
+            >
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 className="text-sm font-black text-slate-800">Reschedule Appointment</h3>
+                <button onClick={() => setShowRescheduleModal(false)} className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
+                  <FiX className="text-slate-500" />
+                </button>
+              </div>
+              <div className="p-5 flex flex-col gap-4 text-xs">
+                <p className="text-slate-500 font-semibold mb-2">Select a new date and time for your consultation with <strong>{selectedAptDetails.doctorName}</strong>.</p>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Available Dates</label>
+                  <select 
+                    value={rescheduleDate} 
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
+                  >
+                    <option value="">Select Date</option>
+                    <option value="2026-06-26">26 Jun 2026</option>
+                    <option value="2026-06-27">27 Jun 2026</option>
+                    <option value="2026-06-28">28 Jun 2026</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Available Slots</label>
+                  <select 
+                    value={rescheduleSlot} 
+                    onChange={(e) => setRescheduleSlot(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
+                  >
+                    <option value="">Select Time Slot</option>
+                    <option value="09:00 AM - 09:30 AM">09:00 AM - 09:30 AM</option>
+                    <option value="11:00 AM - 11:30 AM">11:00 AM - 11:30 AM</option>
+                    <option value="04:00 PM - 04:30 PM">04:00 PM - 04:30 PM</option>
+                  </select>
+                </div>
+              </div>
+              <div className="p-4 border-t border-slate-100 bg-slate-50">
+                <button
+                  onClick={() => {
+                    if(!rescheduleDate || !rescheduleSlot) { showToast('Select date and time!', 'error'); return; }
+                    dispatch(rescheduleDoctorAppointment({ id: selectedAptDetails.id, date: rescheduleDate, timeSlot: rescheduleSlot }));
+                    showToast('Appointment Rescheduled Successfully!');
+                    setShowRescheduleModal(false);
+                    setRescheduleDate('');
+                    setRescheduleSlot('');
+                  }}
+                  className="w-full py-3 bg-teal text-white hover:bg-teal-dark text-xs font-black uppercase rounded-xl border-0 cursor-pointer transition-colors shadow-sm"
+                >
+                  Confirm Reschedule
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cancel Modal */}
+      <AnimatePresence>
+        {showCancelModal && selectedAptDetails && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 select-none"
+          >
+            <div onClick={() => setShowCancelModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm cursor-pointer" />
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-premium z-10 border border-slate-100 flex flex-col"
+            >
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 className="text-sm font-black text-slate-800">Cancel Appointment</h3>
+                <button onClick={() => setShowCancelModal(false)} className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
+                  <FiX className="text-slate-500" />
+                </button>
+              </div>
+              <div className="p-5 flex flex-col gap-5 text-xs">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Why are you cancelling?</label>
+                  <div className="flex flex-col gap-2 mt-1 text-slate-700 font-semibold">
+                    {['Feeling better', 'Doctor unavailable', 'Booked by mistake', 'Scheduling conflict', 'Other'].map(reason => (
+                      <label key={reason} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100">
+                        <input type="radio" name="cancelReason" value={reason} checked={cancelReason === reason} onChange={(e) => setCancelReason(e.target.value)} className="accent-teal w-4 h-4" />
+                        {reason}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-amber-50 p-3 rounded-xl border border-amber-200/50 flex flex-col gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-amber-600">Cancellation Policy</span>
+                  <p className="text-[9.5px] text-amber-800/80 font-bold leading-relaxed">
+                    • Free cancellation up to 2 hours before appointment.<br/>
+                    • 50% refund within 2 hours.<br/>
+                    • No refund after consultation starts.
+                  </p>
+                </div>
+              </div>
+              <div className="p-4 border-t border-slate-100 bg-slate-50">
+                <button
+                  onClick={() => {
+                    if(!cancelReason) { showToast('Please select a reason!', 'error'); return; }
+                    dispatch(cancelDoctorAppointment({ id: selectedAptDetails.id, reason: cancelReason }));
+                    const newRefund = {
+                      id: selectedAptDetails.id,
+                      itemName: `${selectedAptDetails.doctorName} consultation`,
+                      amount: selectedAptDetails.fee || 499,
+                      date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+                      status: 'Processing',
+                      city: locationState?.city || 'Mumbai',
+                      pincode: locationState?.pincode || '400001',
+                      steps: [
+                        { title: 'Cancellation confirmed', date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), status: 'done' },
+                        { title: 'Refund processing', date: '3–5 business days', status: 'active', icon: 'refresh' },
+                        { title: `₹${selectedAptDetails.fee || 499} credited`, date: 'Pending', status: 'pending', icon: 'check' }
+                      ]
+                    };
+                    setRefunds(prev => [newRefund, ...prev]);
+                    showToast('Appointment Cancelled!');
+                    setShowCancelModal(false);
+                    setCancelReason('');
+                  }}
+                  className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase rounded-xl border-0 cursor-pointer transition-colors shadow-sm"
+                >
+                  Confirm Cancellation
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <LabManagementModals 
+        showDetails={showLabDetailsModal} setShowDetails={setShowLabDetailsModal} selectedBooking={selectedLabBooking}
+        showCancel={showLabCancelModal} setShowCancel={setShowLabCancelModal} cancelReason={labCancelReason} setCancelReason={setLabCancelReason}
+        showReschedule={showLabRescheduleModal} setShowReschedule={setShowLabRescheduleModal} rescheduleDate={labRescheduleDate} setRescheduleDate={setLabRescheduleDate} rescheduleSlot={labRescheduleSlot} setRescheduleSlot={setLabRescheduleSlot}
+        locationState={locationState} showToast={showToast}
+      />
+
+      <OrderManagementModals 
+        showDetails={showOrderDetailsModal} setShowDetails={setShowOrderDetailsModal} selectedOrder={selectedOrder}
+        showCancel={showOrderCancelModal} setShowCancel={setShowOrderCancelModal} cancelReason={orderCancelReason} setCancelReason={setOrderCancelReason}
+        showReturn={showOrderReturnModal} setShowReturn={setShowOrderReturnModal} returnReason={orderReturnReason} setReturnReason={setOrderReturnReason}
+        showToast={showToast}
+      />
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className={`fixed bottom-6 left-1/2 z-[100] px-6 py-3 rounded-full text-xs font-black tracking-wide shadow-2xl flex items-center gap-2 text-white ${toastType === 'error' ? 'bg-rose-600' : 'bg-slate-800'}`}
+          >
+            {toastType === 'success' ? <FiCheckCircle className="text-emerald-400 text-base" /> : <FiX className="text-rose-200 text-base" />}
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Generic Confirm Modal */}
+      <AnimatePresence>
+        {confirmAction && (
+          <motion.div className="fixed inset-0 z-[80] flex items-center justify-center p-4 select-none">
+            <div onClick={() => setConfirmAction(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm cursor-pointer" />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 text-center shadow-premium border border-slate-100">
+              <h4 className="text-base font-black text-slate-800">Please Confirm</h4>
+              <p className="text-xs text-slate-500 font-semibold mb-2">{confirmAction.message}</p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmAction(null)} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold cursor-pointer transition-colors">Cancel</button>
+                <button onClick={() => { confirmAction.onConfirm(); setConfirmAction(null); }} className="flex-1 py-3 rounded-xl bg-teal text-white hover:bg-teal-dark text-xs font-black cursor-pointer transition-colors shadow-sm">Confirm</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

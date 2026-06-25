@@ -2749,8 +2749,9 @@ const storedOrders = localStorage.getItem('em_orders')
           { name: 'Dolo 650 Tablet', qty: 2, price: 28, type: 'medicine' }
         ],
         total: 319,
-        status: 'Delivered',
-        deliveryAddress: 'Home (Mumbai)'
+        status: 'DELIVERED',
+        deliveryAddress: 'Home (Mumbai)',
+        paymentMethod: 'UPI'
       }
     ];
 
@@ -2778,7 +2779,7 @@ const storedLabBookings = localStorage.getItem('em_lab_bookings_v2')
         packageName: 'Diabetes Screening Core Panel',
         date: '2026-05-29',
         timeSlot: '08:00 AM - 10:00 AM',
-        status: 'Scheduled',
+        status: 'BOOKED',
         address: 'Home (Mumbai)',
         city: 'Mumbai',
         pincode: '400001'
@@ -3054,7 +3055,8 @@ const productSlice = createSlice({
       localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
     },
     bookLabPackage: (state, action) => {
-      state.labBookings.unshift(action.payload);
+      const newBooking = { ...action.payload, status: 'BOOKED' };
+      state.labBookings.unshift(newBooking);
       localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
     },
     syncLabBookings: (state, action) => {
@@ -3087,16 +3089,44 @@ const productSlice = createSlice({
       }
     },
     cancelDoctorAppointment: (state, action) => {
-      const apt = state.appointments.find(a => a.id === action.payload);
+      const payload = action.payload;
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const apt = state.appointments.find(a => a.id === id);
       if (apt) {
         apt.status = 'Cancelled';
+        apt.cancelReason = reason;
+        localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
+      }
+    },
+    rescheduleDoctorAppointment: (state, action) => {
+      const { id, date, timeSlot } = action.payload;
+      const apt = state.appointments.find(a => a.id === id);
+      if (apt) {
+        apt.status = 'Rescheduled';
+        apt.date = date;
+        apt.timeSlot = timeSlot;
         localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
       }
     },
     cancelLabBooking: (state, action) => {
-      const booking = state.labBookings.find(b => b.id === action.payload);
+      const payload = action.payload;
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const booking = state.labBookings.find(b => b.id === id);
       if (booking) {
-        booking.status = 'Cancelled';
+        booking.status = 'CANCELLED';
+        booking.cancelReason = reason;
+        localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
+      }
+    },
+    rescheduleLabBooking: (state, action) => {
+      const { id, date, timeSlot } = action.payload;
+      const booking = state.labBookings.find(b => b.id === id);
+      if (booking) {
+        booking.status = 'RESCHEDULED';
+        booking.date = date;
+        booking.timeSlot = timeSlot;
         localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
       }
     },
@@ -3105,6 +3135,28 @@ const productSlice = createSlice({
       const order = state.orders.find(o => o.id === orderId);
       if (order) {
         order.status = status;
+        localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
+      }
+    },
+    cancelOrder: (state, action) => {
+      const payload = action.payload;
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const order = state.orders.find(o => o.id === id);
+      if (order) {
+        order.status = 'CANCELLED';
+        order.cancelReason = reason;
+        localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
+      }
+    },
+    returnOrder: (state, action) => {
+      const payload = action.payload;
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const reason = typeof payload === 'object' ? payload.reason : 'No reason provided';
+      const order = state.orders.find(o => o.id === id);
+      if (order) {
+        order.status = 'RETURNED';
+        order.returnReason = reason;
         localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
       }
     },
@@ -3375,8 +3427,12 @@ export const {
   completeDoctorAppointment,
   completeLabBooking,
   cancelDoctorAppointment,
+  rescheduleDoctorAppointment,
   cancelLabBooking,
+  rescheduleLabBooking,
   updateOrderStatus,
+  cancelOrder,
+  returnOrder,
   addMedicineCategory,
   addDoctorSpecialty,
   addLabCategory,

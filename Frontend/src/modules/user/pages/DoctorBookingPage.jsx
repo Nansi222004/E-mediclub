@@ -122,6 +122,10 @@ export default function DoctorBookingPage() {
       return;
     }
 
+    if (consultationType === 'Online Consultation' && paymentMethod === 'cash') {
+      setPaymentMethod('upi');
+    }
+
     // Toggle payment review step
     setShowPaymentStep(true);
   };
@@ -289,7 +293,7 @@ export default function DoctorBookingPage() {
               {/* Payment Methods */}
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Choose Payment Option</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className={`grid ${consultationType === 'Online Consultation' ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('upi')}
@@ -308,15 +312,17 @@ export default function DoctorBookingPage() {
                   >
                     <span>💳</span> Card
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('cash')}
-                    className={`py-3.5 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${
-                      paymentMethod === 'cash' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span>🏥</span> Cash
-                  </button>
+                  {consultationType !== 'Online Consultation' && (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('cash')}
+                      className={`py-3.5 border rounded-xl font-black text-xs uppercase flex flex-col items-center gap-1 cursor-pointer transition-all border-0 ${
+                        paymentMethod === 'cash' ? 'bg-teal/10 border-teal text-teal' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>🏥</span> Cash
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -495,30 +501,39 @@ export default function DoctorBookingPage() {
               </div>
 
               {/* Form Input: Preferred Time Slot Selector */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
                   Preferred Appointment TimeSlot <span className="text-coral">*</span>
                 </label>
-                <div className="relative w-full">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-450 pointer-events-none">
-                    <FiClock />
-                  </span>
-                  <select
-                    required
-                    value={preferredTime}
-                    onChange={(e) => setPreferredTime(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold outline-none focus:border-teal focus:bg-white focus:ring-4 focus:ring-teal-light transition-all cursor-pointer text-slate-700 uppercase"
-                  >
-                    <option value="" disabled>-- Select Preferred Time Slot --</option>
-                    {timeSlots.map(slot => {
-                      const available = isDoctorSlotAvailable(slot);
-                      return (
-                        <option key={slot} value={slot} disabled={!available}>
-                          {slot} {!available && ' (Passed)'}
-                        </option>
-                      );
-                    })}
-                  </select>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {timeSlots.map(slot => {
+                    const available = isDoctorSlotAvailable(slot);
+                    const isSelected = preferredTime === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={!available}
+                        onClick={() => setPreferredTime(slot)}
+                        className={`py-2.5 px-1 rounded-xl text-center transition-all duration-200 border ${
+                          !available 
+                            ? 'bg-slate-50/50 border-slate-100/50 opacity-60 cursor-not-allowed' 
+                            : isSelected 
+                              ? 'bg-teal/10 border-teal shadow-sm cursor-pointer' 
+                              : 'bg-white border-slate-200 hover:border-teal/30 hover:bg-slate-50 cursor-pointer'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className={`text-[10px] font-black tracking-wider ${!available ? 'text-slate-400' : isSelected ? 'text-teal' : 'text-slate-650'}`}>
+                            {slot.split(' - ')[0]}
+                          </span>
+                          <span className={`text-[8px] font-bold mt-0.5 uppercase ${!available ? 'text-slate-300' : isSelected ? 'text-teal/70' : 'text-slate-400'}`}>
+                            to {slot.split(' - ')[1]}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

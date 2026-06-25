@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiTrash2, FiPlus, FiMinus, FiShoppingBag, FiPercent, 
-  FiChevronRight, FiCheck, FiX, FiShield, FiTrendingUp 
+  FiChevronRight, FiCheck, FiX, FiShield, FiTrendingUp,
+  FiTruck, FiAlertTriangle
 } from 'react-icons/fi';
 import { addToCart, updateQuantity, removeFromCart, applyCoupon, removeCoupon } from '../store/cartSlice';
 
@@ -166,6 +167,19 @@ export default function CartPage() {
                       <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-semibold block mt-0.5">
                         {item.packSize || item.subtitle}
                       </span>
+                      {/* Estimated delivery & Rx */}
+                      <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                        {item.type === 'medicine' && (
+                          <span className="flex items-center gap-1 text-[9px] font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+                            <FiTruck className="w-3 h-3 text-teal" /> Delivery by {new Date(Date.now() + 86400000 * (item.rxRequired ? 2 : 1)).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                        {item.rxRequired && (
+                          <span className="flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+                            <FiAlertTriangle className="w-3 h-3" /> Rx Required
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

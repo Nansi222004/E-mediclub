@@ -15,7 +15,8 @@ const getSpecsFallback = (product) => {
       composition: 'Paracetamol IP 650 mg',
       benefits: 'Effective for symptomatic relief from mild-to-moderate pain and high fever. Commonly used for headaches, muscle aches, backaches, arthritis, toothaches, colds, and minor fevers.',
       dosage: 'Take 1 tablet every 4-6 hours as needed. Do not exceed 4 tablets (4000 mg) in any 24-hour period. Best consumed after meals with water.',
-      warnings: 'Liver warning: Consuming more than maximum daily dose may cause serious liver damage or allergic reactions (swelling of face, mouth, throat, breathing difficulty, itching or rash).'
+      warnings: 'Liver warning: Consuming more than maximum daily dose may cause serious liver damage or allergic reactions (swelling of face, mouth, throat, breathing difficulty, itching or rash).',
+      rxRequired: false
     };
   }
   
@@ -25,7 +26,8 @@ const getSpecsFallback = (product) => {
       composition: 'Metformin Hydrochloride IP 500 mg / 1000 mg',
       benefits: 'Indicated for type 2 diabetes mellitus to improve glycemic control in adults. Helps increase insulin sensitivity and lower glucose production by the liver.',
       dosage: 'Typically initiated at 500 mg twice daily or 850 mg once daily, taken with meals to reduce gastrointestinal side effects. Adjust dosage under doctor instruction.',
-      warnings: 'Lactic Acidosis: A rare but serious metabolic complication. Avoid heavy alcohol intake while on this medication. Discontinue temporarily before contrast imaging studies.'
+      warnings: 'Lactic Acidosis: A rare but serious metabolic complication. Avoid heavy alcohol intake while on this medication. Discontinue temporarily before contrast imaging studies.',
+      rxRequired: true
     };
   }
   
@@ -35,7 +37,8 @@ const getSpecsFallback = (product) => {
       composition: 'Atorvastatin Calcium IP 10 mg / 20 mg',
       benefits: 'Helps lower LDL (bad cholesterol) and triglycerides while raising HDL (good cholesterol). Reduces risk of stroke, heart attack, and other cardiovascular complications.',
       dosage: 'Usually taken once daily at any time of day, with or without food. Swallow the tablet whole with a glass of water. Try to take it at the same time each day.',
-      warnings: 'Contraindicated in pregnancy or active liver disease. Report any unexplained muscle pain, tenderness, or weakness immediately to your healthcare provider.'
+      warnings: 'Contraindicated in pregnancy or active liver disease. Report any unexplained muscle pain, tenderness, or weakness immediately to your healthcare provider.',
+      rxRequired: true
     };
   }
 
@@ -45,7 +48,8 @@ const getSpecsFallback = (product) => {
       composition: 'Ginseng Extract, Vitamins A, B-Complex, C, D3, E, Zinc, Iron, Magnesium, and essential minerals.',
       benefits: 'Boosts daily energy levels, fights fatigue, and improves physical stamina. Strengthens the immune system, promotes healthy cognitive functions, and supports bone health.',
       dosage: 'Take 1 capsule/tablet daily with a glass of water, preferably after breakfast or lunch. Do not consume on an empty stomach.',
-      warnings: 'Keep out of reach of children. Consult your doctor if you are pregnant, nursing, or have a chronic medical condition (e.g. chronic kidney disease).'
+      warnings: 'Keep out of reach of children. Consult your doctor if you are pregnant, nursing, or have a chronic medical condition (e.g. chronic kidney disease).',
+      rxRequired: false
     };
   }
 
@@ -55,7 +59,8 @@ const getSpecsFallback = (product) => {
       composition: 'Amala (Indian Gooseberry), Ashwagandha, Giloy, Pippali, Shatavari, Cardamom, Honey, and over 40 potent Ayurvedic herbs.',
       benefits: 'Traditional Ayurvedic Rasayana that builds natural immunity, improves respiratory health, aids digestion, and rejuvenates overall energy levels.',
       dosage: 'Adults: 1-2 teaspoons twice daily. Children (above 3 years): 1/2 teaspoon daily. Best taken with warm milk or water in the morning.',
-      warnings: 'Contains sugar; diabetic patients should opt for sugar-free variants. Consult an Ayurvedic physician if you have chronic acidity or high blood sugar.'
+      warnings: 'Contains sugar; diabetic patients should opt for sugar-free variants. Consult an Ayurvedic physician if you have chronic acidity or high blood sugar.',
+      rxRequired: false
     };
   }
 
@@ -65,7 +70,8 @@ const getSpecsFallback = (product) => {
       composition: 'Dextromethorphan HBr, Phenylephrine HCl, Chlorpheniramine Maleate',
       benefits: 'Provides prompt relief from dry cough, nasal congestion, runny nose, watery eyes, and sneezing associated with common cold or respiratory allergies.',
       dosage: 'Take 5 ml to 10 ml 3-4 times a day or as directed by your physician. Use the measuring cup provided in the packaging.',
-      warnings: 'May cause drowsiness or dizziness. Avoid driving or operating heavy machinery after consumption. Keep away from alcohol intake.'
+      warnings: 'May cause drowsiness or dizziness. Avoid driving or operating heavy machinery after consumption. Keep away from alcohol intake.',
+      rxRequired: false
     };
   }
 
@@ -74,7 +80,8 @@ const getSpecsFallback = (product) => {
     composition: product.composition || 'Active Pharmaceutical Ingredients (API) mapped dynamically.',
     benefits: product.benefits || 'Indicated for symptomatic treatment and clinical therapy. Promotes therapeutic relief and recovery from relevant physiological disorders.',
     dosage: product.dosage || 'Take as advised by your healthcare practitioner. Swallow whole; do not crush, chew, or break. Ensure proper adherence to scheduled timings.',
-    warnings: product.warnings || 'For clinical pharmacy use. Consult your physician prior to usage if pregnant, nursing, or having active hepatic/renal history.'
+    warnings: product.warnings || 'For clinical pharmacy use. Consult your physician prior to usage if pregnant, nursing, or having active hepatic/renal history.',
+    rxRequired: product.category === 'Medicines' && !name.includes('dolo') && !name.includes('crocin') && !name.includes('spray') && !name.includes('vicks')
   };
 };
 
@@ -129,7 +136,8 @@ export default function ProductDetailsPage() {
       discountPrice: product.discountPrice,
       image: product.image,
       packSize: product.packSize,
-      brand: product.brand
+      brand: product.brand,
+      rxRequired: specs.rxRequired
     }));
   };
 
@@ -213,6 +221,12 @@ export default function ProductDetailsPage() {
             <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 mt-1 leading-tight">
               {product.name}
             </h1>
+            {specs.rxRequired && (
+              <div className="mt-2 flex items-center gap-1.5 bg-rose-50 text-rose-600 px-3 py-1 rounded-lg w-fit">
+                <FiAlertTriangle className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Prescription Required</span>
+              </div>
+            )}
             <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">
               BY: {product.brand}
             </p>
