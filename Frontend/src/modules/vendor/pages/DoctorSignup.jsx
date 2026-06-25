@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiArrowRight, FiCheck, FiFileText, FiImage, FiUser } from 'react-icons/fi';
+import { FiArrowLeft, FiArrowRight, FiCheck, FiFileText, FiImage, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import Logo from '../../../shared/components/Logo';
 
 export default function DoctorSignup() {
@@ -17,6 +17,68 @@ export default function DoctorSignup() {
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, 4));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const handleNameChange = (e) => {
+    let val = e.target.value;
+    if (!val.startsWith('Dr. ') && val.length > 0) val = 'Dr. ' + val.replace(/^Dr\.?\s*/i, '');
+    setFormData({...formData, fullName: val});
+    
+    const namePart = val.replace(/^Dr\.?\s*/i, '');
+    if (/[0-9]/.test(namePart)) {
+      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain numbers' }));
+    } else if (/[^a-zA-Z\s]/.test(namePart)) {
+      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain special characters' }));
+    } else if (namePart && namePart.trim().length < 2) {
+      setErrors(prev => ({ ...prev, fullName: 'Name must be at least 2 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, fullName: '' }));
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, email: val});
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (val && !emailRegex.test(val)) {
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+    } else {
+      setErrors(prev => ({ ...prev, email: '' }));
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setFormData({...formData, phone: val});
+    if (val && val.length < 10) {
+      setErrors(prev => ({ ...prev, phone: 'Mobile number must be 10 digits' }));
+    } else {
+      setErrors(prev => ({ ...prev, phone: '' }));
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, password: val});
+    if (val && val.length < 6) {
+      setErrors(prev => ({ ...prev, password: 'Password must be at least 6 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, password: '' }));
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, confirmPassword: val});
+    if (val && val !== formData.password) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+    } else {
+      setErrors(prev => ({ ...prev, confirmPassword: '' }));
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -103,27 +165,38 @@ export default function DoctorSignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Full Name (with Dr. prefix)</label>
-                      <input required type="text" value={formData.fullName} onChange={e => {
-                        let val = e.target.value;
-                        if (!val.startsWith('Dr. ') && val.length > 0) val = 'Dr. ' + val.replace(/^Dr\.?\s*/i, '');
-                        setFormData({...formData, fullName: val});
-                      }} placeholder="Dr. Full Name" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.fullName} onChange={handleNameChange} placeholder="Dr. Full Name" className={`w-full px-4 py-3 bg-white border ${errors.fullName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.fullName && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.fullName}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Email Address</label>
-                      <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="email" value={formData.email} onChange={handleEmailChange} className={`w-full px-4 py-3 bg-white border ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.email && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.email}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Phone Number</label>
-                      <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="tel" value={formData.phone} onChange={handlePhoneChange} className={`w-full px-4 py-3 bg-white border ${errors.phone ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.phone && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.phone}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Password</label>
-                      <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <div className="relative">
+                        <input required type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handlePasswordChange} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.password ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                          {showPassword ? <FiEyeOff /> : <FiEye />}
+                        </button>
+                      </div>
+                      {errors.password && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.password}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Confirm Password</label>
-                      <input required type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <div className="relative">
+                        <input required type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleConfirmPasswordChange} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.confirmPassword ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                          {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                        </button>
+                      </div>
+                      {errors.confirmPassword && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.confirmPassword}</p>}
                     </div>
                   </div>
                 </div>

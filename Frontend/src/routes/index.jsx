@@ -22,7 +22,7 @@ const ProductRatingsPage = lazy(() => import('../modules/user/pages/ProductRatin
 
 
 // Auth Page (Customer)
-const LoginPage = lazy(() => import('../modules/auth/pages/LoginPage'));
+const AuthPage = lazy(() => import('../modules/auth/user/pages/AuthPage'));
 
 // Layouts (Admin & Vendor)
 const AdminLayout = lazy(() => import('../modules/admin/layouts/AdminLayout'));
@@ -155,7 +155,7 @@ export default function AppRoutes() {
       </Route>
 
       {/* Auth page routed outside layout so it doesn't show navigation bars */}
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<AuthPage />} />
 
       {/* 2. Super Admin Auth Public Routes */}
       <Route path="/admin/login" element={<AdminLoginPage />} />

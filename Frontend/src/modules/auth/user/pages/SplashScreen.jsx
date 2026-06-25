@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Logo from '../../../shared/components/Logo';
-import Shimmer from '../../../shared/components/Shimmer';
+import Logo from '../../../../shared/components/Logo';
+import Shimmer from '../../../../shared/components/Shimmer';
 
 export default function SplashScreen({ onComplete }) {
   useEffect(() => {

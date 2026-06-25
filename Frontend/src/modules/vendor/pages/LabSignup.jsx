@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { FiArrowLeft, FiArrowRight, FiCheck, FiUploadCloud, FiFileText, FiImage, FiUser } from 'react-icons/fi';
+import { FiArrowLeft, FiArrowRight, FiCheck, FiUploadCloud, FiFileText, FiImage, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import Logo from '../../../shared/components/Logo';
 import apiClient from '../../../shared/services/apiClient';
 import { vendorLoginSuccess } from '../../auth/vendor/store/vendorAuthSlice';
@@ -22,6 +22,151 @@ export default function LabSignup() {
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, 4));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const handleNameChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, fullName: val});
+    if (/[0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain numbers' }));
+    } else if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain special characters' }));
+    } else if (val && val.trim().length < 2) {
+      setErrors(prev => ({ ...prev, fullName: 'Name must be at least 2 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, fullName: '' }));
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setFormData({...formData, phone: val});
+    if (val && val.length < 10) {
+      setErrors(prev => ({ ...prev, phone: 'Mobile number must be 10 digits' }));
+    } else {
+      setErrors(prev => ({ ...prev, phone: '' }));
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, email: val});
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (val && !emailRegex.test(val)) {
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+    } else {
+      setErrors(prev => ({ ...prev, email: '' }));
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, password: val});
+    if (val && val.length < 6) {
+      setErrors(prev => ({ ...prev, password: 'Password must be at least 6 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, password: '' }));
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, confirmPassword: val});
+    if (val && val !== formData.password) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+    } else {
+      setErrors(prev => ({ ...prev, confirmPassword: '' }));
+    }
+  };
+
+  const handleLabNameChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, labName: val});
+    if (val && val.trim().length < 2) {
+      setErrors(prev => ({ ...prev, labName: 'Lab Name must be at least 2 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, labName: '' }));
+    }
+  };
+
+  const handleNablNumberChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, nablNumber: val});
+    setErrors(prev => ({ ...prev, nablNumber: '' }));
+  };
+
+  const handleRegNumberChange = (e) => {
+    const val = e.target.value.toUpperCase();
+    setFormData({...formData, regNumber: val});
+    if (/[^A-Z0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, regNumber: 'Registration No. can only contain letters and numbers' }));
+    } else {
+      setErrors(prev => ({ ...prev, regNumber: '' }));
+    }
+  };
+
+  const handleAddressChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, address: val});
+    if (val && val.trim().length < 5) {
+      setErrors(prev => ({ ...prev, address: 'Address is too short' }));
+    } else {
+      setErrors(prev => ({ ...prev, address: '' }));
+    }
+  };
+
+  const handleCityChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, city: val});
+    if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, city: 'City can only contain letters and spaces' }));
+    } else {
+      setErrors(prev => ({ ...prev, city: '' }));
+    }
+  };
+
+  const handleStateChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, state: val});
+    if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, state: 'State can only contain letters and spaces' }));
+    } else {
+      setErrors(prev => ({ ...prev, state: '' }));
+    }
+  };
+
+  const handlePincodeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setFormData({...formData, pincode: val});
+    if (val && val.length !== 6) {
+      setErrors(prev => ({ ...prev, pincode: 'Pincode must be 6 digits' }));
+    } else {
+      setErrors(prev => ({ ...prev, pincode: '' }));
+    }
+  };
+
+  const handleServiceablePincodesChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, serviceablePincodes: val});
+    if (val && !/^(\d{6})(,\s*\d{6})*$/.test(val)) {
+      setErrors(prev => ({ ...prev, serviceablePincodes: 'Enter valid 6-digit pincodes separated by commas' }));
+    } else {
+      setErrors(prev => ({ ...prev, serviceablePincodes: '' }));
+    }
+  };
+
+  const handleRadiusChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setFormData({...formData, homeCollectionRadius: val});
+    if (val && parseInt(val) <= 0) {
+      setErrors(prev => ({ ...prev, homeCollectionRadius: 'Radius must be greater than 0' }));
+    } else {
+      setErrors(prev => ({ ...prev, homeCollectionRadius: '' }));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -156,23 +301,38 @@ export default function LabSignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Full Name</label>
-                      <input required type="text" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.fullName} onChange={handleNameChange} className={`w-full px-4 py-3 bg-white border ${errors.fullName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.fullName && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.fullName}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Email Address</label>
-                      <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="email" value={formData.email} onChange={handleEmailChange} className={`w-full px-4 py-3 bg-white border ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.email && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.email}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Phone Number</label>
-                      <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="tel" value={formData.phone} onChange={handlePhoneChange} className={`w-full px-4 py-3 bg-white border ${errors.phone ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.phone && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.phone}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Password</label>
-                      <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <div className="relative">
+                        <input required type={showPassword ? "text" : "password"} value={formData.password} onChange={handlePasswordChange} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.password ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                          {showPassword ? <FiEyeOff /> : <FiEye />}
+                        </button>
+                      </div>
+                      {errors.password && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.password}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Confirm Password</label>
-                      <input required type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <div className="relative">
+                        <input required type={showConfirmPassword ? "text" : "password"} value={formData.confirmPassword} onChange={handleConfirmPasswordChange} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.confirmPassword ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                          {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                        </button>
+                      </div>
+                      {errors.confirmPassword && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.confirmPassword}</p>}
                     </div>
                   </div>
                 </div>
@@ -185,35 +345,42 @@ export default function LabSignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Lab / Diagnostic Center Name</label>
-                      <input required type="text" value={formData.labName} onChange={e => setFormData({...formData, labName: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.labName} onChange={handleLabNameChange} className={`w-full px-4 py-3 bg-white border ${errors.labName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.labName && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.labName}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">NABL Accreditation No. (Optional)</label>
-                      <input type="text" value={formData.nablNumber} onChange={e => setFormData({...formData, nablNumber: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="text" value={formData.nablNumber} onChange={handleNablNumberChange} className={`w-full px-4 py-3 bg-white border ${errors.nablNumber ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Lab Registration No. *</label>
-                      <input required type="text" value={formData.regNumber} onChange={e => setFormData({...formData, regNumber: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.regNumber} onChange={handleRegNumberChange} className={`w-full px-4 py-3 bg-white border ${errors.regNumber ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.regNumber && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.regNumber}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Lab Address</label>
-                      <textarea required rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 resize-none" />
+                      <textarea required rows="2" value={formData.address} onChange={handleAddressChange} className={`w-full px-4 py-3 bg-white border ${errors.address ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 resize-none`} />
+                      {errors.address && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.address}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">City</label>
-                      <input required type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.city} onChange={handleCityChange} className={`w-full px-4 py-3 bg-white border ${errors.city ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.city && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.city}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">State</label>
-                      <input required type="text" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.state} onChange={handleStateChange} className={`w-full px-4 py-3 bg-white border ${errors.state ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.state && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.state}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pincode</label>
-                      <input required type="text" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.pincode} onChange={handlePincodeChange} className={`w-full px-4 py-3 bg-white border ${errors.pincode ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.pincode && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.pincode}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Serviceable Pincodes</label>
-                      <input required type="text" value={formData.serviceablePincodes} onChange={e => setFormData({...formData, serviceablePincodes: e.target.value})} placeholder="e.g. 400001, 400002" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={formData.serviceablePincodes} onChange={handleServiceablePincodesChange} placeholder="e.g. 400001, 400002" className={`w-full px-4 py-3 bg-white border ${errors.serviceablePincodes ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.serviceablePincodes && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.serviceablePincodes}</p>}
                     </div>
                     <div className="flex items-center justify-between sm:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
                       <div>
@@ -228,7 +395,8 @@ export default function LabSignup() {
                     {formData.homeCollection && (
                       <div className="flex flex-col gap-1.5 sm:col-span-2 animate-fadeIn">
                         <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Home Collection Radius (in km)</label>
-                        <input type="number" required value={formData.homeCollectionRadius} onChange={e => setFormData({...formData, homeCollectionRadius: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                        <input type="number" required value={formData.homeCollectionRadius} onChange={handleRadiusChange} className={`w-full px-4 py-3 bg-white border ${errors.homeCollectionRadius ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                        {errors.homeCollectionRadius && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.homeCollectionRadius}</p>}
                       </div>
                     )}
                   </div>

@@ -45,6 +45,113 @@ export default function VendorSignupPage() {
   // Errors state
   const [errors, setErrors] = useState({});
 
+  // Live validation handlers
+  const handleFullNameChange = (e) => {
+    const val = e.target.value;
+    setFullName(val);
+    
+    if (/[0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain numbers' }));
+    } else if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain special characters' }));
+    } else if (val && val.trim().length < 2) {
+      setErrors(prev => ({ ...prev, fullName: 'Name must be at least 2 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, fullName: '' }));
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setPhone(val);
+    
+    if (val && val.length < 10) {
+      setErrors(prev => ({ ...prev, phone: 'Mobile number must be 10 digits' }));
+    } else {
+      setErrors(prev => ({ ...prev, phone: '' }));
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setEmail(val);
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (val && !emailRegex.test(val)) {
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+    } else {
+      setErrors(prev => ({ ...prev, email: '' }));
+    }
+  };
+
+  const handlePanChange = (e) => {
+    const val = e.target.value.toUpperCase();
+    setPanNo(val);
+    
+    if (/[^A-Z0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, panNo: 'PAN can only contain letters and numbers' }));
+    } else if (val && val.length !== 10) {
+      setErrors(prev => ({ ...prev, panNo: '10-digit corporate PAN ID is required' }));
+    } else {
+      setErrors(prev => ({ ...prev, panNo: '' }));
+    }
+  };
+
+  const handleAadhaarChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setAadhaarNo(val);
+    
+    if (val && val.length !== 12) {
+      setErrors(prev => ({ ...prev, aadhaarNo: '12-digit Aadhaar UID is required' }));
+    } else {
+      setErrors(prev => ({ ...prev, aadhaarNo: '' }));
+    }
+  };
+
+  const handleGstChange = (e) => {
+    const val = e.target.value.toUpperCase();
+    setGstNo(val);
+    
+    if (/[^A-Z0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, gstNo: 'GST can only contain letters and numbers' }));
+    } else if (val && val.length !== 15) {
+      setErrors(prev => ({ ...prev, gstNo: '15-character GST number is required' }));
+    } else {
+      setErrors(prev => ({ ...prev, gstNo: '' }));
+    }
+  };
+
+  const handlePincodeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setPincode(val);
+    
+    if (val && val.length !== 6) {
+      setErrors(prev => ({ ...prev, pincode: '6-digit area pincode is required' }));
+    } else {
+      setErrors(prev => ({ ...prev, pincode: '' }));
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    setPassword(val);
+    if (val.length > 0 && val.length < 8) {
+      setErrors(prev => ({ ...prev, password: 'Password must be at least 8 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, password: '' }));
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    const val = e.target.value;
+    setConfirmPassword(val);
+    if (val && val !== password) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+    } else {
+      setErrors(prev => ({ ...prev, confirmPassword: '' }));
+    }
+  };
+
   const handleValidation = () => {
     const errs = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -145,7 +252,7 @@ export default function VendorSignupPage() {
                 icon={FiUser}
                 error={errors.fullName ? { message: errors.fullName } : null}
                 required
-                register={{ value: fullName, onChange: (e) => setFullName(e.target.value) }}
+                register={{ value: fullName, onChange: handleFullNameChange }}
               />
               <AuthInput
                 label="Pharmacy / Clinic Designation"
@@ -178,7 +285,7 @@ export default function VendorSignupPage() {
                   icon={FiShield}
                   error={errors.gstNo ? { message: errors.gstNo } : null}
                   required
-                  register={{ value: gstNo, onChange: (e) => setGstNo(e.target.value.toUpperCase()) }}
+                  register={{ value: gstNo, onChange: handleGstChange }}
                 />
               </div>
             </div>
@@ -195,7 +302,7 @@ export default function VendorSignupPage() {
                   icon={FiUser}
                   error={errors.email ? { message: errors.email } : null}
                   required
-                  register={{ value: email, onChange: (e) => setEmail(e.target.value) }}
+                  register={{ value: email, onChange: handleEmailChange }}
                 />
                 <AuthInput
                   label="Owner Phone Number"
@@ -203,7 +310,7 @@ export default function VendorSignupPage() {
                   icon={FiUser}
                   error={errors.phone ? { message: errors.phone } : null}
                   required
-                  register={{ value: phone, onChange: (e) => setPhone(e.target.value.replace(/\D/g, '')) }}
+                  register={{ value: phone, onChange: handlePhoneChange }}
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -213,7 +320,7 @@ export default function VendorSignupPage() {
                   icon={FiShield}
                   error={errors.panNo ? { message: errors.panNo } : null}
                   required
-                  register={{ value: panNo, onChange: (e) => setPanNo(e.target.value.toUpperCase()) }}
+                  register={{ value: panNo, onChange: handlePanChange }}
                 />
                 <AuthInput
                   label="Aadhaar UID Number"
@@ -221,7 +328,7 @@ export default function VendorSignupPage() {
                   icon={FiShield}
                   error={errors.aadhaarNo ? { message: errors.aadhaarNo } : null}
                   required
-                  register={{ value: aadhaarNo, onChange: (e) => setAadhaarNo(e.target.value.replace(/\D/g, '')) }}
+                  register={{ value: aadhaarNo, onChange: handleAadhaarChange }}
                 />
               </div>
               <AuthInput
@@ -250,7 +357,7 @@ export default function VendorSignupPage() {
                   placeholder="400001"
                   error={errors.pincode ? { message: errors.pincode } : null}
                   required
-                  register={{ value: pincode, onChange: (e) => setPincode(e.target.value.replace(/\D/g, '')) }}
+                  register={{ value: pincode, onChange: handlePincodeChange }}
                 />
               </div>
             </div>
@@ -293,7 +400,7 @@ export default function VendorSignupPage() {
                 placeholder="••••••••"
                 error={errors.password ? { message: errors.password } : null}
                 required
-                register={{ value: password, onChange: (e) => setPassword(e.target.value) }}
+                register={{ value: password, onChange: handlePasswordChange }}
               />
 
               <PasswordInput
@@ -301,7 +408,7 @@ export default function VendorSignupPage() {
                 placeholder="••••••••"
                 error={errors.confirmPassword ? { message: errors.confirmPassword } : null}
                 required
-                register={{ value: confirmPassword, onChange: (e) => setConfirmPassword(e.target.value) }}
+                register={{ value: confirmPassword, onChange: handleConfirmPasswordChange }}
               />
 
             </div>

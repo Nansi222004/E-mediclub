@@ -156,7 +156,6 @@ Thumbs.db
 ehthumbs.db
 
 # Package manager
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 

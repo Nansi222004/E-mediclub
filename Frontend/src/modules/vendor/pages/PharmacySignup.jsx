@@ -92,6 +92,94 @@ export default function PharmacySignup() {
 
   // Declaration
   const [declared, setDeclared] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const handleNameChange = (e) => {
+    const val = e.target.value;
+    setName(val);
+    if (/[0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, name: 'Name cannot contain numbers' }));
+    } else if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, name: 'Name cannot contain special characters' }));
+    } else if (val && val.trim().length < 2) {
+      setErrors(prev => ({ ...prev, name: 'Name must be at least 2 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, name: '' }));
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setPhone(val);
+    if (val && val.length < 10) {
+      setErrors(prev => ({ ...prev, phone: 'Mobile number must be 10 digits' }));
+    } else {
+      setErrors(prev => ({ ...prev, phone: '' }));
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setEmail(val);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (val && !emailRegex.test(val)) {
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+    } else {
+      setErrors(prev => ({ ...prev, email: '' }));
+    }
+  };
+
+  const handleStoreNameChange = (e) => {
+    const val = e.target.value;
+    setStoreName(val);
+    if (val && val.trim().length < 2) {
+      setErrors(prev => ({ ...prev, storeName: 'Store Name must be at least 2 characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, storeName: '' }));
+    }
+  };
+
+  const handleCityChange = (e) => {
+    const val = e.target.value;
+    setCity(val);
+    if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, city: 'City can only contain letters and spaces' }));
+    } else {
+      setErrors(prev => ({ ...prev, city: '' }));
+    }
+  };
+
+  const handleStateChange = (e) => {
+    const val = e.target.value;
+    setState(val);
+    if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, state: 'State can only contain letters and spaces' }));
+    } else {
+      setErrors(prev => ({ ...prev, state: '' }));
+    }
+  };
+
+  const handlePincodeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setPincode(val);
+    if (val && val.length !== 6) {
+      setErrors(prev => ({ ...prev, pincode: 'Pincode must be 6 digits' }));
+    } else {
+      setErrors(prev => ({ ...prev, pincode: '' }));
+    }
+  };
+
+  const handleGstChange = (e) => {
+    const val = e.target.value.toUpperCase();
+    setGstNumber(val);
+    if (/[^A-Z0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, gstNumber: 'GST can only contain letters and numbers' }));
+    } else if (val && val.length !== 15) {
+      setErrors(prev => ({ ...prev, gstNumber: '15-character GST number is required' }));
+    } else {
+      setErrors(prev => ({ ...prev, gstNumber: '' }));
+    }
+  };
 
   // OTP countdown timer
   useEffect(() => {
@@ -377,20 +465,25 @@ export default function PharmacySignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Owner Full Name *</label>
-                      <input required type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Enter full name" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={name} onChange={handleNameChange} placeholder="Enter full name" className={`w-full px-4 py-2.5 bg-white border ${errors.name ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.name && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.name}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Email Address *</label>
-                      <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="owner@store.com" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="email" value={email} onChange={handleEmailChange} placeholder="owner@store.com" className={`w-full px-4 py-2.5 bg-white border ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.email && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.email}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Mobile Number *</label>
                       <div className="flex gap-2">
-                        <input required type="tel" disabled={otpVerified} value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile number" className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 disabled:bg-slate-100 disabled:text-slate-500" />
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          <input required type="tel" disabled={otpVerified} value={phone} onChange={handlePhoneChange} placeholder="10-digit mobile number" className={`w-full px-4 py-2.5 bg-white border ${errors.phone ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 disabled:bg-slate-100 disabled:text-slate-500`} />
+                          {errors.phone && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.phone}</p>}
+                        </div>
                         {!otpVerified && (
-                          <button type="button" onClick={handleSendOTP} disabled={otpLoading || otpTimer > 0} className="px-4 py-2.5 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black shrink-0 transition-colors disabled:bg-slate-200 disabled:text-slate-400">
+                          <button type="button" onClick={handleSendOTP} disabled={otpLoading || otpTimer > 0} className="px-4 py-2.5 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black shrink-0 transition-colors disabled:bg-slate-200 disabled:text-slate-400 self-start">
                             {otpTimer > 0 ? `Resend (${otpTimer}s)` : 'Send OTP'}
                           </button>
                         )}
@@ -459,7 +552,8 @@ export default function PharmacySignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Pharmacy / Store Name *</label>
-                      <input required type="text" value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="e.g. Apollo Pharmacy Store" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={storeName} onChange={handleStoreNameChange} placeholder="e.g. Apollo Pharmacy Store" className={`w-full px-4 py-2.5 bg-white border ${errors.storeName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.storeName && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.storeName}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -469,7 +563,8 @@ export default function PharmacySignup() {
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">GST Number *</label>
-                      <input required type="text" value={gstNumber} onChange={e => setGstNumber(e.target.value.toUpperCase())} placeholder="27AAAAA1111A1Z1" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={gstNumber} onChange={handleGstChange} placeholder="27AAAAA1111A1Z1" className={`w-full px-4 py-2.5 bg-white border ${errors.gstNumber ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.gstNumber && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.gstNumber}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -494,17 +589,20 @@ export default function PharmacySignup() {
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">City *</label>
-                      <input required type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Mumbai" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={city} onChange={handleCityChange} placeholder="e.g. Mumbai" className={`w-full px-4 py-2.5 bg-white border ${errors.city ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.city && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.city}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">State *</label>
-                      <input required type="text" value={state} onChange={e => setState(e.target.value)} placeholder="e.g. Maharashtra" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" value={state} onChange={handleStateChange} placeholder="e.g. Maharashtra" className={`w-full px-4 py-2.5 bg-white border ${errors.state ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.state && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.state}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Pincode *</label>
-                      <input required type="text" maxLength={6} value={pincode} onChange={e => setPincode(e.target.value.replace(/\D/g, ''))} placeholder="400001" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input required type="text" maxLength={6} value={pincode} onChange={handlePincodeChange} placeholder="400001" className={`w-full px-4 py-2.5 bg-white border ${errors.pincode ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.pincode && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.pincode}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
