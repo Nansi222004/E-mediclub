@@ -102,6 +102,14 @@ export default function ProductDetailsPage() {
   // Find product by id
   const product = medicines?.find(med => med.id === id);
 
+  const [activeImage, setActiveImage] = useState(product?.image || null);
+
+  useEffect(() => {
+    if (product?.image) {
+      setActiveImage(product.image);
+    }
+  }, [product?.image]);
+
   // Early return if product is not found (either still loading or doesn't exist)
   if (!product) {
     return (
@@ -129,14 +137,6 @@ export default function ProductDetailsPage() {
         'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80',
         'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80'
       ];
-
-  const [activeImage, setActiveImage] = useState(product?.image);
-
-  useEffect(() => {
-    if (product) {
-      setActiveImage(product.image);
-    }
-  }, [product]);
 
   // Cart matching details
   const cartItem = cartItems.find(item => item.id === product.id && item.type === 'medicine');
