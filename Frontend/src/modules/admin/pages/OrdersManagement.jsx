@@ -117,9 +117,6 @@ export default function OrdersManagement() {
           Dispatch
         </button>
       )}
-<<<<<<< Updated upstream
-=======
-
       {row.returnStatus === 'Requested' && (
         <button
           onClick={() => {
@@ -143,7 +140,6 @@ export default function OrdersManagement() {
           Complete Refund
         </button>
       )}
->>>>>>> Stashed changes
     </>
   );
 
