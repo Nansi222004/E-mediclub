@@ -121,6 +121,13 @@ export default function CMSManagement() {
               searchKey="code"
               actions={couponActions}
               fileName="emediclub-coupons"
+              emptyStateComponent={
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-100 rounded-2xl text-center shadow-sm">
+                  <FiTag className="text-3xl text-slate-300 mb-2" />
+                  <div className="text-[10px] font-black uppercase text-slate-800 tracking-wider">No Promo Codes</div>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Add discount coupons to boost conversions.</p>
+                </div>
+              }
             />
           </div>
 
@@ -134,32 +141,40 @@ export default function CMSManagement() {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {cms.heroBanners.map((banner) => (
-                <div 
-                  key={banner.id} 
-                  className="border border-slate-100 rounded-2xl overflow-hidden relative group shadow-sm bg-slate-50"
-                >
-                  <img 
-                    src={banner.image} 
-                    alt={banner.title} 
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="p-4 flex flex-col gap-2 bg-white">
-                    <span className="text-xs font-extrabold text-slate-800 truncate block">{banner.title}</span>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${banner.status === 'active' ? 'bg-teal-light text-teal' : 'bg-slate-100 text-slate-400'}`}>
-                        {banner.status}
-                      </span>
-                      <button 
-                        onClick={() => handleToggleBanner(banner.id)}
-                        className="text-[9px] font-black text-teal hover:underline uppercase cursor-pointer"
-                      >
-                        Toggle Status
-                      </button>
+              {cms.heroBanners.length === 0 ? (
+                <div className="col-span-1 sm:col-span-2 flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-100 rounded-2xl text-center shadow-sm">
+                  <FiLayout className="text-3xl text-slate-300 mb-2" />
+                  <div className="text-[10px] font-black uppercase text-slate-800 tracking-wider">No Banners Found</div>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Upload sliding hero banners for the user app.</p>
+                </div>
+              ) : (
+                cms.heroBanners.map((banner) => (
+                  <div 
+                    key={banner.id} 
+                    className="border border-slate-100 rounded-2xl overflow-hidden relative group shadow-sm bg-slate-50"
+                  >
+                    <img 
+                      src={banner.image} 
+                      alt={banner.title} 
+                      className="w-full h-32 object-cover"
+                    />
+                    <div className="p-4 flex flex-col gap-2 bg-white">
+                      <span className="text-xs font-extrabold text-slate-800 truncate block">{banner.title}</span>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${banner.status === 'active' ? 'bg-teal-light text-teal' : 'bg-slate-100 text-slate-400'}`}>
+                          {banner.status}
+                        </span>
+                        <button 
+                          onClick={() => handleToggleBanner(banner.id)}
+                          className="text-[9px] font-black text-teal hover:underline uppercase cursor-pointer"
+                        >
+                          Toggle Status
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

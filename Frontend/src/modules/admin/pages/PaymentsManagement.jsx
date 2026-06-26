@@ -5,6 +5,7 @@ import LocationFilter from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';
 import { useAdminLocation } from '../context/AdminLocationContext';
+import ReusableTable from '../components/ReusableTable';
 import apiClient from '../../../shared/services/apiClient';
 import { buildApiUrl } from '../utils/adminQueryHelper';
 
@@ -110,16 +111,6 @@ export default function PaymentsManagement() {
       <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
         <div className="flex justify-between items-center border-b border-slate-50 pb-3 mb-1">
           <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Settlements Log</span>
-          <div className="relative w-60">
-            <FiSearch className="absolute left-3 top-2.5 text-slate-400 text-xs" />
-            <input
-              type="text"
-              placeholder="Search partner or txn..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-100 focus:border-teal rounded-xl text-xs font-semibold outline-none focus:bg-white"
-            />
-          </div>
         </div>
 
         {loading ? (
@@ -141,40 +132,32 @@ export default function PaymentsManagement() {
             <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">There are no payout/settlement transactions recorded in the system yet.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest">
-                  <th className="py-3 px-4">Transaction ID</th>
-                  <th className="py-3 px-4">Fulfillment Partner</th>
-                  <th className="py-3 px-4">Gross Revenue</th>
-                  <th className="py-3 px-4">Partner Payout</th>
-                  <th className="py-3 px-4">Commission (Cut)</th>
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Settlement</th>
-                </tr>
-              </thead>
-              <tbody className="text-xs font-semibold text-slate-650 divide-y divide-slate-50/50">
-                {filteredTxns.map(t => (
-                  <tr key={t.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="py-3 px-4 font-extrabold text-slate-800">{t.id}</td>
-                    <td className="py-3 px-4 text-slate-850 font-extrabold">{t.partner}</td>
-                    <td className="py-3 px-4 text-slate-700">₹{t.rev.toLocaleString('en-IN')}</td>
-                    <td className="py-3 px-4 text-slate-700 font-extrabold">₹{t.payout.toLocaleString('en-IN')}</td>
-                    <td className="py-3 px-4 text-teal font-black">₹{t.commission.toLocaleString('en-IN')}</td>
-                    <td className="py-3 px-4 text-slate-400 text-[10.5px]">{t.date}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider ${
-                        t.status === 'Settled' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                      }`}>
-                        {t.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ReusableTable
+            columns={[
+              { key: 'id', header: 'Transaction ID', render: row => <span className="font-extrabold text-slate-800">{row.id}</span> },
+              { key: 'partner', header: 'Fulfillment Partner', render: row => <span className="text-slate-850 font-extrabold">{row.partner}</span> },
+              { key: 'rev', header: 'Gross Revenue', render: row => <span className="text-slate-700">₹{row.rev.toLocaleString('en-IN')}</span> },
+              { key: 'payout', header: 'Partner Payout', render: row => <span className="text-slate-700 font-extrabold">₹{row.payout.toLocaleString('en-IN')}</span> },
+              { key: 'commission', header: 'Commission (Cut)', render: row => <span className="text-teal font-black">₹{row.commission.toLocaleString('en-IN')}</span> },
+              { key: 'date', header: 'Date', render: row => <span className="text-slate-400 text-[10.5px]">{row.date}</span> },
+              { 
+                key: 'status', 
+                header: 'Settlement',
+                render: row => (
+                  <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider ${
+                    row.status === 'Settled' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                  }`}>
+                    {row.status}
+                  </span>
+                )
+              }
+            ]}
+            data={filteredTxns}
+            searchPlaceholder="Search partner or txn..."
+            searchKey="partner"
+            filterOptions={{ key: 'status', label: 'Settlement', options: ['Settled', 'Pending'] }}
+            fileName="emediclub-settlements"
+          />
         )}
       </div>
 
