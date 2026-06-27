@@ -7,6 +7,7 @@ import { FiCheckCircle, FiXCircle, FiTrash2, FiSearch, FiFilter, FiDownload } fr
 import LocationFilter from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';
+import ConfirmationModal from '../components/ConfirmationModal';
 import apiClient from '../../../shared/services/apiClient';
 import { buildApiUrl } from '../utils/adminQueryHelper';
 
@@ -48,9 +49,15 @@ export default function DoctorManagement() {
     fetchDoctors();
   }, [locationFilter.search, locationFilter.state, locationFilter.city, locationFilter.pincode, timeframe]);
 
-  const handleDelete = (id) => {
-    dispatch(deleteDoctor(id));
-    setDoctorsList(prev => prev.filter(doc => doc.id !== id));
+  // Modals state
+  const [docToDelete, setDocToDelete] = useState(null);
+  const [docToReject, setDocToReject] = useState(null);
+
+  const handleDelete = () => {
+    if (!docToDelete) return;
+    dispatch(deleteDoctor(docToDelete.id));
+    setDoctorsList(prev => prev.filter(doc => doc.id !== docToDelete.id));
+    setDocToDelete(null);
   };
 
   const handleApprove = (id) => {
@@ -58,9 +65,11 @@ export default function DoctorManagement() {
     setDoctorsList(prev => prev.map(doc => doc.id === id ? { ...doc, status: 'approved' } : doc));
   };
 
-  const handleReject = (id) => {
-    dispatch(rejectDoctor(id));
-    setDoctorsList(prev => prev.map(doc => doc.id === id ? { ...doc, status: 'rejected' } : doc));
+  const handleReject = () => {
+    if (!docToReject) return;
+    dispatch(rejectDoctor(docToReject.id));
+    setDoctorsList(prev => prev.map(doc => doc.id === docToReject.id ? { ...doc, status: 'rejected' } : doc));
+    setDocToReject(null);
   };
 
   // Get unique hospital names for filter dropdown
@@ -354,7 +363,7 @@ export default function DoctorManagement() {
                           {/* Reject Button */}
                           <button
                             disabled={doc.status === 'rejected'}
-                            onClick={() => handleReject(doc.id)}
+                            onClick={() => setDocToReject(doc)}
                             title="Reject Practitioner"
                             className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition-all cursor-pointer tap-scale disabled:opacity-30 disabled:pointer-events-none"
                           >
@@ -363,7 +372,7 @@ export default function DoctorManagement() {
 
                           {/* Delete Button */}
                           <button
-                            onClick={() => handleDelete(doc.id)}
+                            onClick={() => setDocToDelete(doc)}
                             title="Delete Doctor"
                             className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition-all cursor-pointer tap-scale"
                           >
@@ -423,14 +432,14 @@ export default function DoctorManagement() {
                     </button>
                     <button
                       disabled={doc.status === 'rejected'}
-                      onClick={() => handleReject(doc.id)}
+                      onClick={() => setDocToReject(doc)}
                       className="flex items-center justify-center gap-1 py-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-30 disabled:pointer-events-none"
                     >
                       <FiXCircle />
                       <span>Reject</span>
                     </button>
                     <button
-                      onClick={() => handleDelete(doc.id)}
+                      onClick={() => setDocToDelete(doc)}
                       className="flex items-center justify-center gap-1 py-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
                     >
                       <FiTrash2 />
@@ -448,6 +457,22 @@ export default function DoctorManagement() {
         )}
       </div>
 
+      <ConfirmationModal
+        isOpen={!!docToReject}
+        onClose={() => setDocToReject(null)}
+        onConfirm={handleReject}
+        title="Reject Doctor?"
+        message={`Are you sure you want to reject Dr. ${docToReject?.name}?`}
+        isDanger={true}
+      />
+      <ConfirmationModal
+        isOpen={!!docToDelete}
+        onClose={() => setDocToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Doctor?"
+        message={`Are you sure you want to permanently delete Dr. ${docToDelete?.name}?`}
+        isDanger={true}
+      />
     </div>
   );
 }

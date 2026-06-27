@@ -135,7 +135,7 @@ export default function DoctorVendorLayout() {
 
       {/* 2. Sidebar Navigation */}
       <aside 
-        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 bg-[#135A5A] text-white border-r border-[#0F4A4A] shadow-premium flex flex-col justify-between`}
+        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 bg-[#135A5A] text-white border-r border-[#0F4A4A] shadow-premium flex flex-col justify-between overflow-hidden`}
         style={{ width: isSidebarOpen ? '256px' : isMobile ? '0px' : '80px', transform: isMobile && !isSidebarOpen ? 'translateX(-100%)' : 'translateX(0)' }}
       >
         <div className="flex flex-col h-[calc(100%-80px)]">
@@ -242,31 +242,6 @@ export default function DoctorVendorLayout() {
           </nav>
         </div>
 
-        {/* Footer Profile & controls */}
-        <div className="p-3 border-t border-[#0F4A4A] flex flex-col gap-2 shrink-0 bg-[#0F4A4A]/50">
-          {isSidebarOpen ? (
-            <div className="flex items-center gap-3 bg-[#135A5A] p-2 rounded-xl border border-white/10 shadow-sm">
-              <div className="w-10 h-10 rounded-full bg-white/20 overflow-hidden shrink-0 border border-white/20">
-                <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Dr. John Smith" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white truncate">Dr. John Smith</h4>
-                <p className="text-xs text-[#88D4D3] truncate">Cardiologist</p>
-              </div>
-              <button onClick={handleLogout} className="p-2 text-[#88D4D3] hover:text-coral transition-colors shrink-0 border-0 bg-transparent cursor-pointer" title="Log Out">
-                <FiLogOut className="text-lg" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleLogout}
-              className="flex items-center justify-center p-3 w-full rounded-xl text-[#F87171] hover:bg-white/10 transition-all tap-scale cursor-pointer border-0"
-              title="Log Out"
-            >
-              <FiLogOut className="text-xl" />
-            </button>
-          )}
-        </div>
       </aside>
 
       {/* 3. Main Dashboard Window */}

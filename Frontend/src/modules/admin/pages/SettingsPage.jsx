@@ -16,19 +16,27 @@ function AdminUsersPanel() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Operations Manager');
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleAdd = (e) => {
     e.preventDefault();
     if (!name || !email) return;
-    const newStaff = {
-      id: `ADM-00${staff.length + 1}`,
-      name,
-      email,
-      role
-    };
-    setStaff([...staff, newStaff]);
-    setName('');
-    setEmail('');
-    setShowAddModal(false);
+    setIsSaving(true);
+    
+    // Simulate API delay
+    setTimeout(() => {
+      const newStaff = {
+        id: `ADM-00${staff.length + 1}`,
+        name,
+        email,
+        role
+      };
+      setStaff([...staff, newStaff]);
+      setName('');
+      setEmail('');
+      setIsSaving(false);
+      setShowAddModal(false);
+    }, 600);
   };
 
   const handleDelete = (id) => {
@@ -126,8 +134,14 @@ function AdminUsersPanel() {
                 </select>
               </div>
               <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-slate-200 rounded-lg font-bold border-0 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-teal text-white rounded-lg font-bold border-0 cursor-pointer">Add Staff</button>
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-slate-200 rounded-lg font-bold border-0 cursor-pointer text-slate-700">Cancel</button>
+                <button type="submit" disabled={isSaving} className="px-4 py-2 bg-teal text-white rounded-lg font-bold border-0 cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[100px]">
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Add Staff'
+                  )}
+                </button>
               </div>
             </form>
           </div>
@@ -221,13 +235,19 @@ function PlatformConfigPanel() {
   const [otpLength, setOtpLength] = useState(4);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSaveSettings = (e) => {
     e.preventDefault();
-    dispatch(setGlobalCommission(Number(commRate)));
-    setSavedSuccess(true);
+    setIsSaving(true);
     setTimeout(() => {
-      setSavedSuccess(false);
-    }, 2000);
+      dispatch(setGlobalCommission(Number(commRate)));
+      setIsSaving(false);
+      setSavedSuccess(true);
+      setTimeout(() => {
+        setSavedSuccess(false);
+      }, 2000);
+    }, 600);
   };
 
   return (
@@ -323,9 +343,17 @@ function PlatformConfigPanel() {
       <div className="flex items-center gap-4.5">
         <button 
           type="submit"
-          className="px-6 py-3.5 bg-teal hover:bg-teal-dark text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-sm transition-all cursor-pointer border-0 tap-scale"
+          disabled={isSaving}
+          className="px-6 py-3.5 bg-teal hover:bg-teal-dark text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-sm transition-all cursor-pointer border-0 tap-scale disabled:opacity-70 flex items-center justify-center min-w-[200px]"
         >
-          Save configurations
+          {isSaving ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Saving...</span>
+            </div>
+          ) : (
+            'Save configurations'
+          )}
         </button>
         
         {savedSuccess && (

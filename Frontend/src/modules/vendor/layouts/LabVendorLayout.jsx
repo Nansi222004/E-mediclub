@@ -133,9 +133,7 @@ export default function LabVendorLayout() {
 
       {/* 2. Sidebar Navigation */}
       <aside 
-        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ${
-          isOpen => isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 md:translate-x-0 -translate-x-full'
-        } bg-[#135A5A] text-white border-r border-[#0F4A4A] shadow-premium flex flex-col justify-between`}
+        className="fixed top-0 left-0 z-40 h-screen transition-all duration-300 bg-[#135A5A] text-white border-r border-[#0F4A4A] shadow-premium flex flex-col justify-between overflow-hidden"
         style={{ width: isSidebarOpen ? '256px' : isMobile ? '0px' : '80px', transform: isMobile && !isSidebarOpen ? 'translateX(-100%)' : 'translateX(0)' }}
       >
         <div>
@@ -251,16 +249,6 @@ export default function LabVendorLayout() {
           </nav>
         </div>
 
-        {/* Footer controls */}
-        <div className="p-3.5 border-t border-[#0F4A4A] flex flex-col gap-1.5">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3.5 px-4 py-3 w-full rounded-2xl text-xs font-black tracking-wider uppercase text-coral hover:bg-white/10 hover:text-coral-light transition-all text-left tap-scale cursor-pointer border-0 bg-transparent"
-          >
-            <FiLogOut className="text-lg shrink-0" />
-            {isSidebarOpen && <span>Log Out</span>}
-          </button>
-        </div>
       </aside>
 
       {/* 3. Main Dashboard Window */}
@@ -383,17 +371,21 @@ export default function LabVendorLayout() {
 
       {/* 4. Bottom mobile nav */}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around z-30 md:hidden shadow-app-bar px-2">
-        {sidebarItems.map((item) => {
-          const Icon = item.icon || FiGrid;
-          const targetPath = item.path || (item.subItems && item.subItems[0].path) || '/vendor/lab/dashboard';
+        {[
+          { name: 'Dashboard', path: '/vendor/lab/dashboard', icon: FiGrid },
+          { name: 'Orders', path: '/vendor/lab/orders/new', icon: FiFileText },
+          { name: 'Tests', path: '/vendor/lab/tests/all', icon: FiActivity },
+          { name: 'Profile', path: '/vendor/lab/profile/basic', icon: FiUser },
+        ].map((item) => {
+          const Icon = item.icon;
           return (
             <NavLink 
               key={item.name}
-              to={targetPath}
-              className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal' : 'text-slate-400'}`}
+              to={item.path}
+              className={({ isActive }) => `flex flex-col items-center gap-1 text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-[#1A7A4A]' : 'text-slate-400'}`}
             >
               <Icon className="text-xl" />
-              <span>{item.name.split(' ')[0]}</span>
+              <span>{item.name}</span>
             </NavLink>
           );
         })}

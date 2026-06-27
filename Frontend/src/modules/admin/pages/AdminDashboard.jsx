@@ -16,7 +16,8 @@ import {
   FiHeart, FiPhone, FiMessageSquare, FiSliders, FiEye, FiCheckCircle, FiPlusCircle, FiTrendingUp, FiUserCheck, FiCreditCard, FiPercent
 } from 'react-icons/fi';
 import { approveVendor, rejectVendor } from '../store/adminSlice';
-import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import AdminFilterBar from '../components/AdminFilterBar';
+import StatsCard from '../components/StatsCard';
 import { useAdminLocation } from '../context/AdminLocationContext';
 
 // Helper function to format Indian locale currencies
@@ -73,7 +74,7 @@ export default function AdminDashboard() {
   const locationQuery = locationFilter.search || '';
 
   // Timeframe and Loading States
-  const [timeframe, setTimeframe] = useState('month'); // day / month / year
+  const [timeframe, setTimeframe] = useState(''); // day / month / year (empty string defaults to month internally but shows placeholder in UI)
   const [chartLoading, setChartLoading] = useState(false);
 
   // Live database states
@@ -118,7 +119,8 @@ export default function AdminDashboard() {
       setChartLoading(true);
       try {
         const qs = getQueryString();
-        const tf = `timeframe=${timeframe}`;
+        const tfValue = timeframe || 'month';
+        const tf = `timeframe=${tfValue}`;
         const finalQs = qs ? `${qs}&${tf}` : tf;
 
         const [
@@ -206,8 +208,9 @@ export default function AdminDashboard() {
 
   // Calculate dynamic totals based on timeframe
   const timeframeMultiplier = useMemo(() => {
-    if (timeframe === 'day') return 1 / 30;
-    if (timeframe === 'year') return 12;
+    const tfValue = timeframe || 'month';
+    if (tfValue === 'day') return 1 / 30;
+    if (tfValue === 'year') return 12;
     return 1; // month is the baseline
   }, [timeframe]);
 
@@ -230,7 +233,7 @@ export default function AdminDashboard() {
 
   const totalOrdersCount = stats.orders || useMemo(() => {
     const raw = filteredOrdersList.length + filteredLabBookingsList.length + filteredAppointmentsList.length;
-    return Math.max(Math.round(raw * timeframeMultiplier), timeframe === 'day' ? 5 : 0);
+    return Math.max(Math.round(raw * timeframeMultiplier), (timeframe || 'month') === 'day' ? 5 : 0);
   }, [filteredOrdersList, filteredLabBookingsList, filteredAppointmentsList, timeframeMultiplier, timeframe]);
 
   const pendingApprovalsCount = filteredVendorsList.filter(v => v.status === 'pending').length;
@@ -433,7 +436,8 @@ export default function AdminDashboard() {
 
 
   const trafficData = useMemo(() => {
-    if (timeframe.toLowerCase() === 'day') {
+    const tfValue = timeframe || 'month';
+    if (tfValue.toLowerCase() === 'day') {
       return [
         { name: '12am', Visits: 150, UniqueUsers: 60, Pageviews: 450 },
         { name: '4am', Visits: 80, UniqueUsers: 35, Pageviews: 240 },
@@ -443,7 +447,7 @@ export default function AdminDashboard() {
         { name: '8pm', Visits: 1500, UniqueUsers: 700, Pageviews: 4505 },
         { name: '11pm', Visits: 600, UniqueUsers: 280, Pageviews: 1800 }
       ];
-    } else if (timeframe.toLowerCase() === 'year') {
+    } else if (tfValue.toLowerCase() === 'year') {
       return [
         { name: 'Jan', Visits: 3200, UniqueUsers: 1400, Pageviews: 8900 },
         { name: 'Feb', Visits: 4100, UniqueUsers: 1900, Pageviews: 11200 },
@@ -534,8 +538,28 @@ export default function AdminDashboard() {
               Real-time operations center, vendor payouts audit, and diagnostic node settlements.
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <LocationFilter />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
+            <AdminFilterBar 
+              customFilters={[
+                {
+                  key: 'timeframe',
+                  label: 'Timeframe',
+                  value: timeframe,
+                  options: [
+                    { value: 'day', label: 'Day' },
+                    { value: 'month', label: 'Month' },
+                    { value: 'year', label: 'Year' }
+                  ]
+                }
+              ]}
+              onFilterChange={(filters) => {
+                const newTimeframe = filters.timeframe || '';
+                if (newTimeframe !== timeframe) {
+                  setTimeframe(newTimeframe);
+                  if (newTimeframe) triggerToast(`Timeframe changed to: ${newTimeframe.toUpperCase()}.`);
+                }
+              }}
+            />
           </div>
         </div>
 
@@ -587,28 +611,28 @@ export default function AdminDashboard() {
         </div>
 
         {/* Filters and Timeframe */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <LocationFilter />
-          <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-[#E8F5EE] shadow-2xs">
-            <span className="admin-toggle-label px-2">Timeframe:</span>
-            {['day', 'month', 'year'].map(mode => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => {
-                  setTimeframe(mode);
-                  triggerToast(`Timeframe changed to: ${mode.toUpperCase()}.`);
-                }}
-                className="px-3 py-1 rounded-xl admin-toggle-btn transition-all cursor-pointer border-0 bg-slate-50 hover:bg-slate-100 text-[#6B7280]"
-                style={{
-                  backgroundColor: timeframe === mode ? '#1A7A4A' : '',
-                  color: timeframe === mode ? '#ffffff' : ''
-                }}
-              >
-                {mode.toUpperCase()}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
+          <AdminFilterBar 
+            customFilters={[
+              {
+                key: 'timeframe',
+                label: 'Timeframe',
+                value: timeframe,
+                options: [
+                  { value: 'day', label: 'Day' },
+                  { value: 'month', label: 'Month' },
+                  { value: 'year', label: 'Year' }
+                ]
+              }
+            ]}
+            onFilterChange={(filters) => {
+              const newTimeframe = filters.timeframe || '';
+              if (newTimeframe !== timeframe) {
+                setTimeframe(newTimeframe);
+                if (newTimeframe) triggerToast(`Timeframe changed to: ${newTimeframe.toUpperCase()}.`);
+              }
+            }}
+          />
         </div>
       </div>
 
@@ -650,197 +674,87 @@ export default function AdminDashboard() {
           </>
         ) : (
           <>
-            {/* Patients (Green) */}
-            <motion.div 
+            <StatsCard 
+              title="Patients" 
+              value={<AnimatedCounter value={stats.patients} />}
+              icon={FiUsers}
+              iconColor="#1A7A4A"
+              trend="12.4%"
+              trendDirection="up"
               onClick={() => handleCardClick('patients')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Patients</span>
-                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">▲ 12.4%</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={stats.patients} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiUsers className="text-[#1A7A4A] text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,12 Q10,2 20,8 T40,4 T50,8" fill="none" stroke="#1A7A4A" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Vendors (Amber) */}
-            <motion.div 
+              sparklineData="M0,12 Q10,2 20,8 T40,4 T50,8"
+            />
+            <StatsCard 
+              title="Vendors" 
+              value={<AnimatedCounter value={stats.vendors} />}
+              icon={FiMapPin}
+              iconColor="#F5A623"
+              trend="8.7%"
+              trendDirection="up"
               onClick={() => handleCardClick('vendors')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Vendors</span>
-                  <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">▲ 8.7%</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={stats.vendors} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiMapPin className="text-[#F5A623] text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,10 Q15,14 30,4 T50,6" fill="none" stroke="#F5A623" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Orders (Blue) */}
-            <motion.div 
+              sparklineData="M0,10 Q15,14 30,4 T50,6"
+            />
+            <StatsCard 
+              title="Orders" 
+              value={<AnimatedCounter value={stats.orders} />}
+              icon={FiShoppingBag}
+              iconColor="#3B82F6"
+              trend="2.6%"
+              trendDirection="down"
               onClick={() => handleCardClick('orders')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Orders</span>
-                  <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">▽ 2.6%</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={stats.orders} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiShoppingBag className="text-blue-500 text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,5 Q10,12 25,8 T50,2" fill="none" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Revenue (Purple) */}
-            <motion.div 
+              sparklineData="M0,5 Q10,12 25,8 T50,2"
+            />
+            <StatsCard 
+              title="Revenue" 
+              value={<AnimatedCounter value={formatIndianCurrency(stats.revenue)} />}
+              icon={FiDollarSign}
+              iconColor="#8B5CF6"
+              trend="40.9%"
+              trendDirection="up"
               onClick={() => handleCardClick('revenue')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Revenue</span>
-                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">▲ 40.9%</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={formatIndianCurrency(stats.revenue)} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiDollarSign className="text-[#8B5CF6] text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,14 Q12,2 25,12 T50,4" fill="none" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Pending Approvals (Orange) */}
-            <motion.div 
+              sparklineData="M0,14 Q12,2 25,12 T50,4"
+              isCurrency={true}
+            />
+            <StatsCard 
+              title="Pending KYC" 
+              value={<AnimatedCounter value={pendingApprovalsCount} />}
+              icon={FiUserCheck}
+              iconColor="#F97316"
+              trendText="Review needed"
+              trendDirection="neutral"
               onClick={() => handleCardClick('pendingKyc')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Pending KYC</span>
-                  <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">KYC review</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={pendingApprovalsCount} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiUserCheck className="text-orange-500 text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,8 L10,8 L20,3 L30,13 L40,8 L50,8" fill="none" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Complaints (Red) */}
-            <motion.div 
+              sparklineData="M0,8 L10,8 L20,3 L30,13 L40,8 L50,8"
+            />
+            <StatsCard 
+              title="Complaints" 
+              value={<AnimatedCounter value={complaintsCount} />}
+              icon={FiAlertTriangle}
+              iconColor="#EF4444"
+              trendText={`${complaintsCount} New`}
+              trendDirection="down"
               onClick={() => handleCardClick('complaints')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Complaints</span>
-                  <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">▲ 1 New</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={complaintsCount} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiAlertTriangle className="text-rose-500 text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,4 L10,12 L20,4 L30,12 L45,4" fill="none" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Active Cities (Teal) */}
-            <motion.div 
-              onClick={() => handleCardClick('activeCities')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Active Cities</span>
-                  <span className="text-[9px] font-bold text-[#14B8A6] bg-teal-50 px-2 py-0.5 rounded-full">▲ 5 Live</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={activeCitiesCount} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiMapPin className="text-[#14B8A6] text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,10 C10,5 15,15 25,8 C35,2 40,12 50,5" fill="none" stroke="#14B8A6" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Home Collections Today (Green) */}
-            <motion.div 
-              onClick={() => handleCardClick('collections')}
-              variants={cardVariants} 
-              className="bg-white rounded-3xl p-4 flex flex-col justify-between min-h-[135px] border border-[#E8F5EE] shadow-xs transition-all duration-200 group admin-card cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <span className="admin-kpi-label block">Collections</span>
-                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">3 Today</span>
-                </div>
-                <div className="admin-kpi-number mt-2">
-                  <AnimatedCounter value={collectionsCount} />
-                </div>
-              </div>
-              <div className="w-full mt-2.5 flex items-end justify-between">
-                <FiActivity className="text-teal-500 text-lg" />
-                <svg viewBox="0 0 50 15" className="w-14 h-5 overflow-visible">
-                  <path d="M0,6 Q10,12 20,4 T40,10 T50,6" fill="none" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
+              sparklineData="M0,4 L10,12 L20,4 L30,12 L45,4"
+            />
+            <StatsCard 
+              title="Doctors" 
+              value={<AnimatedCounter value={doctors.length} />}
+              icon={FiHeart}
+              iconColor="#3B82F6"
+              trend="Live"
+              trendDirection="up"
+              onClick={() => navigate('/admin/doctors')}
+              sparklineData="M0,12 Q10,2 20,8 T40,4 T50,8"
+            />
+            <StatsCard 
+              title="Labs" 
+              value={<AnimatedCounter value={labs.length} />}
+              icon={FiActivity}
+              iconColor="#10B981"
+              trend="Live"
+              trendDirection="up"
+              onClick={() => navigate('/admin/vendors')}
+              sparklineData="M0,10 C10,5 15,15 25,8 C35,2 40,12 50,5"
+            />
           </>
         )}
       </motion.div>
@@ -855,7 +769,7 @@ export default function AdminDashboard() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Pharmacies Panel */}
-          <div className="vendor-node-pharmacy shadow-xs hover:shadow-sm transition-all duration-200">
+          <div className="vendor-node-pharmacy shadow-premium hover:shadow-sm transition-all duration-200">
             <div className="flex items-center gap-2 border-b border-[#BBF7D0] pb-3.5 mb-4">
               <span className="p-2 rounded-xl bg-emerald-50 text-[#1A7A4A]">
                 <FiPackage className="text-lg" />
@@ -900,7 +814,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Labs Panel */}
-          <div className="vendor-node-lab shadow-xs hover:shadow-sm transition-all duration-200">
+          <div className="vendor-node-lab shadow-premium hover:shadow-sm transition-all duration-200">
             <div className="flex items-center gap-2 border-b border-[#FDE68A] pb-3.5 mb-4">
               <span className="p-2 rounded-xl bg-amber-50 text-[#F5A623]">
                 <FiActivity className="text-lg" />
@@ -945,7 +859,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Doctors Panel */}
-          <div className="vendor-node-doctor shadow-xs hover:shadow-sm transition-all duration-200">
+          <div className="vendor-node-doctor shadow-premium hover:shadow-sm transition-all duration-200">
             <div className="flex items-center gap-2 border-b border-[#BFDBFE] pb-3.5 mb-4">
               <span className="p-2 rounded-xl bg-blue-50 text-blue-500">
                 <FiHeart className="text-lg" />
@@ -1167,7 +1081,7 @@ export default function AdminDashboard() {
         <div className="admin-skeleton-card-large mt-2" style={{ height: '380px' }} />
       ) : (
         <div className="w-full mt-2">
-          <div className="bg-white rounded-3xl border border-[#E8F5EE] shadow-xs flex flex-col justify-between relative overflow-hidden">
+          <div className="bg-white rounded-3xl border border-[#E8F5EE] shadow-premium flex flex-col justify-between relative overflow-hidden">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-[#E8F5EE] gap-4">
               <div>
                 <div className="admin-section-heading">Traffic Analysis</div>
@@ -1176,7 +1090,7 @@ export default function AdminDashboard() {
               <button 
                 type="button"
                 onClick={() => setShowDownloadLoader(true)}
-                className="bg-[#1A7A4A] hover:bg-[#1A7A4A]/90 text-white p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs border-0"
+                className="bg-[#1A7A4A] hover:bg-[#1A7A4A]/90 text-white p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-premium border-0"
               >
                 <FiDownload className="text-sm" />
               </button>
@@ -1320,7 +1234,7 @@ export default function AdminDashboard() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Recent Orders */}
-          <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col justify-between">
+          <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-premium flex flex-col justify-between">
             <div>
               <div className="flex flex-col gap-1 border-b border-[#E8F5EE] pb-3 mb-4">
                 <div className="admin-section-heading-wrapper">
@@ -1369,7 +1283,7 @@ export default function AdminDashboard() {
           </section>
 
           {/* Recent Registrations */}
-          <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col justify-between">
+          <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-premium flex flex-col justify-between">
             <div>
               <div className="flex flex-col gap-1 border-b border-[#E8F5EE] pb-3 mb-4">
                 <div className="admin-section-heading-wrapper">
@@ -1409,7 +1323,7 @@ export default function AdminDashboard() {
                             <button
                               type="button"
                               onClick={() => handleApproveVendor(vend.id, vend.name)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-xl border-0 cursor-pointer shadow-xs transition-all duration-150"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-xl border-0 cursor-pointer shadow-premium transition-all duration-150"
                             >
                               Approve
                             </button>
@@ -1434,7 +1348,7 @@ export default function AdminDashboard() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Activity Feed */}
-          <div className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col gap-4">
+          <div className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-premium flex flex-col gap-4">
             <div className="border-b border-[#E8F5EE] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <div className="admin-section-heading">Live Activity Feed</div>
@@ -1481,7 +1395,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Top Performers */}
-          <div className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs flex flex-col gap-4 justify-between">
+          <div className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-premium flex flex-col gap-4 justify-between">
             <div>
               <div className="border-b border-[#E8F5EE] pb-2">
                 <div className="admin-section-heading">Top Performing Vendors (This Month)</div>
@@ -1556,7 +1470,7 @@ export default function AdminDashboard() {
       )}
 
       {/* ==================== ROW 7 — FINANCIAL OVERVIEW ==================== */}
-      <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs">
+      <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-premium">
         <div className="border-b border-[#E8F5EE] pb-3.5 mb-4">
           <div className="admin-section-heading flex items-center gap-1.5">
             <FiCreditCard className="text-[#1A7A4A]" /> Platform Financial Overview <span className="text-[9px] font-bold text-[#6B7280] bg-slate-100 px-2 py-0.5 rounded ml-2 uppercase tracking-widest">Admin Eyes Only</span>
@@ -1609,7 +1523,7 @@ export default function AdminDashboard() {
       </section>
 
       {/* ==================== ROW 8 — ALERTS & NOTIFICATIONS PANEL ==================== */}
-      <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-xs">
+      <section className="bg-white rounded-3xl p-5 border border-[#E8F5EE] shadow-premium">
         <div className="border-b border-[#E8F5EE] pb-3.5 mb-4">
           <div className="admin-section-heading">🚨 Action Alerts & Notifications Panel</div>
           <div className="admin-section-subtext">Critical items requiring immediate administrative resolution or verification.</div>

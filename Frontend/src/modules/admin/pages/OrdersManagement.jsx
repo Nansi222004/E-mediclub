@@ -8,6 +8,7 @@ import { FiShoppingBag, FiFileText, FiPrinter, FiXCircle, FiCheckCircle, FiTruck
 import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';
+import ConfirmationModal from '../components/ConfirmationModal';
 import apiClient from '../../../shared/services/apiClient';
 import { buildApiUrl } from '../utils/adminQueryHelper';
 
@@ -16,6 +17,8 @@ export default function OrdersManagement() {
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [orderToConfirm, setOrderToConfirm] = useState(null);
+  const [confirmActionType, setConfirmActionType] = useState(''); // 'dispatch', 'return', 'refund'
   const [searchParams] = useSearchParams();
   const { locationFilter, isFiltered } = useAdminLocation();
 
@@ -46,8 +49,20 @@ export default function OrdersManagement() {
     setShowInvoiceModal(true);
   };
 
-  const handleUpdateStatus = (id, newStatus) => {
-    setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+  const handleConfirmAction = () => {
+    if (!orderToConfirm) return;
+    const { id } = orderToConfirm;
+    
+    if (confirmActionType === 'dispatch') {
+      setOrders(orders.map(o => o.id === id ? { ...o, status: 'shipped' } : o));
+    } else if (confirmActionType === 'return') {
+      setOrders(orders.map(o => o.id === id ? { ...o, returnStatus: 'Approved', refundStatus: 'Processing' } : o));
+    } else if (confirmActionType === 'refund') {
+      setOrders(orders.map(o => o.id === id ? { ...o, refundStatus: 'Completed' } : o));
+    }
+    
+    setOrderToConfirm(null);
+    setConfirmActionType('');
   };
 
   // Define table column descriptors
@@ -93,10 +108,36 @@ export default function OrdersManagement() {
 
       {row.status === 'pending' && (
         <button 
-          onClick={() => handleUpdateStatus(row.id, 'shipped')}
+          onClick={() => {
+            setOrderToConfirm(row);
+            setConfirmActionType('dispatch');
+          }}
           className="flex items-center gap-1 px-3 py-1.5 bg-teal text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-teal-dark shadow-sm transition-all cursor-pointer tap-scale"
         >
           Dispatch
+        </button>
+      )}
+      {row.returnStatus === 'Requested' && (
+        <button
+          onClick={() => {
+            setOrderToConfirm(row);
+            setConfirmActionType('return');
+          }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-600 shadow-sm transition-all cursor-pointer tap-scale"
+        >
+          Approve Return
+        </button>
+      )}
+
+      {row.refundStatus === 'Processing' && (
+        <button
+          onClick={() => {
+            setOrderToConfirm(row);
+            setConfirmActionType('refund');
+          }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 shadow-sm transition-all cursor-pointer tap-scale"
+        >
+          Complete Refund
         </button>
       )}
     </>
@@ -257,6 +298,26 @@ export default function OrdersManagement() {
         )}
       </AnimatePresence>
 
+      <ConfirmationModal
+        isOpen={!!orderToConfirm}
+        onClose={() => {
+          setOrderToConfirm(null);
+          setConfirmActionType('');
+        }}
+        onConfirm={handleConfirmAction}
+        title={
+          confirmActionType === 'dispatch' ? 'Confirm Dispatch' :
+          confirmActionType === 'return' ? 'Approve Return' :
+          'Complete Refund'
+        }
+        message={
+          confirmActionType === 'dispatch' ? `Are you sure you want to mark order #${orderToConfirm?.id} as shipped?` :
+          confirmActionType === 'return' ? `Are you sure you want to approve the return request for order #${orderToConfirm?.id}? This will initiate the refund process.` :
+          `Are you sure you want to complete the refund for order #${orderToConfirm?.id}?`
+        }
+        confirmText="Confirm"
+        cancelText="Cancel"
+      />
     </div>
   );
 }
