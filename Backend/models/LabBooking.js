@@ -113,10 +113,11 @@ const labBookingSchema = new mongoose.Schema(
       type: String
     },
     reason: {
-      type: String
-    },
-    customReason: {
-      type: String
+      type: {
+        type: String,
+        enum: ["WRONG_TEST_BOOKED", "DOCTOR_ADVICE_CHANGED", "NO_LONGER_NEEDED", "OTHER"]
+      },
+      customReason: String
     },
     returnStatus: {
       type: String,

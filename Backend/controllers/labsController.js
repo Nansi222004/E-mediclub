@@ -168,7 +168,7 @@ const cancelLabBooking = async (req, res, next) => {
   try {
     const { reason, customReason } = req.body;
     
-    if (reason === "Other" && !customReason?.trim()) {
+    if (reason === "OTHER" && !customReason?.trim()) {
       return res.status(400).json({
         success: false,
         message: "Please specify your reason."
@@ -186,9 +186,11 @@ const cancelLabBooking = async (req, res, next) => {
     }
 
     booking.status = 'Cancelled';
-    booking.reason = reason;
-    booking.customReason = reason === 'Other' ? customReason.trim() : '';
-    booking.returnStatus = 'Requested'; // Treat as cancellation/refund request
+    booking.reason = {
+      type: reason,
+      customReason: reason === 'OTHER' ? customReason.trim() : ''
+    };
+    booking.returnStatus = 'Requested';
     
     if (booking.paymentStatus === 'Paid') {
       booking.refundStatus = 'Pending';
@@ -198,6 +200,43 @@ const cancelLabBooking = async (req, res, next) => {
 
     await booking.save();
     return ApiResponse.success(res, 200, 'Lab booking cancelled successfully', booking);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reschedule a lab booking
+// @route   POST /api/labs/bookings/:id/reschedule
+// @access  Protected
+const rescheduleLabBooking = async (req, res, next) => {
+  try {
+    const { newDate, newTimeSlot } = req.body;
+    
+    if (!newDate || !newTimeSlot) {
+      return ApiResponse.error(res, 400, 'New date and time slot are required');
+    }
+
+    const booking = await LabBooking.findOne({ id: req.params.id });
+    
+    if (!booking) {
+      return ApiResponse.error(res, 404, 'Lab booking not found');
+    }
+
+    if (booking.status === 'sample_collected' || booking.status === 'completed' || booking.status === 'Cancelled') {
+      return ApiResponse.error(res, 400, 'Booking cannot be rescheduled at this stage');
+    }
+
+    booking.date = newDate;
+    booking.timeSlot = newTimeSlot;
+    
+    if (booking.status === 'collector_assigned') {
+      booking.status = 'new_booking';
+      booking.collectorName = null;
+      booking.collectorPhone = null;
+    }
+
+    await booking.save();
+    return ApiResponse.success(res, 200, 'Lab booking rescheduled successfully', booking);
   } catch (error) {
     next(error);
   }
@@ -570,6 +609,7 @@ module.exports = {
   bookLab,
   getMyLabBookings,
   cancelLabBooking,
+  rescheduleLabBooking,
   getVendorBookings,
   updateBookingStatus,
   uploadBookingReport,

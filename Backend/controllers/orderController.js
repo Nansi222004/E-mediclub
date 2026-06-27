@@ -9,7 +9,7 @@ const cancelOrder = async (req, res, next) => {
     const { reason, customReason } = req.body;
     
     // Backend Validation
-    if (reason === "Other" && !customReason?.trim()) {
+    if (reason === "OTHER" && !customReason?.trim()) {
       return res.status(400).json({
         success: false,
         message: "Please specify your reason."
@@ -32,8 +32,10 @@ const cancelOrder = async (req, res, next) => {
     }
 
     order.status = 'Cancelled';
-    order.reason = reason;
-    order.customReason = reason === 'Other' ? customReason.trim() : '';
+    order.reason = {
+      type: reason,
+      customReason: reason === 'OTHER' ? customReason.trim() : ''
+    };
     
     // Set refund status if applicable
     if (order.paymentStatus === 'Paid') {
@@ -58,7 +60,7 @@ const returnOrder = async (req, res, next) => {
     const { reason, customReason } = req.body;
     
     // Backend Validation
-    if (reason === "Other" && !customReason?.trim()) {
+    if (reason === "OTHER" && !customReason?.trim()) {
       return res.status(400).json({
         success: false,
         message: "Please specify your reason."
@@ -79,9 +81,11 @@ const returnOrder = async (req, res, next) => {
       return ApiResponse.error(res, 400, 'Only delivered orders can be returned');
     }
 
-    order.returnStatus = 'Requested';
-    order.reason = reason;
-    order.customReason = reason === 'Other' ? customReason.trim() : '';
+    order.status = 'RETURN_REQUESTED';
+    order.reason = {
+      type: reason,
+      customReason: reason === 'OTHER' ? customReason.trim() : ''
+    };
     order.refundStatus = 'Pending';
 
     await order.save();

@@ -2845,6 +2845,86 @@ const initialState = {
   labCategories: ['Blood Test', 'Thyroid', 'Diabetes', 'Full Body Checkup', 'Vitamin Tests', 'Urine Test']
 };
 
+export const returnOrderThunk = createAsyncThunk(
+  'products/returnOrder',
+  async ({ id, reason, customReason }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post(`/api/orders/${id}/return`, { reason, customReason });
+      return response.data.data;
+    } catch (error) {
+      // Fallback for local mock orders
+      if (error.response?.status === 404) {
+        return { id, status: 'RETURN_REQUESTED', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' } };
+      }
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const cancelDoctorAppointmentThunk = createAsyncThunk(
+  'products/cancelDoctorAppointment',
+  async ({ id, reason, customReason }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post(`/api/appointments/${id}/cancel`, { reason, customReason });
+      return response.data.data;
+    } catch (error) {
+      // Fallback for local mock appointments
+      if (error.response?.status === 404) {
+        return { id, bookingStatus: 'Cancelled', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' } };
+      }
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const rescheduleDoctorAppointmentThunk = createAsyncThunk(
+  'products/rescheduleDoctorAppointment',
+  async ({ id, newDate, newTimeSlot }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post(`/api/appointments/${id}/reschedule`, { newDate, newTimeSlot });
+      return response.data.data;
+    } catch (error) {
+      // Fallback for local mock appointments
+      if (error.response?.status === 404) {
+        return { id, appointmentDate: newDate, timeSlot: newTimeSlot, bookingStatus: 'RESCHEDULED', date: newDate };
+      }
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const cancelLabBookingThunk = createAsyncThunk(
+  'products/cancelLabBooking',
+  async ({ id, reason, customReason }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post(`/api/labs/bookings/${id}/cancel`, { reason, customReason });
+      return response.data.data;
+    } catch (error) {
+      // Fallback for local mock bookings
+      if (error.response?.status === 404) {
+        return { id, status: 'Cancelled', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' } };
+      }
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const rescheduleLabBookingThunk = createAsyncThunk(
+  'products/rescheduleLabBooking',
+  async ({ id, newDate, newTimeSlot }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post(`/api/labs/bookings/${id}/reschedule`, { newDate, newTimeSlot });
+      return response.data.data;
+    } catch (error) {
+      // Fallback for local mock bookings
+      if (error.response?.status === 404) {
+        return { id, date: newDate, timeSlot: newTimeSlot };
+      }
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 const productSlice = createSlice({
   name: 'products',
   initialState,
@@ -3358,6 +3438,45 @@ const productSlice = createSlice({
       })
       .addCase(fetchProducts.rejected, (state) => {
         state.isLoading = false;
+      })
+      .addCase(returnOrderThunk.fulfilled, (state, action) => {
+        const orderIndex = state.orders.findIndex(o => o.id === action.payload.id);
+        if (orderIndex !== -1) {
+          state.orders[orderIndex] = { ...state.orders[orderIndex], ...action.payload };
+          localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
+        }
+      })
+      .addCase(cancelDoctorAppointmentThunk.fulfilled, (state, action) => {
+        const aptIndex = state.appointments.findIndex(a => a.id === action.payload.id);
+        if (aptIndex !== -1) {
+          state.appointments[aptIndex] = { ...state.appointments[aptIndex], ...action.payload };
+          state.appointments[aptIndex].status = 'Cancelled';
+          localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
+        }
+      })
+      .addCase(rescheduleDoctorAppointmentThunk.fulfilled, (state, action) => {
+        const aptIndex = state.appointments.findIndex(a => a.id === action.payload.id);
+        if (aptIndex !== -1) {
+          state.appointments[aptIndex] = { ...state.appointments[aptIndex], ...action.payload };
+          if (action.payload.bookingStatus === 'RESCHEDULED') {
+             state.appointments[aptIndex].status = 'RESCHEDULED';
+          }
+          localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
+        }
+      })
+      .addCase(cancelLabBookingThunk.fulfilled, (state, action) => {
+        const bkIndex = state.labBookings.findIndex(b => b.id === action.payload.id);
+        if (bkIndex !== -1) {
+          state.labBookings[bkIndex] = { ...state.labBookings[bkIndex], ...action.payload };
+          localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
+        }
+      })
+      .addCase(rescheduleLabBookingThunk.fulfilled, (state, action) => {
+        const bkIndex = state.labBookings.findIndex(b => b.id === action.payload.id);
+        if (bkIndex !== -1) {
+          state.labBookings[bkIndex] = { ...state.labBookings[bkIndex], ...action.payload };
+          localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
+        }
       });
   }
 });

@@ -75,37 +75,19 @@ export default function DoctorAppointmentsPage() {
   };
 
   const isAppointmentActive = (apt) => {
-    if (!apt.date) return false;
+    const aptDate = apt.date || apt.appointmentDate;
+    if (!aptDate) return false;
+    if (apt.status === 'Cancelled' || apt.bookingStatus === 'Cancelled') return false;
+    if (apt.status === 'Completed' || apt.bookingStatus === 'Completed') return false;
+
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const todayStr = `${year}-${month}-${day}`;
     
-    if (apt.date < todayStr) return false;
-    if (apt.date > todayStr) return true;
-    
-    const parts = apt.timeSlot.split(' - ');
-    if (parts.length < 2) return true;
-    const endTimeStr = parts[1].trim();
-    
-    const timeMatch = endTimeStr.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
-    if (!timeMatch) return true;
-    
-    let hour = parseInt(timeMatch[1]);
-    const min = parseInt(timeMatch[2]);
-    const ampm = timeMatch[3].toUpperCase();
-    
-    if (ampm === 'PM' && hour !== 12) hour += 12;
-    if (ampm === 'AM' && hour === 12) hour = 0;
-    
-    const currentHour = now.getHours();
-    const currentMin = now.getMinutes();
-    
-    if (currentHour > hour || (currentHour === hour && currentMin >= min)) {
-      return false;
-    }
-    return true;
+    if (aptDate < todayStr) return false;
+    return true; // Keep today's active all day
   };
 
   const todayStr = getTodayStr();
@@ -290,7 +272,8 @@ export default function DoctorAppointmentsPage() {
             <div className="flex gap-4 overflow-x-auto no-scrollbar py-1 -mx-2 px-2 select-none">
               {activeAppointments.map((apt) => {
                 const avatar = getDoctorAvatar(apt);
-                const isToday = apt.date === todayStr;
+                const aptDate = apt.date || apt.appointmentDate;
+                const isToday = aptDate === todayStr;
                 return (
                   <div
                     key={apt.id || apt._id}
@@ -315,7 +298,7 @@ export default function DoctorAppointmentsPage() {
                     <span className={`text-[7.5px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
                       isToday ? 'bg-teal-light/25 text-teal border border-teal/10 animate-pulse' : 'bg-slate-100 text-slate-500'
                     }`}>
-                      {isToday ? 'Today' : apt.date.split('-').slice(1).reverse().join('/')}
+                      {isToday ? 'Today' : (apt.date || apt.appointmentDate).split('-').slice(1).reverse().join('/')}
                     </span>
                   </div>
                 );

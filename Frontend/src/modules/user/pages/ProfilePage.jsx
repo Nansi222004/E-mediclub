@@ -8,13 +8,14 @@ import { FiMapPin, FiCalendar, FiClock, FiTrash2, FiPlus,
 } from 'react-icons/fi';
 import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile, addSavedCard, deleteSavedCard } from '../../auth/store/authSlice';
 import { addToCart } from '../store/cartSlice';
-import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, cancelLabBooking, syncLabBookings, normalizeCity } from '../store/productSlice';
+import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancelDoctorAppointment, cancelLabBooking, syncLabBookings, normalizeCity, returnOrderThunk, cancelDoctorAppointmentThunk, rescheduleDoctorAppointmentThunk, cancelLabBookingThunk, rescheduleLabBookingThunk } from '../store/productSlice';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
 import apiClient from '../../../shared/services/apiClient';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfileSchema } from '../../auth/user/schemas/auth.schema';
+import ViewDetailsModal from '../components/ViewDetailsModal';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -75,6 +76,14 @@ export default function ProfilePage() {
   const [showGlobalUploadModal, setShowGlobalUploadModal] = useState(false);
   const [selectedRxForReview, setSelectedRxForReview] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // View Details / Action Modal States
+  const [actionModal, setActionModal] = useState({ isOpen: false, type: '', action: '', data: null });
+  const [actionReason, setActionReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  const [newDate, setNewDate] = useState('');
+  const [newTimeSlot, setNewTimeSlot] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [replacements, setReplacements] = useState(() => {
     const saved = localStorage.getItem('em_replacements');
@@ -517,13 +526,22 @@ export default function ProfilePage() {
 
                       <div className="flex justify-between items-center pt-2.5 border-t border-slate-50 mt-1">
                         <span className="text-slate-400 font-bold">Total charged: <strong className="text-slate-750">₹{ord.total}</strong></span>
-                        <button
-                          type="button"
-                          onClick={() => handleSimulateProgress(ord.id, ord.status)}
-                          className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 hover:text-slate-800 text-[9px] font-black uppercase tracking-wider rounded-lg border border-slate-150 cursor-pointer outline-none shrink-0"
-                        >
-                          Next Step ➔
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setActionModal({ isOpen: true, type: 'order', action: '', data: ord })}
+                            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[9px] font-black uppercase tracking-wider rounded-lg border border-slate-200 cursor-pointer shadow-sm transition-colors outline-none shrink-0"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSimulateProgress(ord.id, ord.status)}
+                            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 hover:text-slate-800 text-[9px] font-black uppercase tracking-wider rounded-lg border border-slate-150 cursor-pointer outline-none shrink-0"
+                          >
+                            Next Step ➔
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -561,10 +579,10 @@ export default function ProfilePage() {
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => navigate('/orders')}
-                          className="px-3 py-2 bg-slate-100 hover:bg-slate-205 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-colors outline-none"
+                          onClick={() => setActionModal({ isOpen: true, type: 'order', action: '', data: ord })}
+                          className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-xl border border-slate-200 cursor-pointer shadow-sm transition-colors outline-none"
                         >
-                          Order Details
+                          View Details
                         </button>
                         <button
                           type="button"
@@ -600,16 +618,19 @@ export default function ProfilePage() {
         };
         
         const isLabBookingActiveObj = (bk) => {
-          if (!bk.date) return false;
+          const bkDate = bk.date || bk.bookingDate;
+          if (!bkDate) return false;
+          if (bk.status === 'cancelled' || bk.status === 'completed') return false;
           const now = new Date();
           const year = now.getFullYear();
           const month = String(now.getMonth() + 1).padStart(2, '0');
           const day = String(now.getDate()).padStart(2, '0');
           const tStr = `${year}-${month}-${day}`;
           
-          if (bk.date < tStr) return false;
-          if (bk.date > tStr) return true;
+          if (bkDate < tStr) return false;
+          if (bkDate > tStr) return true;
           
+          if (!bk.timeSlot) return true;
           const parts = bk.timeSlot.split(' - ');
           if (parts.length < 2) return true;
           const endTimeStr = parts[1].trim();
@@ -696,7 +717,7 @@ export default function ProfilePage() {
                 <div className="min-w-0 flex-1">
                   <h4 className="font-extrabold text-slate-750 text-xs truncate">🔬 {booking.packageName}</h4>
                   <p className="text-[9px] text-slate-450 uppercase font-bold tracking-wide mt-0.5 truncate">
-                    {booking.date} • {booking.timeSlot}
+                    {booking.date || booking.bookingDate} • {booking.timeSlot}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -788,6 +809,17 @@ export default function ProfilePage() {
                   </span>
                 )}
 
+                {!isCancelled && booking.status !== 'completed' && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActionModal({ isOpen: true, type: 'lab', action: '', data: booking })}
+                      className="px-4 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-xl border border-slate-200 cursor-pointer transition-all shadow-sm outline-none"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                )}
+
                 {booking.status === 'completed' && (
                   booking.isRated ? (
                     <div className="flex items-center gap-1">
@@ -844,37 +876,19 @@ export default function ProfilePage() {
         };
         
         const isAppointmentActive = (apt) => {
-          if (!apt.date) return false;
+          const aptDate = apt.date || apt.appointmentDate;
+          if (!aptDate) return false;
+          if (apt.bookingStatus === 'Cancelled' || apt.status === 'Cancelled') return false;
+          if (apt.bookingStatus === 'Completed' || apt.status === 'Completed') return false;
+
           const now = new Date();
           const year = now.getFullYear();
           const month = String(now.getMonth() + 1).padStart(2, '0');
           const day = String(now.getDate()).padStart(2, '0');
           const tStr = `${year}-${month}-${day}`;
           
-          if (apt.date < tStr) return false;
-          if (apt.date > tStr) return true;
-          
-          const parts = apt.timeSlot.split(' - ');
-          if (parts.length < 2) return true;
-          const endTimeStr = parts[1].trim();
-          
-          const timeMatch = endTimeStr.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
-          if (!timeMatch) return true;
-          
-          let hour = parseInt(timeMatch[1]);
-          const min = parseInt(timeMatch[2]);
-          const ampm = timeMatch[3].toUpperCase();
-          
-          if (ampm === 'PM' && hour !== 12) hour += 12;
-          if (ampm === 'AM' && hour === 12) hour = 0;
-          
-          const currentHour = now.getHours();
-          const currentMin = now.getMinutes();
-          
-          if (currentHour > hour || (currentHour === hour && currentMin >= min)) {
-            return false;
-          }
-          return true;
+          if (aptDate < tStr) return false;
+          return true; // Keep today's appointments active all day
         };
 
         const todayStr = getTodayStr();
@@ -901,19 +915,24 @@ export default function ProfilePage() {
                         <div className="min-w-0">
                           <h4 className="font-extrabold text-slate-750 truncate">👨‍⚕️ {apt.doctorName}</h4>
                           <p className="text-[9px] text-slate-450 font-bold mt-1 uppercase tracking-wide truncate">{apt.specialty} • {apt.type}</p>
-                          <p className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">{apt.date} • {apt.timeSlot}</p>
+                          <p className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">{apt.date || apt.appointmentDate} • {apt.timeSlot}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] text-teal bg-teal-light/50 border border-teal/10 px-2.5 py-0.5 rounded-full uppercase font-black">{apt.status}</span>
-                        {apt.type.includes('Online') && (apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending') && (
+                      <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0">
+                        {(apt.type || '').includes('Online') && (apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Pending') && (
                           <button 
                             onClick={() => navigate('/doctor-appointments')} 
-                            className="px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer shadow-sm outline-none"
+                            className="w-full sm:w-auto px-3 py-1.5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase rounded-lg border-0 cursor-pointer shadow-sm outline-none"
                           >
                             Join Call
                           </button>
                         )}
+                        <button
+                          onClick={() => setActionModal({ isOpen: true, type: 'consultation', action: '', data: apt })}
+                          className="w-full sm:w-auto px-4 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-black uppercase rounded-lg border border-slate-200 cursor-pointer shadow-sm outline-none"
+                        >
+                          View Details
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -940,10 +959,10 @@ export default function ProfilePage() {
                           <div className="min-w-0">
                             <h4 className="font-extrabold text-slate-750 truncate">👨‍⚕️ {apt.doctorName}</h4>
                             <p className="text-[9px] text-slate-450 font-bold mt-1 uppercase tracking-wide truncate">{apt.specialty} • {apt.type}</p>
-                            <p className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">{apt.date} • {apt.timeSlot}</p>
+                            <p className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">{apt.date || apt.appointmentDate} • {apt.timeSlot}</p>
                           </div>
                         </div>
-                        <span className="text-[9px] text-slate-405 bg-slate-100 border border-slate-200/50 px-2.5 py-0.5 rounded-full uppercase font-black shrink-0">Completed</span>
+                        <span className="text-[9px] text-slate-405 bg-slate-100 border border-slate-200/50 px-2.5 py-0.5 rounded-full uppercase font-black shrink-0">{apt.status || apt.bookingStatus || 'Completed'}</span>
                       </div>
                       
                       <div className="flex justify-between items-center border-t border-slate-50 pt-2.5 mt-1 select-none">
@@ -1364,7 +1383,7 @@ export default function ProfilePage() {
                 <div key={booking.id} className="bg-white p-4 border border-slate-100 rounded-2xl flex justify-between items-center text-xs shadow-sm gap-3 animate-fade-in">
                   <div>
                     <h4 className="font-extrabold text-slate-750">🔬 {booking.packageName}</h4>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-1">{booking.date} • {booking.timeSlot}</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-1">{booking.date || booking.bookingDate} • {booking.timeSlot}</p>
                     <p className="text-[10px] text-slate-500 font-extrabold mt-1">Amount: ₹{booking.price || 799}</p>
                   </div>
                   <button
@@ -1410,7 +1429,7 @@ export default function ProfilePage() {
                   <div>
                     <h4 className="font-extrabold text-slate-750">👨‍⚕️ {apt.doctorName}</h4>
                     <p className="text-[9px] text-slate-455 font-bold uppercase tracking-wide mt-1">{apt.specialty} • {apt.type}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">{apt.date} • {apt.timeSlot}</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{apt.date || apt.appointmentDate} • {apt.timeSlot}</p>
                     <p className="text-[10px] text-slate-500 font-extrabold mt-1">Fee paid: ₹{apt.fee || 499}</p>
                   </div>
                   <button
@@ -2250,6 +2269,14 @@ export default function ProfilePage() {
         isOpen={showReviewModal}
         onClose={() => setShowReviewModal(false)}
         prescription={selectedRxForReview}
+      />
+
+      {/* Action / View Details Modal */}
+      <ViewDetailsModal 
+        isOpen={actionModal.isOpen}
+        onClose={() => setActionModal({ ...actionModal, isOpen: false })}
+        type={actionModal.type}
+        data={actionModal.data}
       />
 
     </div>

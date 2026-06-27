@@ -34,8 +34,8 @@ const appointmentSchema = new mongoose.Schema(
     },
     bookingStatus: {
       type: String,
-      enum: ['pending', 'confirmed', 'completed', 'cancelled'],
-      default: 'pending'
+      enum: ['pending', 'confirmed', 'completed', 'cancelled', 'Scheduled', 'Pending', 'Confirmed', 'Completed', 'Cancelled', 'RESCHEDULED', 'IN_PROGRESS'],
+      default: 'Scheduled'
     },
     city: {
       type: String,
@@ -50,11 +50,16 @@ const appointmentSchema = new mongoose.Schema(
       required: true
     },
     reason: {
-      type: String
+      type: {
+        type: String,
+        enum: ["FEELING_BETTER", "SCHEDULING_CONFLICT", "BOOKED_BY_MISTAKE", "DOCTOR_UNAVAILABLE", "OTHER"]
+      },
+      customReason: String
     },
-    customReason: {
-      type: String
-    },
+    previousSlots: [{
+      date: String,
+      time: String
+    }],
     returnStatus: {
       type: String,
       enum: ["None", "Requested", "Under Review", "Approved", "Rejected"],

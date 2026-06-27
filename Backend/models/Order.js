@@ -21,8 +21,11 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'shipped', 'delivered', 'cancelled'],
+      enum: ['pending', 'shipped', 'delivered', 'cancelled', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_COMPLETED'],
       default: 'pending'
+    },
+    deliveryDate: {
+      type: Date
     },
     date: {
       type: String,
@@ -53,10 +56,11 @@ const orderSchema = new mongoose.Schema(
       required: true
     },
     reason: {
-      type: String
-    },
-    customReason: {
-      type: String
+      type: {
+        type: String,
+        enum: ["WRONG_MEDICINE", "DAMAGED_PRODUCT", "EXPIRED_PRODUCT", "MISSING_ITEMS", "OTHER"]
+      },
+      customReason: String
     },
     returnStatus: {
       type: String,

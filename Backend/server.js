@@ -21,6 +21,7 @@ const labsRoutes = require('./routes/labsRoutes');
 const productsRoutes = require('./routes/productsRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
 const errorHandler = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -548,6 +549,7 @@ app.use('/api/doctors', doctorsRoutes);
 app.use('/api/labs', labsRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Health check API
 app.get('/api/health', (req, res) => {
