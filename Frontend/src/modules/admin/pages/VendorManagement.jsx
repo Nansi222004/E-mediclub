@@ -17,6 +17,7 @@ import {
 import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';
+import ConfirmationModal from '../components/ConfirmationModal';
 import apiClient from '../../../shared/services/apiClient';
 import { buildApiUrl } from '../utils/adminQueryHelper';
 
@@ -434,114 +435,27 @@ export default function VendorManagement() {
         </div>
 
         {/* Confirmation Modals */}
-        <AnimatePresence>
-          {vendorToReject && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setVendorToReject(null)}
-                className="fixed inset-0 bg-slate-900 z-10"
-              />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="bg-white rounded-[32px] border border-slate-100 shadow-premium max-w-md w-full p-6 sm:p-8 z-20 text-center relative overflow-hidden"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
-                  <FiAlertTriangle className="text-xl" />
-                </div>
-                <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2">
-                  Confirm Rejection
-                </div>
-                <p className="text-2xs text-slate-400 font-bold uppercase tracking-wider border-b border-slate-50 pb-3.5 mb-5 leading-relaxed text-center">
-                  You are rejecting the retail drug license request of <strong className="text-slate-600">{vendorToReject.storeName || vendorToReject.name || 'Partner Brand'}</strong>.
-                </p>
-                <div className="flex flex-col gap-1 text-left mb-6">
-                  <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Reason for Rejection (Optional)</label>
-                  <textarea
-                    placeholder="e.g. Drug license certificate blurry or expired."
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold outline-none focus:border-teal h-20 resize-none"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setVendorToReject(null)}
-                    className="py-3 border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-black uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRejectConfirm}
-                    disabled={loadingActions[`${vendorToReject.id}-reject`]}
-                    className="py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-sm transition-all cursor-pointer flex items-center justify-center min-h-[44px]"
-                  >
-                    {loadingActions[`${vendorToReject.id}-reject`] ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <span>Confirm</span>
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
- 
-        <AnimatePresence>
-          {vendorToDelete && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setVendorToDelete(null)}
-                className="fixed inset-0 bg-slate-900 z-10"
-              />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="bg-white rounded-[32px] border border-slate-100 shadow-premium max-w-sm w-full p-6 sm:p-8 z-20 text-center relative overflow-hidden"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
-                  <FiTrash2 className="text-xl" />
-                </div>
-                <div className="text-base font-black text-slate-800 uppercase tracking-wider mb-2 text-center">
-                  Delete Partner?
-                </div>
-                <p className="text-2xs text-slate-400 font-bold uppercase tracking-wider mb-6 leading-relaxed text-center">
-                  Are you sure you want to permanently delete <strong className="text-slate-600">{vendorToDelete.storeName || vendorToDelete.name || 'Partner Brand'}</strong>?
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setVendorToDelete(null)}
-                    className="py-3 border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-black uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    disabled={loadingActions[`${vendorToDelete.id}-delete`]}
-                    className="py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-sm transition-all cursor-pointer flex items-center justify-center min-h-[44px]"
-                  >
-                    {loadingActions[`${vendorToDelete.id}-delete`] ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <span>Delete</span>
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        <ConfirmationModal
+          isOpen={!!vendorToReject}
+          onClose={() => setVendorToReject(null)}
+          onConfirm={handleRejectConfirm}
+          title="Confirm Rejection"
+          message={`You are rejecting the retail drug license request of ${vendorToReject?.storeName || vendorToReject?.name || 'Partner Brand'}.`}
+          confirmText={loadingActions[`${vendorToReject?.id}-reject`] ? 'Rejecting...' : 'Confirm'}
+          cancelText="Cancel"
+          isDanger={true}
+        />
+
+        <ConfirmationModal
+          isOpen={!!vendorToDelete}
+          onClose={() => setVendorToDelete(null)}
+          onConfirm={handleDeleteConfirm}
+          title="Delete Partner?"
+          message={`Are you sure you want to permanently delete ${vendorToDelete?.storeName || vendorToDelete?.name || 'Partner Brand'}?`}
+          confirmText={loadingActions[`${vendorToDelete?.id}-delete`] ? 'Deleting...' : 'Delete'}
+          cancelText="Cancel"
+          isDanger={true}
+        />
 
       </div>
     );

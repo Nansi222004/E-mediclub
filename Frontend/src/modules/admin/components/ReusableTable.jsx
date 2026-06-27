@@ -5,6 +5,9 @@ import { FiSearch, FiChevronLeft, FiChevronRight, FiDownload, FiFilter } from 'r
 export default function ReusableTable({ 
   columns, 
   data, 
+  loading = false,
+  emptyStateComponent = null,
+  hideSearch = false,
   searchPlaceholder = "Search records...", 
   searchKey = "name",
   filterOptions = null, // e.g. { key: 'status', label: 'Status', options: ['approved', 'pending', 'rejected'] }
@@ -83,71 +86,90 @@ export default function ReusableTable({
   return (
     <div className="w-full flex flex-col gap-3.5">
       {/* Search and Filters Top Deck */}
-      <div className="flex flex-row items-center justify-between gap-2 bg-white p-3 rounded-2xl border border-slate-100 shadow-premium">
-        
-        {/* Dynamic Search Box */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl flex-1 min-w-0">
-          <FiSearch className="text-slate-400 text-sm shrink-0" />
-          <input 
-            type="text" 
-            placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="bg-transparent border-none outline-none text-[11px] font-semibold text-slate-700 w-full placeholder:text-slate-400 animate-fade-in"
-          />
-        </div>
-
-        {/* Category Selectors & Download Deck */}
-        <div className="flex items-center gap-2 shrink-0">
+      {(!hideSearch || filterOptions) && (
+        <div className="flex flex-row items-center justify-between gap-2 bg-white p-3 rounded-2xl border border-slate-100 shadow-premium">
           
-          {filterOptions && (
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-2 rounded-xl shrink-0">
-              <FiFilter className="text-slate-400 text-[10px] shrink-0" />
-              <select 
-                value={filterValue} 
-                onChange={handleFilterChange}
-                className="bg-transparent border-none outline-none text-[10px] font-black text-slate-650 uppercase tracking-wide cursor-pointer"
-              >
-                <option value="all">{filterOptions.label === 'Status' ? 'All Status' : `All ${filterOptions.label}s`}</option>
-                {filterOptions.options.map(opt => (
-                  <option key={opt} value={opt}>{opt.toUpperCase()}</option>
-                ))}
-              </select>
+          {/* Dynamic Search Box */}
+          {!hideSearch ? (
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl flex-1 min-w-0">
+              <FiSearch className="text-slate-400 text-sm shrink-0" />
+              <input 
+                type="text" 
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="bg-transparent border-none outline-none text-[11px] font-semibold text-slate-700 w-full placeholder:text-slate-400 animate-fade-in"
+              />
             </div>
-          )}
+          ) : <div className="flex-1" />}
 
-          {/* Export to CSV Button */}
-          <button 
-            onClick={handleExportCSV}
-            className="flex items-center justify-center gap-1 px-3 py-2.5 bg-teal text-white text-[10px] font-black tracking-wider uppercase rounded-xl hover:bg-teal-dark shadow-sm transition-all duration-200 tap-scale shrink-0 cursor-pointer min-w-[34px] min-h-[34px]"
-            title="Export CSV"
-          >
-            <FiDownload className="text-xs shrink-0" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
+          {/* Category Selectors & Download Deck */}
+          <div className="flex items-center gap-2 shrink-0">
+            {filterOptions && (
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-2 rounded-xl shrink-0">
+                <FiFilter className="text-slate-400 text-[10px] shrink-0" />
+                <select 
+                  value={filterValue} 
+                  onChange={handleFilterChange}
+                  className="bg-transparent border-none outline-none text-[10px] font-black text-slate-650 uppercase tracking-wide cursor-pointer"
+                >
+                  <option value="all">{filterOptions.label === 'Status' ? 'All Status' : `All ${filterOptions.label}s`}</option>
+                  {filterOptions.options.map(opt => (
+                    <option key={opt} value={opt}>{opt.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Export to CSV Button */}
+            <button 
+              onClick={handleExportCSV}
+              className="flex items-center justify-center gap-1 px-3 py-2.5 bg-[#1A7A4A] text-white text-[10px] font-black tracking-wider uppercase rounded-xl hover:bg-[#135A5A] shadow-sm transition-all duration-200 tap-scale shrink-0 cursor-pointer min-w-[34px] min-h-[34px] border-0"
+              title="Export CSV"
+            >
+              <FiDownload className="text-xs shrink-0" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Advanced Responsive Table Grid */}
       <div className="bg-white border border-slate-100 rounded-3xl shadow-premium overflow-hidden">
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/60 border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+        <div className="overflow-x-auto no-scrollbar max-h-[60vh] overflow-y-auto">
+          <table className="w-full text-left border-collapse relative">
+            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm">
+              <tr className="border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest">
                 {columns.map((col) => (
-                  <th key={col.key} className="py-4.5 px-6 font-black">
+                  <th key={col.key} className="py-4.5 px-6 font-black whitespace-nowrap">
                     {col.header}
                   </th>
                 ))}
-                {actions && <th className="py-4.5 px-6 text-right font-black">Actions</th>}
+                {actions && <th className="py-4.5 px-6 text-right font-black sticky right-0 bg-slate-50/95 backdrop-blur-sm">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-xs font-semibold text-slate-600">
-              {paginatedData.length > 0 ? (
+              {loading ? (
+                // Loading Skeletons
+                [...Array(5)].map((_, i) => (
+                  <tr key={i}>
+                    {columns.map((col) => (
+                      <td key={col.key} className="py-4.5 px-6">
+                        <div className="h-4 bg-slate-100 rounded-md animate-pulse w-3/4"></div>
+                      </td>
+                    ))}
+                    {actions && (
+                      <td className="py-4.5 px-6">
+                        <div className="h-6 w-16 bg-slate-100 rounded-md animate-pulse ml-auto"></div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : paginatedData.length > 0 ? (
                 paginatedData.map((row, idx) => (
                   <tr 
-                    key={row.id || idx} 
-                    className="hover:bg-slate-50/30 transition-colors"
+                    key={row.id || row._id || idx} 
+                    className="hover:bg-slate-50/50 transition-colors group"
                   >
                     {columns.map((col) => (
                       <td key={col.key} className="py-4.5 px-6">
@@ -155,7 +177,7 @@ export default function ReusableTable({
                       </td>
                     ))}
                     {actions && (
-                      <td className="py-4.5 px-6 text-right">
+                      <td className="py-3 px-6 text-right sticky right-0 bg-white group-hover:bg-slate-50/50 transition-colors">
                         <div className="flex items-center justify-end gap-2.5">
                           {actions(row)}
                         </div>
@@ -165,8 +187,10 @@ export default function ReusableTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length + (actions ? 1 : 0)} className="py-12 text-center text-slate-400 font-bold">
-                    No matching records found.
+                  <td colSpan={columns.length + (actions ? 1 : 0)} className="py-12 text-center">
+                    {emptyStateComponent || (
+                      <div className="text-slate-400 font-bold">No matching records found.</div>
+                    )}
                   </td>
                 </tr>
               )}

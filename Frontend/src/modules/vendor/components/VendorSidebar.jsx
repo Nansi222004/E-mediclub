@@ -80,16 +80,6 @@ export default function VendorSidebar({ isOpen, toggleSidebar }) {
         </nav>
       </div>
 
-      {/* Footer controls */}
-      <div className="p-3.5 border-t border-slate-50 flex flex-col gap-1.5">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3.5 px-4 py-3 w-full rounded-2xl text-xs font-black tracking-wider uppercase text-coral hover:bg-coral-light/60 transition-all text-left tap-scale cursor-pointer"
-        >
-          <FiLogOut className="text-lg shrink-0" />
-          {isOpen && <span>Log Out</span>}
-        </button>
-      </div>
     </aside>
   );
 }

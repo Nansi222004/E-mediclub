@@ -286,13 +286,12 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     <motion.aside 
       animate={{ width: isOpen ? 256 : 80 }}
       transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-      className="fixed top-0 left-0 z-40 h-screen bg-[#135A5A] border-r border-[#0F4A4A] shadow-premium flex flex-col justify-between"
-      style={{ boxShadow: '4px 0 24px rgba(0,0,0,0.15)' }}
+      className="fixed top-0 left-0 z-40 h-screen bg-white border-r border-[#E8F5EE] shadow-premium flex flex-col justify-between"
     >
       {/* Brand Header */}
       <div className="overflow-hidden flex flex-col flex-1">
-        <div className="h-20 flex items-center justify-between px-5 border-b border-[#0F4A4A] shrink-0 bg-white/10">
-          <div className="flex items-center whitespace-nowrap pt-2 bg-white rounded-xl px-2.5 py-1 select-none">
+        <div className="h-20 flex items-center justify-between px-5 border-b border-[#E8F5EE] shrink-0">
+          <div className="flex items-center whitespace-nowrap pt-2 bg-transparent rounded-xl px-2.5 py-1 select-none">
             <Logo showText={isOpen} layout="horizontal" />
           </div>
         </div>
@@ -310,15 +309,15 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  className={`
-                    flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[14px] font-medium tracking-normal transition-all duration-200 tap-scale
+                  className={({ isActive }) => `
+                    flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[11px] font-black tracking-wider uppercase transition-all duration-200 tap-scale no-underline
                     ${isActive 
-                      ? 'bg-[#0D9488] text-white shadow-lg shadow-[#0D9488]/20 font-semibold' 
-                      : 'text-[#9ADCDA] hover:bg-white/10 hover:text-white'
+                      ? 'bg-[#1A7A4A]/10 !text-[#1A7A4A] shadow-sm' 
+                      : '!text-slate-500 hover:bg-[#F8FAF9] hover:!text-[#1A7A4A]'
                     }
                   `}
                 >
-                  <item.Icon className={`text-lg shrink-0 ${isActive ? 'text-white' : 'text-[#9ADCDA]'}`} />
+                  <item.Icon className={`text-lg shrink-0 ${isActive ? 'text-[#1A7A4A]' : 'text-slate-400'}`} />
                   {isOpen && (
                     <motion.span
                       initial={{ opacity: 0, x: -10 }}
@@ -338,12 +337,12 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 <button
                   onClick={() => toggleSubmenu(item.name)}
                   className={`
-                    w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[14px] font-medium tracking-normal transition-all duration-200 tap-scale cursor-pointer border-0 bg-transparent text-left
-                    text-[#9ADCDA] hover:bg-white/10 hover:text-white
+                    w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[11px] font-black tracking-wider uppercase transition-all duration-200 tap-scale cursor-pointer border-0 bg-transparent text-left
+                    text-slate-500 hover:bg-[#F8FAF9] hover:text-[#1A7A4A]
                   `}
                 >
                   <div className="flex items-center gap-3.5">
-                    <item.Icon className="text-lg shrink-0 text-[#9ADCDA]" />
+                    <item.Icon className="text-lg shrink-0 text-slate-400" />
                     {isOpen && (
                       <motion.span
                         initial={{ opacity: 0, x: -10 }}
@@ -355,7 +354,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                     )}
                   </div>
                   {isOpen && (
-                    <FiChevronDown className={`transition-transform duration-250 text-[#9ADCDA] ${isMenuExpanded ? 'rotate-180' : ''}`} />
+                    <FiChevronDown className={`transition-transform duration-250 text-slate-400 ${isMenuExpanded ? 'rotate-180' : ''}`} />
                   )}
                 </button>
 
@@ -367,7 +366,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2, ease: 'easeInOut' }}
-                      className="overflow-hidden flex flex-col gap-1 pl-8 pr-1 border-l border-[#0D9488]/10 ml-6"
+                      className="overflow-hidden flex flex-col gap-1 pl-8 pr-1 border-l-2 border-[#E8F5EE] ml-6"
                     >
                       {item.children.map((child) => {
                         const hasSubChildren = !!child.children;
@@ -378,11 +377,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                             <NavLink
                               key={child.path}
                               to={child.path}
-                              className={`
-                                px-3.5 py-2 rounded-lg text-[13px] font-medium tracking-normal transition-all duration-150
-                                ${isChildActive
-                                  ? 'bg-[#0D9488]/10 text-[#0D9488] font-semibold border-l-2 border-[#0D9488] pl-2.5'
-                                  : 'text-[#88D4D3] hover:text-white hover:bg-white/5'
+                              className={({ isActive }) => `
+                                px-3.5 py-2.5 rounded-xl text-[10px] font-bold tracking-wider uppercase transition-all duration-150 no-underline block
+                                ${isActive || isChildActive
+                                  ? 'bg-[#1A7A4A]/10 !text-[#1A7A4A] font-black border-l-2 border-[#1A7A4A] pl-2.5 shadow-sm'
+                                  : '!text-slate-500 hover:!text-[#1A7A4A] hover:bg-[#F8FAF9]'
                                 }
                               `}
                             >
@@ -397,7 +396,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                           <div key={child.name} className="flex flex-col gap-1 mt-1">
                             <button
                               onClick={() => toggleSubmenu(child.subKey || child.name)}
-                              className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-lg text-[13px] font-medium tracking-normal transition-all border-0 bg-transparent text-[#88D4D3] hover:text-white hover:bg-white/5 text-left cursor-pointer"
+                              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[10px] font-bold tracking-wider uppercase transition-all border-0 bg-transparent text-slate-500 hover:text-[#1A7A4A] hover:bg-[#F8FAF9] text-left cursor-pointer"
                             >
                               <span>{child.name}</span>
                               <FiChevronDown className={`transition-transform duration-200 text-slate-400 ${isSubSubExpanded ? 'rotate-180' : ''}`} />
@@ -409,7 +408,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: 'auto', opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden flex flex-col gap-0.5 pl-3 border-l border-[#8B2635]/20 ml-3"
+                                  className="overflow-hidden flex flex-col gap-0.5 pl-3 border-l-2 border-slate-100 ml-3"
                                 >
                                   {child.children.map((subChild) => {
                                     const isSubChildActive = location.pathname + location.search === subChild.path || location.pathname === subChild.path;
@@ -417,11 +416,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                                       <NavLink
                                         key={subChild.path}
                                         to={subChild.path}
-                                        className={`
-                                          px-2.5 py-1.5 rounded-md text-[12px] font-medium tracking-normal transition-all duration-150
-                                          ${isSubChildActive
-                                            ? 'bg-[#8B2635]/10 text-[#8B2635] font-semibold border-l border-[#8B2635] pl-2'
-                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                        className={({ isActive }) => `
+                                          px-2.5 py-2 rounded-lg text-[9px] font-bold tracking-wider uppercase transition-all duration-150 no-underline block
+                                          ${isActive || isSubChildActive
+                                            ? 'bg-slate-100 !text-[#1A7A4A] font-black border-l-2 border-[#1A7A4A] pl-2'
+                                            : '!text-slate-400 hover:!text-[#1A7A4A] hover:bg-[#F8FAF9]'
                                           }
                                         `}
                                       >
@@ -444,24 +443,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
         </nav>
       </div>
 
-      {/* Footer controls */}
-      <div className="p-3.5 border-t border-[#0F4A4A] flex flex-col gap-2 shrink-0 bg-white/5">
-        <button 
-          onClick={toggleSidebar} 
-          className="hidden md:flex items-center gap-3.5 px-4 py-2.5 w-full rounded-xl text-[14px] font-medium tracking-normal text-[#88D4D3] hover:bg-white/10 hover:text-white transition-all text-left tap-scale cursor-pointer border-0 bg-transparent"
-        >
-          <FiArrowLeft className={`text-lg shrink-0 transition-transform duration-300 ${!isOpen && 'rotate-180'}`} />
-          {isOpen && <span>Collapse</span>}
-        </button>
-
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3.5 px-4 py-2.5 w-full rounded-xl text-[14px] font-medium tracking-normal text-[#8B2635] hover:bg-[#8B2635]/10 transition-all text-left tap-scale cursor-pointer border-0 bg-transparent"
-        >
-          <FiLogOut className="text-lg shrink-0 text-[#8B2635]" />
-          {isOpen && <span>Log Out</span>}
-        </button>
-      </div>
     </motion.aside>
   );
 }

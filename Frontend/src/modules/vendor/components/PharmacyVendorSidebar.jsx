@@ -212,16 +212,6 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
         </nav>
       </div>
 
-      {/* Footer controls */}
-      <div className="p-3.5 border-t border-[#0F4A4A] flex flex-col gap-1.5 shrink-0 bg-[#135A5A]">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3.5 px-4 py-3 w-full rounded-2xl text-xs font-black tracking-wider uppercase text-red-300 hover:bg-red-400/10 transition-all text-left tap-scale cursor-pointer border-0 bg-transparent"
-        >
-          <FiLogOut className="text-lg shrink-0" />
-          {isOpen && <span>Log Out</span>}
-        </button>
-      </div>
     </aside>
   );
 }
