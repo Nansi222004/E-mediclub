@@ -7,7 +7,8 @@ import {
   rescheduleDoctorAppointmentThunk, 
   cancelLabBookingThunk, 
   rescheduleLabBookingThunk, 
-  returnOrderThunk 
+  returnOrderThunk,
+  cancelOrderThunk
 } from '../store/productSlice';
 
 export default function ViewDetailsModal({ isOpen, onClose, type, data }) {
@@ -18,6 +19,10 @@ export default function ViewDetailsModal({ isOpen, onClose, type, data }) {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [refundStep, setRefundStep] = useState(false);
+  const [refundMethod, setRefundMethod] = useState(''); // 'Wallet', 'BankAccount'
+  const [bankDetails, setBankDetails] = useState({ name: '', account: '', ifsc: '' });
 
   if (!isOpen || !data) return null;
 
@@ -27,6 +32,9 @@ export default function ViewDetailsModal({ isOpen, onClose, type, data }) {
     setCustomReason('');
     setNewDate('');
     setNewTime('');
+    setRefundStep(false);
+    setRefundMethod('');
+    setBankDetails({ name: '', account: '', ifsc: '' });
   };
 
   const handleClose = () => {
@@ -44,23 +52,44 @@ export default function ViewDetailsModal({ isOpen, onClose, type, data }) {
       return;
     }
 
+    let refundData = null;
+    if (refundStep) {
+      if (!refundMethod) {
+        alert("Please select a refund method.");
+        return;
+      }
+      if (refundMethod === 'BankAccount' && (!bankDetails.name || !bankDetails.account || !bankDetails.ifsc)) {
+        alert("Please fill in all bank details.");
+        return;
+      }
+      const amount = type === 'order' ? data.total : type === 'consultation' ? data.fee : data.totalAmount || data.price || 0;
+      refundData = {
+        amount,
+        method: refundMethod,
+        title: type === 'order' ? `Refund for Order ${data.id}` : type === 'consultation' ? `Refund for Consultation ${data.id}` : `Refund for Lab Booking ${data.id}`,
+        bankDetails: refundMethod === 'BankAccount' ? bankDetails : null
+      };
+    }
+
     setIsLoading(true);
     try {
       if (type === 'consultation') {
         if (activeAction === 'cancel') {
-          await dispatch(cancelDoctorAppointmentThunk({ id: data.id, reason, customReason })).unwrap();
+          await dispatch(cancelDoctorAppointmentThunk({ id: data.id, reason, customReason, refundData })).unwrap();
         } else if (activeAction === 'reschedule') {
           await dispatch(rescheduleDoctorAppointmentThunk({ id: data.id, newDate, newTimeSlot: newTime })).unwrap();
         }
       } else if (type === 'lab') {
         if (activeAction === 'cancel') {
-          await dispatch(cancelLabBookingThunk({ id: data.id, reason, customReason })).unwrap();
+          await dispatch(cancelLabBookingThunk({ id: data.id, reason, customReason, refundData })).unwrap();
         } else if (activeAction === 'reschedule') {
           await dispatch(rescheduleLabBookingThunk({ id: data.id, newDate, newTimeSlot: newTime })).unwrap();
         }
       } else if (type === 'order') {
         if (activeAction === 'return') {
-          await dispatch(returnOrderThunk({ id: data.id, reason, customReason })).unwrap();
+          await dispatch(returnOrderThunk({ id: data.id, reason, customReason, refundData })).unwrap();
+        } else if (activeAction === 'cancel') {
+          await dispatch(cancelOrderThunk({ id: data.id, reason, customReason, refundData })).unwrap();
         }
       }
       alert("Request processed successfully.");
@@ -69,6 +98,19 @@ export default function ViewDetailsModal({ isOpen, onClose, type, data }) {
       alert(err || "An error occurred.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleProceedToRefund = () => {
+    if (reason === 'OTHER' && !customReason.trim()) {
+      alert("Please specify the custom reason.");
+      return;
+    }
+    // For COD orders cancelled before delivery, no refund needed
+    if (type === 'order' && data?.paymentMethod === 'COD' && activeAction === 'cancel') {
+      handleSubmitAction();
+    } else {
+      setRefundStep(true);
     }
   };
 
@@ -125,6 +167,47 @@ export default function ViewDetailsModal({ isOpen, onClose, type, data }) {
       { id: 'OTHER', label: 'Other' }
     ];
 
+    if (refundStep) {
+      const refundAmount = type === 'order' ? data.total : type === 'consultation' ? data.fee : data.totalAmount || data.price || 0;
+      return (
+        <div className="bg-slate-50 p-4 rounded-xl mt-4 border border-slate-200">
+          <h4 className="text-xs font-black uppercase text-slate-800 mb-3">How would you like your refund?</h4>
+          <p className="text-[10px] text-slate-500 font-bold mb-4">Refund Amount: <span className="text-slate-800">₹{refundAmount}</span></p>
+          
+          <div className="flex flex-col gap-3">
+            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${refundMethod === 'Wallet' ? 'border-teal bg-teal-50/50' : 'border-slate-200 bg-white'}`}>
+              <input type="radio" name="refundMethod" value="Wallet" checked={refundMethod === 'Wallet'} onChange={() => setRefundMethod('Wallet')} className="accent-teal" />
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">E-Mediclub Wallet ⚡</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Instant refund. Use for future bookings.</span>
+              </div>
+            </label>
+
+            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${refundMethod === 'BankAccount' ? 'border-teal bg-teal-50/50' : 'border-slate-200 bg-white'}`}>
+              <input type="radio" name="refundMethod" value="BankAccount" checked={refundMethod === 'BankAccount'} onChange={() => setRefundMethod('BankAccount')} className="accent-teal" />
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">Bank Account Transfer 🏦</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Takes 3-5 business days.</span>
+              </div>
+            </label>
+
+            {refundMethod === 'BankAccount' && (
+              <div className="flex flex-col gap-2 mt-2 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                <input type="text" placeholder="Account Holder Name" value={bankDetails.name} onChange={(e) => setBankDetails({...bankDetails, name: e.target.value})} className="w-full p-2 text-xs border border-slate-200 rounded-lg outline-none" />
+                <input type="text" placeholder="Account Number" value={bankDetails.account} onChange={(e) => setBankDetails({...bankDetails, account: e.target.value})} className="w-full p-2 text-xs border border-slate-200 rounded-lg outline-none" />
+                <input type="text" placeholder="IFSC Code" value={bankDetails.ifsc} onChange={(e) => setBankDetails({...bankDetails, ifsc: e.target.value})} className="w-full p-2 text-xs border border-slate-200 rounded-lg outline-none" />
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => setRefundStep(false)} className="flex-1 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg">Back</button>
+              <button onClick={handleSubmitAction} disabled={isLoading || !refundMethod} className="flex-1 py-2 text-xs font-bold text-white bg-teal rounded-lg disabled:opacity-50">{isLoading ? 'Processing...' : 'Confirm Refund'}</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-slate-50 p-4 rounded-xl mt-4 border border-slate-200">
         <h4 className="text-xs font-black uppercase text-slate-800 mb-3">Why are you {activeAction === 'return' ? 'returning' : 'cancelling'}?</h4>
@@ -156,7 +239,7 @@ export default function ViewDetailsModal({ isOpen, onClose, type, data }) {
           )}
           <div className="flex gap-2 mt-2">
             <button onClick={() => setActiveAction(null)} className="flex-1 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg">Back</button>
-            <button onClick={handleSubmitAction} disabled={isLoading || !reason} className="flex-1 py-2 text-xs font-bold text-white bg-rose-500 rounded-lg disabled:opacity-50">{isLoading ? 'Processing...' : 'Confirm'}</button>
+            <button onClick={handleProceedToRefund} disabled={isLoading || !reason} className="flex-1 py-2 text-xs font-bold text-white bg-rose-500 rounded-lg disabled:opacity-50">Proceed</button>
           </div>
         </div>
       </div>

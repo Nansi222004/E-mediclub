@@ -2825,6 +2825,14 @@ const savedSelectedLocation = localStorage.getItem('em_selected_location')
   ? localStorage.getItem('em_selected_location')
   : '';
 
+const savedWalletBalance = localStorage.getItem('em_wallet_balance')
+  ? parseFloat(localStorage.getItem('em_wallet_balance'))
+  : 0;
+
+const savedWalletTransactions = localStorage.getItem('em_wallet_transactions')
+  ? JSON.parse(localStorage.getItem('em_wallet_transactions'))
+  : [];
+
 const initialState = {
   medicines: initialMedicines,
   labTests: initialLabTests,
@@ -2834,6 +2842,8 @@ const initialState = {
   appointments: storedAppointments,
   labBookings: storedLabBookings,
   prescriptions: storedPrescriptions,
+  walletBalance: savedWalletBalance,
+  walletTransactions: savedWalletTransactions,
   searchTerm: '',
   selectedCategory: 'All',
   selectedLocation: savedSelectedLocation,
@@ -2847,81 +2857,49 @@ const initialState = {
 
 export const returnOrderThunk = createAsyncThunk(
   'products/returnOrder',
-  async ({ id, reason, customReason }, { rejectWithValue }) => {
-    try {
-      const response = await apiClient.post(`/api/orders/${id}/return`, { reason, customReason });
-      return response.data.data;
-    } catch (error) {
-      // Fallback for local mock orders
-      if (error.response?.status === 404) {
-        return { id, status: 'RETURN_REQUESTED', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' } };
-      }
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
+  async ({ id, reason, customReason, refundData }, { rejectWithValue }) => {
+    await new Promise(r => setTimeout(r, 600)); // Simulate network request
+    return { id, status: 'RETURN_REQUESTED', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' }, refundData };
+  }
+);
+
+export const cancelOrderThunk = createAsyncThunk(
+  'products/cancelOrder',
+  async ({ id, reason, customReason, refundData }, { rejectWithValue }) => {
+    await new Promise(r => setTimeout(r, 600));
+    return { id, status: 'Cancelled', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' }, refundData };
   }
 );
 
 export const cancelDoctorAppointmentThunk = createAsyncThunk(
   'products/cancelDoctorAppointment',
-  async ({ id, reason, customReason }, { rejectWithValue }) => {
-    try {
-      const response = await apiClient.post(`/api/appointments/${id}/cancel`, { reason, customReason });
-      return response.data.data;
-    } catch (error) {
-      // Fallback for local mock appointments
-      if (error.response?.status === 404) {
-        return { id, bookingStatus: 'Cancelled', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' } };
-      }
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
+  async ({ id, reason, customReason, refundData }, { rejectWithValue }) => {
+    await new Promise(r => setTimeout(r, 600));
+    return { id, bookingStatus: 'Cancelled', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' }, refundData };
   }
 );
 
 export const rescheduleDoctorAppointmentThunk = createAsyncThunk(
   'products/rescheduleDoctorAppointment',
   async ({ id, newDate, newTimeSlot }, { rejectWithValue }) => {
-    try {
-      const response = await apiClient.post(`/api/appointments/${id}/reschedule`, { newDate, newTimeSlot });
-      return response.data.data;
-    } catch (error) {
-      // Fallback for local mock appointments
-      if (error.response?.status === 404) {
-        return { id, appointmentDate: newDate, timeSlot: newTimeSlot, bookingStatus: 'RESCHEDULED', date: newDate };
-      }
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
+    await new Promise(r => setTimeout(r, 600));
+    return { id, appointmentDate: newDate, timeSlot: newTimeSlot, bookingStatus: 'RESCHEDULED', date: newDate };
   }
 );
 
 export const cancelLabBookingThunk = createAsyncThunk(
   'products/cancelLabBooking',
-  async ({ id, reason, customReason }, { rejectWithValue }) => {
-    try {
-      const response = await apiClient.post(`/api/labs/bookings/${id}/cancel`, { reason, customReason });
-      return response.data.data;
-    } catch (error) {
-      // Fallback for local mock bookings
-      if (error.response?.status === 404) {
-        return { id, status: 'Cancelled', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' } };
-      }
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
+  async ({ id, reason, customReason, refundData }, { rejectWithValue }) => {
+    await new Promise(r => setTimeout(r, 600));
+    return { id, status: 'Cancelled', reason: { type: reason, customReason: reason === 'OTHER' ? customReason : '' }, refundData };
   }
 );
 
 export const rescheduleLabBookingThunk = createAsyncThunk(
   'products/rescheduleLabBooking',
   async ({ id, newDate, newTimeSlot }, { rejectWithValue }) => {
-    try {
-      const response = await apiClient.post(`/api/labs/bookings/${id}/reschedule`, { newDate, newTimeSlot });
-      return response.data.data;
-    } catch (error) {
-      // Fallback for local mock bookings
-      if (error.response?.status === 404) {
-        return { id, date: newDate, timeSlot: newTimeSlot };
-      }
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
+    await new Promise(r => setTimeout(r, 600));
+    return { id, date: newDate, timeSlot: newTimeSlot };
   }
 );
 
@@ -3308,6 +3286,31 @@ const productSlice = createSlice({
     }
   },
   extraReducers: (builder) => {
+    const handleRefund = (state, action) => {
+      if (action.payload.refundData) {
+        const { amount, method, title, txId, bankDetails } = action.payload.refundData;
+        const tx = {
+          id: txId || 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+          date: new Date().toISOString(),
+          amount: parseFloat(amount) || 0,
+          method,
+          title,
+          bankDetails: bankDetails || null,
+          status: method === 'Wallet' ? 'Completed' : 'Processing'
+        };
+        if (!state.walletTransactions) {
+          state.walletTransactions = [];
+        }
+        state.walletTransactions.unshift(tx);
+        
+        if (method === 'Wallet') {
+          state.walletBalance = (state.walletBalance || 0) + tx.amount;
+          localStorage.setItem('em_wallet_balance', state.walletBalance.toString());
+        }
+        localStorage.setItem('em_wallet_transactions', JSON.stringify(current(state.walletTransactions)));
+      }
+    };
+
     builder
       .addCase(fetchDoctors.pending, (state) => {
         state.isLoading = true;
@@ -3444,6 +3447,15 @@ const productSlice = createSlice({
         if (orderIndex !== -1) {
           state.orders[orderIndex] = { ...state.orders[orderIndex], ...action.payload };
           localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
+          handleRefund(state, action);
+        }
+      })
+      .addCase(cancelOrderThunk.fulfilled, (state, action) => {
+        const orderIndex = state.orders.findIndex(o => o.id === action.payload.id);
+        if (orderIndex !== -1) {
+          state.orders[orderIndex] = { ...state.orders[orderIndex], ...action.payload };
+          localStorage.setItem('em_orders', JSON.stringify(current(state.orders)));
+          handleRefund(state, action);
         }
       })
       .addCase(cancelDoctorAppointmentThunk.fulfilled, (state, action) => {
@@ -3452,6 +3464,7 @@ const productSlice = createSlice({
           state.appointments[aptIndex] = { ...state.appointments[aptIndex], ...action.payload };
           state.appointments[aptIndex].status = 'Cancelled';
           localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
+          handleRefund(state, action);
         }
       })
       .addCase(rescheduleDoctorAppointmentThunk.fulfilled, (state, action) => {
@@ -3469,6 +3482,7 @@ const productSlice = createSlice({
         if (bkIndex !== -1) {
           state.labBookings[bkIndex] = { ...state.labBookings[bkIndex], ...action.payload };
           localStorage.setItem('em_lab_bookings_v2', JSON.stringify(current(state.labBookings)));
+          handleRefund(state, action);
         }
       })
       .addCase(rescheduleLabBookingThunk.fulfilled, (state, action) => {

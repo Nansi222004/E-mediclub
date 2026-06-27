@@ -23,7 +23,7 @@ export default function ProfilePage() {
 
   // Redux Selectors
   const { user, isAuthenticated, addresses = [], savedCards = [] } = useSelector(state => state.auth);
-  const { appointments = [], labBookings = [], orders = [], prescriptions = [], location: locationState } = useSelector(state => state.products);
+  const { appointments = [], labBookings = [], orders = [], prescriptions = [], location: locationState, walletBalance = 0, walletTransactions = [] } = useSelector(state => state.products);
   
   const normalizedSelectedCityForAddresses = locationState?.city ? normalizeCity(locationState.city).toLowerCase() : '';
   const filteredAddresses = normalizedSelectedCityForAddresses
@@ -59,7 +59,7 @@ export default function ProfilePage() {
     }));
     setShowEditProfileModal(false);
   };
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'labs', 'consultations', 'prescriptions', 'records', 'payments', 'notifications', 'help'
+  const [activeTab, setActiveTab] = useState(null); // 'orders', 'labs', 'consultations', 'prescriptions', 'records', 'payments', 'notifications', 'help'
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddrName, setNewAddrName] = useState('');
   const [newAddrPhone, setNewAddrPhone] = useState('');
@@ -355,8 +355,9 @@ export default function ProfilePage() {
       ]
     },
     {
-      title: 'Cancellations & Refunds',
+      title: 'Wallet & Payments',
       items: [
+        { key: 'wallet', label: 'E-Mediclub Wallet', subLabel: 'Balance & Transactions', icon: <FiCreditCard className="text-[#0f6e56]" /> },
         { key: 'lab_cancellations', label: 'Lab Test Cancellations', subLabel: 'Cancel & track refund', icon: <FiActivity className="text-[#ba7517]" /> },
         { key: 'doctor_refunds', label: 'Doctor Appt. Refunds', subLabel: 'Cancelled consultations', icon: <FiCalendar className="text-[#ba7517]" /> },
         { key: 'medicine_returns', label: 'Medicine Returns', subLabel: 'Return or replace medicines', icon: <FiShoppingBag className="text-[#ba7517]" /> }
@@ -414,6 +415,61 @@ export default function ProfilePage() {
 
   const renderTabContent = (tab) => {
     switch (tab) {
+      case 'wallet':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-6"
+          >
+            <div className="bg-gradient-to-br from-teal to-forest p-6 rounded-[2rem] shadow-lg text-white flex flex-col relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-20"><FiCreditCard className="w-32 h-32" /></div>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-teal-50 mb-1 z-10">Available Balance</span>
+              <div className="text-4xl font-black tracking-tight mb-2 z-10">₹{walletBalance.toFixed(2)}</div>
+              <p className="text-xs font-semibold text-teal-100 max-w-[200px] z-10">Use this balance for instant checkouts on medicines, labs, and consultations.</p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-4 px-2">Recent Transactions</h3>
+              {walletTransactions.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {walletTransactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center gap-4 p-4 bg-slate-50/50 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-colors">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.method === 'Wallet' ? 'bg-teal-50 text-teal' : 'bg-slate-100 text-slate-500'}`}>
+                        {tx.method === 'Wallet' ? <FiCreditCard className="text-lg" /> : <FiRefreshCw className="text-lg" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-extrabold text-slate-800 mb-0.5 truncate">{tx.title}</h4>
+                        <div className="flex flex-wrap items-center gap-1.5 text-[9px] text-slate-500 font-bold uppercase tracking-wide">
+                          <span className="shrink-0">{new Date(tx.date).toLocaleDateString()}</span>
+                          <span className="shrink-0">•</span>
+                          <span className="truncate max-w-[80px] xs:max-w-none">{tx.id}</span>
+                          <span className="shrink-0">•</span>
+                          <span className={`shrink-0 ${tx.status === 'Completed' ? 'text-forest' : 'text-amber-500'}`}>{tx.status}</span>
+                        </div>
+                        {tx.bankDetails && (
+                          <div className="text-[10px] text-slate-400 font-semibold mt-1 truncate">To Bank: {tx.bankDetails.account.replace(/.(?=.{4})/g, '*')}</div>
+                        )}
+                      </div>
+                      <div className="text-sm font-black text-forest shrink-0 whitespace-nowrap pl-2">
+                        +₹{tx.amount.toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                    <FiRefreshCw className="text-2xl text-slate-300" />
+                  </div>
+                  <h4 className="text-sm font-black text-slate-700 mb-1">No Transactions Yet</h4>
+                  <p className="text-xs text-slate-500 font-medium">Refunds from cancellations and returns will appear here.</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        );
+
       case 'orders':
         const filteredProfileOrders = orders.filter(filterByLocation);
         const activeOrders = filteredProfileOrders.filter(ord => ord.status !== 'Delivered' && !ord.archived);
