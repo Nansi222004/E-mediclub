@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FiCheckCircle, FiShield, FiFileText, FiLock, FiImage, FiClock, FiMapPin, FiVideo, FiUploadCloud } from 'react-icons/fi';
+import { useState } from 'react';
+import { FiCheckCircle, FiShield, FiFileText, FiLock, FiImage, FiClock, FiMapPin, FiUploadCloud } from 'react-icons/fi';
 
 export default function DoctorVendorProfile() {
   const [profile, setProfile] = useState({

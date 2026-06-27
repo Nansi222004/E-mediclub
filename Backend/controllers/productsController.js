@@ -6,10 +6,20 @@ const ApiResponse = require('../utils/ApiResponse');
 // @access  Public
 const getProducts = async (req, res, next) => {
   try {
-    const { city, pincode } = req.query;
+    const { city, pincode, lat, lng, radius } = req.query;
     let query = {};
 
-    if (pincode) {
+    if (lat && lng) {
+      query.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(lng), parseFloat(lat)]
+          },
+          $maxDistance: radius ? parseInt(radius) : 10000
+        }
+      };
+    } else if (pincode) {
       query.vendorPincode = pincode.trim();
     } else if (city) {
       query.vendorCity = new RegExp(`^${city.trim()}$`, 'i');

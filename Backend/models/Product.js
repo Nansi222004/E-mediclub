@@ -76,11 +76,23 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number]
+      }
     }
   },
   {
     timestamps: true
   }
 );
+
+productSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Product', productSchema);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FiCalendar, FiClock, FiCheckCircle, FiSearch, FiVideo, FiFilter } from 'react-icons/fi';
 
 export default function DoctorVendorSchedule() {

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { FiPlusCircle, FiLayers, FiTrash2, FiSearch, FiEdit, FiPercent, FiInfo } from 'react-icons/fi';
+import { FiPlusCircle, FiTrash2, FiEdit, FiPercent } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 
 export default function TestPackages() {

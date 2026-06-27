@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -87,11 +87,19 @@ export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess })
         setUploadProgress(prev => prev < 90 ? prev + 10 : prev);
       }, 300);
 
-      const response = await apiClient.post('/api/prescriptions/upload', formData, {
+      const token = localStorage.getItem('em_token') || localStorage.getItem('userToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/prescriptions/upload`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
       });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Upload failed');
+      }
       
       clearInterval(interval);
       setUploadProgress(100);
@@ -102,11 +110,11 @@ export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess })
         // Parse prescription using service for local preview
         const parsedMeds = PrescriptionMedicineService.parsePrescription(selectedFile.name);
         const newRx = {
-          id: response.data?.data?.id || `rx-${Date.now()}`,
+          id: data?.data?.id || `rx-${Date.now()}`,
           date: new Date().toISOString().split('T')[0],
           fileName: selectedFile.name,
           fileSize: (selectedFile.size / 1024).toFixed(1) + ' KB',
-          fileUrl: response.data?.data?.fileUrl, // Provided by cloudinary via API
+          fileUrl: data?.data?.fileUrl, // Provided by cloudinary via API
           medicines: parsedMeds,
           city: locationState?.city || '',
           pincode: locationState?.pincode || ''
@@ -136,15 +144,33 @@ export default function PrescriptionUpload({ isOpen, onClose, onUploadSuccess })
 
   // Simulate snapping with mobile camera
   const handleCameraSnap = () => {
-    const mockFile = {
-      name: 'prescription-camera-capture.jpg',
-      size: 485000,
-      type: 'image/jpeg',
-      isCameraCapture: true
-    };
-    setSelectedFile(mockFile);
-    setUploadState('idle');
-    setUploadProgress(0);
+    // Generate a real File object so FormData can append it properly
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw some mock prescription lines
+    ctx.fillStyle = '#f8fafc'; // bg-slate-50
+    ctx.fillRect(0, 0, 600, 800);
+    ctx.fillStyle = '#0f172a'; // text-slate-900
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('Rx', 40, 60);
+    ctx.font = '16px Arial';
+    ctx.fillText('Dr. Smith - Virtual Consultation', 40, 100);
+    ctx.fillStyle = '#334155';
+    ctx.fillText('1. Paracetamol 500mg (1-1-1)', 40, 160);
+    ctx.fillText('2. Amoxicillin 250mg (1-0-1)', 40, 200);
+
+    canvas.toBlob((blob) => {
+      const mockFile = new File([blob], 'prescription-camera-capture.jpg', {
+        type: 'image/jpeg'
+      });
+      mockFile.isCameraCapture = true;
+      setSelectedFile(mockFile);
+      setUploadState('idle');
+      setUploadProgress(0);
+    }, 'image/jpeg');
   };
 
   const handleClose = () => {

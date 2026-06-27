@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addProduct, editProduct, deleteProduct } from '../store/vendorSlice';
 import { 
-  FiPackage, FiPlus, FiTrash2, FiEdit2, FiCheck, FiLayout, 
-  FiSearch, FiSliders, FiUpload, FiX, FiInfo, FiTag, FiCalendar, FiDollarSign 
+  FiPackage, FiPlus, FiTrash2, FiEdit2, FiLayout, 
+  FiSearch, FiUpload, FiX, FiTag, FiCalendar, FiDollarSign 
 } from 'react-icons/fi';
 
 const CATEGORIES = [

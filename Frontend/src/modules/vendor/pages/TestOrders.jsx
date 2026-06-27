@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { 
-  FiSearch, FiFilter, FiCheckCircle, FiXCircle, FiUserCheck, FiCpu, 
-  FiActivity, FiUploadCloud, FiTrash2, FiMapPin, FiPhone, FiAlertCircle, FiClock, FiFileText
+  FiSearch, FiCheckCircle, FiXCircle, FiUserCheck, 
+  FiActivity, FiUploadCloud, FiTrash2, FiMapPin, FiPhone, FiFileText
 } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 
@@ -67,7 +67,7 @@ export default function TestOrders() {
 
       await apiClient.put(`/api/labs/vendor/bookings/${activeBooking.id}/report`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': undefined
         }
       });
       fetchBookings();

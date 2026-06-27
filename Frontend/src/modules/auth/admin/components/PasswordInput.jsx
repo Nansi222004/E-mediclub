@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 
 export default function PasswordInput({ 

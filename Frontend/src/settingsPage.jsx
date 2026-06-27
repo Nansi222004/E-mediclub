@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setGlobalCommission } from '../store/adminSlice';
-import { FiSettings, FiSliders, FiShield, FiCreditCard, FiCheckCircle } from 'react-icons/fi';
+import { FiSliders, FiShield, FiCreditCard, FiCheckCircle } from 'react-icons/fi';
 
 export default function SettingsPage() {
   const dispatch = useDispatch();

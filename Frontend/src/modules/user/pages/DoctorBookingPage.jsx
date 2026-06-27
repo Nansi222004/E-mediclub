@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FiUser, FiClock, FiActivity, FiArrowLeft, FiCheckCircle, 
+  FiUser, FiActivity, FiArrowLeft, FiCheckCircle, 
   FiFileText, FiUploadCloud, FiTrash2, FiShield, FiHeart 
 } from 'react-icons/fi';
 import { bookDoctorAppointment } from '../store/productSlice';
+import apiClient from '../../../shared/services/apiClient';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const doctorPatientSchema = z.object({
+  patientName: z.string()
+    .min(3, "Name must be at least 3 characters")
+    .max(50, "Name cannot exceed 50 characters")
+    .regex(/^[a-zA-Z\s]+$/, "Name can only contain alphabets and spaces"),
+  patientAge: z.coerce.number({ invalid_type_error: "Age must be a number" })
+    .int("Age must be an integer")
+    .min(1, "Please enter a valid age between 1 and 120")
+    .max(120, "Please enter a valid age between 1 and 120"),
+});
 
 export default function DoctorBookingPage() {
   const { doctorId } = useParams();
@@ -18,8 +33,41 @@ export default function DoctorBookingPage() {
   const selectedDoctor = doctors.find(doc => doc.id === doctorId);
 
   // Form input states
-  const [patientName, setPatientName] = useState('');
-  const [patientAge, setPatientAge] = useState('');
+  const { register: registerPatient, trigger: triggerPatient, getValues: getPatientValues, formState: { errors: patientErrors } } = useForm({
+    resolver: zodResolver(doctorPatientSchema),
+    mode: 'onChange',
+    defaultValues: {
+      patientName: '',
+      patientAge: '',
+    }
+  });
+
+  const generateDates = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const isToday = i === 0;
+      const isTomorrow = i === 1;
+      let label = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+      if (isToday) label = `Today (${label})`;
+      else if (isTomorrow) label = `Tomorrow (${label})`;
+      
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const value = `${year}-${month}-${day}`;
+      dates.push({ label, value });
+    }
+    return dates;
+  };
+
+  const [dateOptions] = useState(generateDates());
+  const [selectedDate, setSelectedDate] = useState(dateOptions[0].value);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+
   const [preferredTime, setPreferredTime] = useState('');
   const [consultationType, setConsultationType] = useState('Online Consultation'); // 'Online Consultation' or 'Offline / In-Person Consultation'
   const [additionalNotes, setAdditionalNotes] = useState('');
@@ -30,6 +78,9 @@ export default function DoctorBookingPage() {
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [generatedRefId, setGeneratedRefId] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [errors, setErrors] = useState({});
+
+  // Validations handled by Zod schema
 
   // Payment states
   const [paymentMethod, setPaymentMethod] = useState('upi'); // 'upi', 'card', 'cash'
@@ -39,23 +90,34 @@ export default function DoctorBookingPage() {
   const [dummyUpiId, setDummyUpiId] = useState('user@okaxis');
   const [isPaying, setIsPaying] = useState(false);
 
-  const timeSlots = [
-    '09:00 AM - 09:30 AM',
-    '09:30 AM - 10:00 AM',
-    '10:00 AM - 10:30 AM',
-    '10:30 AM - 11:00 AM',
-    '11:00 AM - 11:30 AM',
-    '11:30 AM - 12:00 PM',
-    '04:00 PM - 04:30 PM',
-    '04:30 PM - 05:00 PM',
-    '05:00 PM - 05:30 PM',
-    '05:30 PM - 06:00 PM'
-  ];
+  useEffect(() => {
+    if (!selectedDoctor) return;
+    const fetchSlots = async () => {
+      setIsLoadingSlots(true);
+      try {
+        const response = await apiClient.get(`/api/doctors/${selectedDoctor.id}/available-slots?date=${selectedDate}`);
+        if (response.data && response.data.success) {
+          setAvailableSlots(response.data.data);
+        } else {
+          setAvailableSlots([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch slots', err);
+        setAvailableSlots([]);
+      }
+      setIsLoadingSlots(false);
+      setPreferredTime(''); // reset time when date changes
+    };
+    fetchSlots();
+  }, [selectedDate, selectedDoctor]);
 
   const isDoctorSlotAvailable = (slot) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (selectedDate !== todayStr) return true; // Future dates don't need time check
+    
     const parts = slot.split(' - ');
     if (parts.length < 2) return true;
-    const endTimeStr = parts[1].trim(); // e.g. '09:30 AM' or '12:00 PM'
+    const endTimeStr = parts[1].trim(); 
     
     const timeMatch = endTimeStr.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
     if (!timeMatch) return true;
@@ -105,16 +167,13 @@ export default function DoctorBookingPage() {
   };
 
   // Pre-payment validation submit
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setValidationError('');
 
-    if (!patientName.trim()) {
-      setValidationError('Patient Full Name is required.');
-      return;
-    }
-    if (!patientAge || isNaN(patientAge) || parseInt(patientAge) <= 0) {
-      setValidationError('Please enter a valid Patient Age.');
+    const isValid = await triggerPatient();
+    if (!isValid) {
+      setValidationError('Please fix the errors in patient information.');
       return;
     }
     if (!preferredTime) {
@@ -147,12 +206,12 @@ export default function DoctorBookingPage() {
         doctorName: selectedDoctor.name,
         specialty: selectedDoctor.specialty,
         avatar: selectedDoctor.avatar,
-        date: localDateStr,
+        appointmentDate: selectedDate,
         timeSlot: preferredTime,
-        type: consultationType,
-        status: 'Scheduled',
-        patientName: patientName,
-        patientAge: patientAge,
+        consultationType: consultationType,
+        bookingStatus: 'Scheduled',
+        patientName: getPatientValues('patientName'),
+        patientAge: getPatientValues('patientAge'),
         notes: additionalNotes,
         hasPrescription: !!prescriptionFile,
         amountPaid: selectedDoctor.fee,
@@ -217,7 +276,7 @@ export default function DoctorBookingPage() {
               </div>
               <div className="flex justify-between border-b border-slate-200/40 pb-2">
                 <span className="text-slate-400 font-bold uppercase text-[9px]">Patient Details</span>
-                <span className="text-slate-800 font-extrabold">{patientName} (Age: {patientAge})</span>
+                <span className="text-slate-800 font-extrabold">{getPatientValues('patientName')} (Age: {getPatientValues('patientAge')})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-bold uppercase text-[9px]">Consultation Mode</span>
@@ -266,7 +325,7 @@ export default function DoctorBookingPage() {
             <div className="border-b border-slate-100 pb-3 mt-1.5">
               <span className="text-[9px] text-slate-450 font-black uppercase tracking-wider">Appointment Summary</span>
               <h3 className="text-sm font-extrabold text-slate-800 leading-tight mt-1">{selectedDoctor.name} • {selectedDoctor.specialty}</h3>
-              <p className="text-[10px] text-slate-450 font-semibold mt-1">Patient: <strong className="text-slate-650">{patientName} (Age: {patientAge})</strong> • Mode: <strong className="text-slate-650">{consultationType}</strong></p>
+              <p className="text-[10px] text-slate-450 font-semibold mt-1">Patient: <strong className="text-slate-650">{getPatientValues('patientName')} (Age: {getPatientValues('patientAge')})</strong> • Mode: <strong className="text-slate-650">{consultationType}</strong></p>
             </div>
 
             {/* Fee break down list */}
@@ -463,13 +522,12 @@ export default function DoctorBookingPage() {
                   </span>
                   <input
                     type="text"
-                    required
+                    {...registerPatient('patientName')}
                     placeholder="e.g. Ramesh Kumar"
-                    value={patientName}
-                    onChange={(e) => setPatientName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold outline-none focus:border-teal focus:bg-white focus:ring-4 focus:ring-teal-light transition-all placeholder:text-slate-400"
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${patientErrors.patientName ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal'} rounded-2xl text-xs font-semibold outline-none focus:bg-white focus:ring-4 focus:ring-teal-light transition-all placeholder:text-slate-400`}
                   />
                 </div>
+                {patientErrors.patientName && <p className="text-coral text-[10px] font-bold px-1 mt-0.5">{patientErrors.patientName.message}</p>}
               </div>
 
               {/* Form Input: Patient Age */}
@@ -483,42 +541,82 @@ export default function DoctorBookingPage() {
                   </span>
                   <input
                     type="number"
-                    required
-                    min="1"
-                    max="120"
+                    {...registerPatient('patientAge')}
                     placeholder="e.g. 45"
-                    value={patientAge}
-                    onChange={(e) => setPatientAge(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold outline-none focus:border-teal focus:bg-white focus:ring-4 focus:ring-teal-light transition-all placeholder:text-slate-400"
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${patientErrors.patientAge ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal'} rounded-2xl text-xs font-semibold outline-none focus:bg-white focus:ring-4 focus:ring-teal-light transition-all placeholder:text-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                   />
+                </div>
+                {patientErrors.patientAge && <p className="text-coral text-[10px] font-bold px-1 mt-0.5">{patientErrors.patientAge.message}</p>}
+              </div>
+
+              {/* Form Input: Appointment Date Selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
+                  Appointment Date <span className="text-coral">*</span>
+                </label>
+                <div className="flex overflow-x-auto gap-2.5 pb-2 hide-scrollbar">
+                  {dateOptions.map(d => (
+                    <button
+                      key={d.value}
+                      type="button"
+                      onClick={() => setSelectedDate(d.value)}
+                      className={`shrink-0 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 tap-scale border ${
+                        selectedDate === d.value
+                          ? 'bg-teal border-teal text-white shadow-md'
+                          : 'bg-white border-slate-200 text-slate-500 hover:border-teal hover:text-teal'
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Form Input: Preferred Time Slot Selector */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
-                  Preferred Appointment TimeSlot <span className="text-coral">*</span>
+                  Available Time Slots <span className="text-coral">*</span>
                 </label>
-                <div className="relative w-full">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-450 pointer-events-none">
-                    <FiClock />
-                  </span>
-                  <select
-                    required
-                    value={preferredTime}
-                    onChange={(e) => setPreferredTime(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold outline-none focus:border-teal focus:bg-white focus:ring-4 focus:ring-teal-light transition-all cursor-pointer text-slate-700 uppercase"
-                  >
-                    <option value="" disabled>-- Select Preferred Time Slot --</option>
-                    {timeSlots.map(slot => {
-                      const available = isDoctorSlotAvailable(slot);
-                      return (
-                        <option key={slot} value={slot} disabled={!available}>
-                          {slot} {!available && ' (Passed)'}
-                        </option>
-                      );
-                    })}
-                  </select>
+                <div className="relative w-full min-h-[60px]">
+                  {/* Hidden required input to maintain form validation */}
+                  <input type="text" required value={preferredTime} onChange={() => {}} className="absolute opacity-0 w-0 h-0 pointer-events-none" />
+                  
+                  {isLoadingSlots ? (
+                    <div className="flex items-center justify-center p-4 text-teal">
+                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100 text-xs font-bold text-slate-400">
+                      No slots available for this date.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      {availableSlots.map(slot => {
+                        const available = isDoctorSlotAvailable(slot);
+                        const displaySlot = slot.replace(/ (AM|PM) - /, '-');
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            disabled={!available}
+                            onClick={() => setPreferredTime(slot)}
+                            className={`py-2.5 px-2 text-[10px] font-extrabold rounded-xl border transition-all ${
+                              !available 
+                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed opacity-60' 
+                                : preferredTime === slot 
+                                  ? 'bg-teal border-teal text-white shadow-md scale-[1.02]' 
+                                  : 'bg-white border-slate-200 text-slate-600 hover:border-teal hover:text-teal active:scale-[0.98]'
+                            }`}
+                          >
+                            {displaySlot}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -551,6 +649,22 @@ export default function DoctorBookingPage() {
                     <span>🏥</span> In-Clinic Visit
                   </button>
                 </div>
+                {/* Dynamic Context Info */}
+                {consultationType === 'Offline / In-Person Consultation' && (
+                  <div className="bg-slate-50 p-3.5 mt-1.5 text-[10px] rounded-xl text-slate-600 font-bold border border-slate-100 animate-fade-in flex gap-2">
+                    <FiCheckCircle className="text-teal shrink-0 text-base" />
+                    <div>
+                      <strong className="text-slate-800 uppercase tracking-wider">Clinic Address:</strong><br />
+                      {selectedDoctor.address || selectedDoctor.hospital || 'Address will be provided upon confirmation.'}
+                    </div>
+                  </div>
+                )}
+                {consultationType === 'Online Consultation' && (
+                  <div className="bg-teal-50/50 p-3.5 mt-1.5 text-[10px] rounded-xl text-teal-800 font-bold border border-teal-100 animate-fade-in flex items-center gap-2">
+                    <FiShield className="text-teal text-base shrink-0" />
+                    Secure video meeting link will be generated after booking.
+                  </div>
+                )}
               </div>
 
               {/* Form Input: Optional Prescription Attachment */}

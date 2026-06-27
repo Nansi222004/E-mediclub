@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { FiStar, FiShoppingBag, FiTruck, FiShield, FiAlertTriangle, FiPlus, FiMinus, FiArrowLeft } from 'react-icons/fi';
+import { FiStar, FiShoppingBag, FiAlertTriangle, FiPlus, FiMinus, FiArrowLeft } from 'react-icons/fi';
 import { addToCart, updateQuantity } from '../store/cartSlice';
-import ProductCard from '../../../shared/components/ProductCard';
 
 const getSpecsFallback = (product) => {
   if (!product) return {};

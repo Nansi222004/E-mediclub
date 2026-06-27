@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  FiChevronLeft, FiChevronRight, FiCheckCircle, FiActivity,
-  FiClock, FiTrendingUp, FiBookmark, FiDownload, FiPhoneCall, FiAward,
-  FiUploadCloud, FiFilter, FiCalendar, FiHeart
+import { FiActivity,
+  FiClock, FiTrendingUp, FiBookmark, FiFilter, FiCalendar, FiHeart
 } from 'react-icons/fi';
 import ProductCard from '../../../shared/components/ProductCard';
 import LabTestCard from '../../../shared/components/LabTestCard';

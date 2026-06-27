@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  FiSearch, FiCalendar, FiFileText, FiExternalLink, FiSend, FiRefreshCw 
+  FiSearch, FiCalendar, FiExternalLink, FiSend 
 } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 

@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
-  FiEye, FiTrendingUp, FiShoppingBag, FiClock, FiCheckCircle, FiFileText, FiPlus,
-  FiMapPin, FiMap, FiStar, FiUsers, FiDollarSign
+  FiEye, FiTrendingUp, FiShoppingBag, FiClock, FiCheckCircle, FiFileText, FiPlus, FiStar, FiUsers, FiDollarSign
 } from 'react-icons/fi';
 import { 
   getTodayRevenue, 

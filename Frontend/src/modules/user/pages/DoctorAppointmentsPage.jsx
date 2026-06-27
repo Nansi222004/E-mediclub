@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import {
-  FiCalendar, FiSearch, FiVideo, FiClock, FiCheckCircle,
-  FiFilter, FiX, FiActivity, FiUser, FiInfo, FiMessageSquare, FiMapPin, FiAward, FiVolume2, FiMic, FiCameraOff,
+import { FiSearch, FiVideo,
+  FiFilter, FiX, FiMessageSquare, FiMapPin, FiAward, FiMic, FiCameraOff,
   FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import DoctorCard from '../../../shared/components/DoctorCard';
-import { completeDoctorAppointment, fetchDoctors, setLocation, normalizeCity } from '../store/productSlice';
-import LocationSelectorModal, { getStateAbbreviation } from '../../../shared/components/LocationSelectorModal';
+import { completeDoctorAppointment, setLocation, normalizeCity } from '../store/productSlice';
+import LocationSelectorModal from '../../../shared/components/LocationSelectorModal';
 import DoctorGalleryCarousel from '../../../shared/components/DoctorGalleryCarousel';
 
 const cityCoordinates = {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
@@ -7,7 +7,7 @@ import AuthInput from '../components/AuthInput';
 import PasswordInput from '../components/PasswordInput';
 import LoadingButton from '../components/LoadingButton';
 import { adminLoginStart, adminLoginFailure, adminSendOtpSuccess } from '../store/adminAuthSlice';
-import { FiMail, FiCheckCircle, FiShield } from 'react-icons/fi';
+import { FiMail, FiShield } from 'react-icons/fi';
 import apiClient from '../../../../shared/services/apiClient';
 
 export default function AdminLoginPage() {

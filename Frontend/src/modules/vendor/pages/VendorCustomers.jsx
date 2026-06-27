@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { 
-  FiUsers, FiShoppingBag, FiStar, FiFileText, FiSearch, FiEye, FiActivity, FiTrendingUp, FiArrowUpRight
+  FiUsers, FiShoppingBag, FiStar, FiFileText, FiSearch, FiEye, FiArrowUpRight
 } from 'react-icons/fi';
 import { customers, mockOrders, mockPrescriptions } from './pharmacyVendorMockData';
 

@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import AuthInput from '../../auth/admin/components/AuthInput';
 import PasswordInput from '../../auth/admin/components/PasswordInput';
-import LoadingButton from '../../auth/admin/components/LoadingButton';
-import { vendorAuthStart, vendorAuthFailure, vendorLoginSuccess } from '../../auth/vendor/store/vendorAuthSlice';
-import { FiUser, FiMail, FiPhone, FiLock } from 'react-icons/fi';
+import { vendorAuthStart, vendorLoginSuccess } from '../../auth/vendor/store/vendorAuthSlice';
+import { FiUser, FiMail, FiPhone } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
-import apiClient from '../../../shared/services/apiClient';
 import Logo from '../../../shared/components/Logo';
 
 export default function DoctorVendorAuth() {

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReusableTable from '../../admin/components/ReusableTable';
 import { addLabTest } from '../store/vendorSlice';
-import { FiActivity, FiPlus, FiCheck, FiLayers, FiFileText } from 'react-icons/fi';
+import { FiPlus, FiLayers } from 'react-icons/fi';
 
 export default function VendorLabTestsManagement() {
   const dispatch = useDispatch();

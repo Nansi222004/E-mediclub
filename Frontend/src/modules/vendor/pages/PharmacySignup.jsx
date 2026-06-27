@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { vendorLoginSuccess } from '../../auth/vendor/store/vendorAuthSlice';
@@ -13,13 +13,14 @@ import {
   FiEye, 
   FiEyeOff, 
   FiAlertCircle, 
-  FiClock, 
-  FiMapPin, 
   FiTrash2, 
   FiCheckCircle 
 } from 'react-icons/fi';
 import Logo from '../../../shared/components/Logo';
 import apiClient from '../../../shared/services/apiClient';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { pharmacySignupSchema } from '../schemas/vendor.schema';
 
 export default function PharmacySignup() {
   const [step, setStep] = useState(1);
@@ -28,12 +29,20 @@ export default function PharmacySignup() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Step 1: Basic Info
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const { register, handleSubmit: formHandleSubmit, trigger, watch, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(pharmacySignupSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: '', email: '', phone: '', password: '', confirmPassword: '',
+      storeName: '', gstNumber: '', drugLicenseNumber: '', pharmacistRegistrationNumber: '',
+      landmark: '', googleMapsLocation: '', openingHour: '09', openingMinute: '00', openingAmpm: 'AM',
+      closingHour: '09', closingMinute: '00', closingAmpm: 'PM', deliveryRadius: 5, homeDelivery: true,
+      address: '', city: '', state: '', pincode: ''
+    }
+  });
+
+  const formData = watch();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -44,26 +53,6 @@ export default function PharmacySignup() {
   const [otpTimer, setOtpTimer] = useState(0);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
-
-  // Step 2: Pharmacy Details
-  const [storeName, setStoreName] = useState('');
-  const [gstNumber, setGstNumber] = useState('');
-  const [drugLicenseNumber, setDrugLicenseNumber] = useState('');
-  const [pharmacistRegistrationNumber, setPharmacistRegistrationNumber] = useState('');
-  const [landmark, setLandmark] = useState('');
-  const [googleMapsLocation, setGoogleMapsLocation] = useState('');
-  const [openingHour, setOpeningHour] = useState('09');
-  const [openingMinute, setOpeningMinute] = useState('00');
-  const [openingAmpm, setOpeningAmpm] = useState('AM');
-  const [closingHour, setClosingHour] = useState('09');
-  const [closingMinute, setClosingMinute] = useState('00');
-  const [closingAmpm, setClosingAmpm] = useState('PM');
-  const [deliveryRadius, setDeliveryRadius] = useState('5');
-  const [homeDelivery, setHomeDelivery] = useState(true);
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
 
   // Step 3: Documents
   const [files, setFiles] = useState({
@@ -78,108 +67,13 @@ export default function PharmacySignup() {
   });
 
   const [uploadProgress, setUploadProgress] = useState({
-    drugLicense: 0,
-    gstCertificate: 0,
-    pharmacistCertificate: 0,
-    panCard: 0,
-    logo: 0,
-    storeFrontImage: 0,
-    governmentId: 0,
-    pharmacyPhoto: 0
+    drugLicense: 0, gstCertificate: 0, pharmacistCertificate: 0, panCard: 0, logo: 0, storeFrontImage: 0, governmentId: 0, pharmacyPhoto: 0
   });
 
   const [fileErrors, setFileErrors] = useState({});
 
   // Declaration
   const [declared, setDeclared] = useState(false);
-  const [errors, setErrors] = useState({});
-
-  const handleNameChange = (e) => {
-    const val = e.target.value;
-    setName(val);
-    if (/[0-9]/.test(val)) {
-      setErrors(prev => ({ ...prev, name: 'Name cannot contain numbers' }));
-    } else if (/[^a-zA-Z\s]/.test(val)) {
-      setErrors(prev => ({ ...prev, name: 'Name cannot contain special characters' }));
-    } else if (val && val.trim().length < 2) {
-      setErrors(prev => ({ ...prev, name: 'Name must be at least 2 characters' }));
-    } else {
-      setErrors(prev => ({ ...prev, name: '' }));
-    }
-  };
-
-  const handlePhoneChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setPhone(val);
-    if (val && val.length < 10) {
-      setErrors(prev => ({ ...prev, phone: 'Mobile number must be 10 digits' }));
-    } else {
-      setErrors(prev => ({ ...prev, phone: '' }));
-    }
-  };
-
-  const handleEmailChange = (e) => {
-    const val = e.target.value;
-    setEmail(val);
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (val && !emailRegex.test(val)) {
-      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
-    } else {
-      setErrors(prev => ({ ...prev, email: '' }));
-    }
-  };
-
-  const handleStoreNameChange = (e) => {
-    const val = e.target.value;
-    setStoreName(val);
-    if (val && val.trim().length < 2) {
-      setErrors(prev => ({ ...prev, storeName: 'Store Name must be at least 2 characters' }));
-    } else {
-      setErrors(prev => ({ ...prev, storeName: '' }));
-    }
-  };
-
-  const handleCityChange = (e) => {
-    const val = e.target.value;
-    setCity(val);
-    if (/[^a-zA-Z\s]/.test(val)) {
-      setErrors(prev => ({ ...prev, city: 'City can only contain letters and spaces' }));
-    } else {
-      setErrors(prev => ({ ...prev, city: '' }));
-    }
-  };
-
-  const handleStateChange = (e) => {
-    const val = e.target.value;
-    setState(val);
-    if (/[^a-zA-Z\s]/.test(val)) {
-      setErrors(prev => ({ ...prev, state: 'State can only contain letters and spaces' }));
-    } else {
-      setErrors(prev => ({ ...prev, state: '' }));
-    }
-  };
-
-  const handlePincodeChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setPincode(val);
-    if (val && val.length !== 6) {
-      setErrors(prev => ({ ...prev, pincode: 'Pincode must be 6 digits' }));
-    } else {
-      setErrors(prev => ({ ...prev, pincode: '' }));
-    }
-  };
-
-  const handleGstChange = (e) => {
-    const val = e.target.value.toUpperCase();
-    setGstNumber(val);
-    if (/[^A-Z0-9]/.test(val)) {
-      setErrors(prev => ({ ...prev, gstNumber: 'GST can only contain letters and numbers' }));
-    } else if (val && val.length !== 15) {
-      setErrors(prev => ({ ...prev, gstNumber: '15-character GST number is required' }));
-    } else {
-      setErrors(prev => ({ ...prev, gstNumber: '' }));
-    }
-  };
 
   // OTP countdown timer
   useEffect(() => {
@@ -207,11 +101,11 @@ export default function PharmacySignup() {
     return { score, label: 'Strong', color: 'bg-emerald-500', textColor: 'text-emerald-500' };
   };
 
-  const strength = getPasswordStrength(password);
+  const strength = getPasswordStrength(formData.password);
 
   // Simulated OTP Send
   const handleSendOTP = () => {
-    if (!phone || phone.length < 10) {
+    if (!formData.phone || formData.phone.length < 10) {
       setOtpError('Please enter a valid 10-digit mobile number first.');
       return;
     }
@@ -284,45 +178,30 @@ export default function PharmacySignup() {
     setUploadProgress(prev => ({ ...prev, [field]: 0 }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    let isValid = false;
     if (step === 1) {
-      if (!name || !email || !phone || !password || !confirmPassword) {
-        setApiError('All fields in Step 1 are required.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setApiError('Passwords do not match.');
-        return;
-      }
-      if (strength.label === 'Weak') {
-        setApiError('Please choose a stronger password.');
-        return;
-      }
-      if (!otpVerified) {
+      isValid = await trigger(['name', 'email', 'phone', 'password', 'confirmPassword']);
+      if (isValid && !otpVerified) {
         setApiError('Please complete mobile OTP verification.');
         return;
       }
-    }
-
-    if (step === 2) {
-      if (!storeName || !gstNumber || !drugLicenseNumber || !pharmacistRegistrationNumber || !address || !city || !state || !pincode) {
-        setApiError('Please fill out all mandatory pharmacy details.');
-        return;
-      }
-    }
-
-    if (step === 3) {
-      // Mandatory documents check
+    } else if (step === 2) {
+      isValid = await trigger(['storeName', 'gstNumber', 'drugLicenseNumber', 'pharmacistRegistrationNumber', 'address', 'city', 'state', 'pincode', 'deliveryRadius']);
+    } else if (step === 3) {
       const requiredDocs = ['drugLicense', 'gstCertificate', 'pharmacistCertificate', 'panCard', 'governmentId'];
       const missing = requiredDocs.filter(doc => !files[doc]);
       if (missing.length > 0) {
         setApiError('Please upload all mandatory documents (Drug License, GST, Pharmacist Cert, PAN, Government ID).');
         return;
       }
+      isValid = true;
     }
 
-    setApiError('');
-    setStep(prev => Math.min(prev + 1, 4));
+    if (isValid) {
+      setApiError('');
+      setStep(prev => Math.min(prev + 1, 4));
+    }
   };
 
   const handleBack = () => {
@@ -330,8 +209,7 @@ export default function PharmacySignup() {
     setStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     if (!declared) {
       setApiError('You must agree to the declaration check.');
       return;
@@ -341,35 +219,35 @@ export default function PharmacySignup() {
     setApiError('');
 
     try {
-      const data = new FormData();
-      data.append('name', name);
-      data.append('email', email);
-      data.append('phone', phone);
-      data.append('password', password);
-      data.append('storeName', storeName);
-      data.append('landmark', landmark);
-      data.append('googleMapsLocation', googleMapsLocation);
-      data.append('openingTime', `${openingHour}:${openingMinute} ${openingAmpm}`);
-      data.append('closingTime', `${closingHour}:${closingMinute} ${closingAmpm}`);
-      data.append('deliveryRadius', deliveryRadius);
-      data.append('homeDelivery', homeDelivery);
-      data.append('address', address);
-      data.append('city', city);
-      data.append('state', state);
-      data.append('pincode', pincode);
-      data.append('drugLicenseNumber', drugLicenseNumber);
-      data.append('gstNumber', gstNumber);
-      data.append('pharmacistRegistrationNumber', pharmacistRegistrationNumber);
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', data.name);
+      formDataToSend.append('email', data.email);
+      formDataToSend.append('phone', data.phone);
+      formDataToSend.append('password', data.password);
+      formDataToSend.append('storeName', data.storeName);
+      formDataToSend.append('landmark', data.landmark);
+      formDataToSend.append('googleMapsLocation', data.googleMapsLocation);
+      formDataToSend.append('openingTime', `${data.openingHour}:${data.openingMinute} ${data.openingAmpm}`);
+      formDataToSend.append('closingTime', `${data.closingHour}:${data.closingMinute} ${data.closingAmpm}`);
+      formDataToSend.append('deliveryRadius', data.deliveryRadius);
+      formDataToSend.append('homeDelivery', data.homeDelivery);
+      formDataToSend.append('address', data.address);
+      formDataToSend.append('city', data.city);
+      formDataToSend.append('state', data.state);
+      formDataToSend.append('pincode', data.pincode);
+      formDataToSend.append('drugLicenseNumber', data.drugLicenseNumber);
+      formDataToSend.append('gstNumber', data.gstNumber);
+      formDataToSend.append('pharmacistRegistrationNumber', data.pharmacistRegistrationNumber);
 
       // Append files
       Object.keys(files).forEach(key => {
         if (files[key]) {
-          data.append(key, files[key]);
+          formDataToSend.append(key, files[key]);
         }
       });
 
-      const res = await apiClient.post('/api/auth/register-pharmacy', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const res = await apiClient.post('/api/auth/register-pharmacy', formDataToSend, {
+        headers: { 'Content-Type': undefined }
       });
 
       if (res.data.success) {
@@ -455,7 +333,7 @@ export default function PharmacySignup() {
             </div>
           )}
 
-          <div className="flex-1 flex flex-col">
+          <form onSubmit={step === 4 ? formHandleSubmit(onSubmit) : (e) => { e.preventDefault(); handleNext(); }} className="flex-1 flex flex-col">
             <div className="flex-1">
               {/* Step 1: Basic Info */}
               {step === 1 && (
@@ -465,22 +343,22 @@ export default function PharmacySignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Owner Full Name *</label>
-                      <input required type="text" value={name} onChange={handleNameChange} placeholder="Enter full name" className={`w-full px-4 py-2.5 bg-white border ${errors.name ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.name && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.name}</p>}
+                      <input type="text" {...register('name')} placeholder="Enter full name" className={`w-full px-4 py-2.5 bg-white border ${errors.name ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.name && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.name.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Email Address *</label>
-                      <input required type="email" value={email} onChange={handleEmailChange} placeholder="owner@store.com" className={`w-full px-4 py-2.5 bg-white border ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.email && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.email}</p>}
+                      <input type="email" {...register('email')} placeholder="owner@store.com" className={`w-full px-4 py-2.5 bg-white border ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.email && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.email.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Mobile Number *</label>
                       <div className="flex gap-2">
                         <div className="flex-1 flex flex-col gap-1.5">
-                          <input required type="tel" disabled={otpVerified} value={phone} onChange={handlePhoneChange} placeholder="10-digit mobile number" className={`w-full px-4 py-2.5 bg-white border ${errors.phone ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 disabled:bg-slate-100 disabled:text-slate-500`} />
-                          {errors.phone && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.phone}</p>}
+                          <input type="tel" disabled={otpVerified} {...register('phone')} placeholder="10-digit mobile number" className={`w-full px-4 py-2.5 bg-white border ${errors.phone ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 disabled:bg-slate-100 disabled:text-slate-500`} />
+                          {errors.phone && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.phone.message}</p>}
                         </div>
                         {!otpVerified && (
                           <button type="button" onClick={handleSendOTP} disabled={otpLoading || otpTimer > 0} className="px-4 py-2.5 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black shrink-0 transition-colors disabled:bg-slate-200 disabled:text-slate-400 self-start">
@@ -510,12 +388,13 @@ export default function PharmacySignup() {
                     <div className="flex flex-col gap-1.5 relative">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Password *</label>
                       <div className="relative">
-                        <input required type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimum 6 characters" className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                        <input type={showPassword ? 'text' : 'password'} {...register('password')} placeholder="Minimum 6 characters" className={`w-full pl-4 pr-10 py-2.5 bg-white border ${errors.password ? 'border-rose-500' : 'border-slate-200'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20`} />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                           {showPassword ? <FiEyeOff /> : <FiEye />}
                         </button>
                       </div>
-                      {password && (
+                      {errors.password && <span className="text-rose-500 text-[9px] font-bold px-1">{errors.password.message}</span>}
+                      {formData.password && (
                         <div className="mt-1 flex flex-col gap-1">
                           <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider">
                             <span className="text-slate-400">Strength:</span>
@@ -531,13 +410,13 @@ export default function PharmacySignup() {
                     <div className="flex flex-col gap-1.5 relative">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Confirm Password *</label>
                       <div className="relative">
-                        <input required type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm your password" className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                        <input type={showConfirmPassword ? 'text' : 'password'} {...register('confirmPassword')} placeholder="Confirm your password" className={`w-full pl-4 pr-10 py-2.5 bg-white border ${errors.confirmPassword ? 'border-rose-500' : 'border-slate-200'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20`} />
                         <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                           {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                         </button>
                       </div>
-                      {confirmPassword && password !== confirmPassword && (
-                        <span className="text-rose-500 text-[10px] font-semibold mt-1">Passwords do not match.</span>
+                      {errors.confirmPassword && (
+                        <span className="text-rose-500 text-[9px] font-bold px-1">{errors.confirmPassword.message}</span>
                       )}
                     </div>
                   </div>
@@ -552,62 +431,66 @@ export default function PharmacySignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Pharmacy / Store Name *</label>
-                      <input required type="text" value={storeName} onChange={handleStoreNameChange} placeholder="e.g. Apollo Pharmacy Store" className={`w-full px-4 py-2.5 bg-white border ${errors.storeName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.storeName && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.storeName}</p>}
+                      <input type="text" {...register('storeName')} placeholder="e.g. Apollo Pharmacy Store" className={`w-full px-4 py-2.5 bg-white border ${errors.storeName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.storeName && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.storeName.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Drug License Number *</label>
-                      <input required type="text" value={drugLicenseNumber} onChange={e => setDrugLicenseNumber(e.target.value)} placeholder="e.g. DL-20831/15" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="text" {...register('drugLicenseNumber')} placeholder="e.g. DL-20831/15" className={`w-full px-4 py-2.5 bg-white border ${errors.drugLicenseNumber ? 'border-rose-500' : 'border-slate-200'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20`} />
+                      {errors.drugLicenseNumber && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.drugLicenseNumber.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">GST Number *</label>
-                      <input required type="text" value={gstNumber} onChange={handleGstChange} placeholder="27AAAAA1111A1Z1" className={`w-full px-4 py-2.5 bg-white border ${errors.gstNumber ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.gstNumber && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.gstNumber}</p>}
+                      <input type="text" {...register('gstNumber')} placeholder="27AAAAA1111A1Z1" className={`w-full px-4 py-2.5 bg-white border ${errors.gstNumber ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.gstNumber && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.gstNumber.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Pharmacist Registration Number *</label>
-                      <input required type="text" value={pharmacistRegistrationNumber} onChange={e => setPharmacistRegistrationNumber(e.target.value)} placeholder="e.g. REG-12345/MH" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="text" {...register('pharmacistRegistrationNumber')} placeholder="e.g. REG-12345/MH" className={`w-full px-4 py-2.5 bg-white border ${errors.pharmacistRegistrationNumber ? 'border-rose-500' : 'border-slate-200'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20`} />
+                      {errors.pharmacistRegistrationNumber && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.pharmacistRegistrationNumber.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Street Address *</label>
-                      <textarea required rows="2" value={address} onChange={e => setAddress(e.target.value)} placeholder="Detailed store layout address details..." className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 resize-none" />
+                      <textarea rows="2" {...register('address')} placeholder="Detailed store layout address details..." className={`w-full px-4 py-2 bg-white border ${errors.address ? 'border-rose-500' : 'border-slate-200'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 resize-none`} />
+                      {errors.address && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.address.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Landmark</label>
-                      <input type="text" value={landmark} onChange={e => setLandmark(e.target.value)} placeholder="e.g. Near City Hospital" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="text" {...register('landmark')} placeholder="e.g. Near City Hospital" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Google Maps Link</label>
-                      <input type="url" value={googleMapsLocation} onChange={e => setGoogleMapsLocation(e.target.value)} placeholder="https://maps.google.com/?q=..." className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="url" {...register('googleMapsLocation')} placeholder="https://maps.google.com/?q=..." className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">City *</label>
-                      <input required type="text" value={city} onChange={handleCityChange} placeholder="e.g. Mumbai" className={`w-full px-4 py-2.5 bg-white border ${errors.city ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.city && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.city}</p>}
+                      <input type="text" {...register('city')} placeholder="e.g. Mumbai" className={`w-full px-4 py-2.5 bg-white border ${errors.city ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.city && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.city.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">State *</label>
-                      <input required type="text" value={state} onChange={handleStateChange} placeholder="e.g. Maharashtra" className={`w-full px-4 py-2.5 bg-white border ${errors.state ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.state && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.state}</p>}
+                      <input type="text" {...register('state')} placeholder="e.g. Maharashtra" className={`w-full px-4 py-2.5 bg-white border ${errors.state ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.state && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.state.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Pincode *</label>
-                      <input required type="text" maxLength={6} value={pincode} onChange={handlePincodeChange} placeholder="400001" className={`w-full px-4 py-2.5 bg-white border ${errors.pincode ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.pincode && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.pincode}</p>}
+                      <input type="text" maxLength={6} {...register('pincode')} placeholder="400001" className={`w-full px-4 py-2.5 bg-white border ${errors.pincode ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.pincode && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.pincode.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Delivery Radius (KM) *</label>
-                      <input required type="number" min="1" max="100" value={deliveryRadius} onChange={e => setDeliveryRadius(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="number" min="1" max="100" {...register('deliveryRadius')} className={`w-full px-4 py-2.5 bg-white border ${errors.deliveryRadius ? 'border-rose-500' : 'border-slate-200'} rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20`} />
+                      {errors.deliveryRadius && <p className="text-rose-500 text-[9px] font-bold px-1">{errors.deliveryRadius.message}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -617,14 +500,14 @@ export default function PharmacySignup() {
                         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex-1 w-full justify-between">
                           <span className="text-[10px] font-black uppercase text-slate-400 pl-1.5">Open:</span>
                           <div className="flex items-center gap-1">
-                            <select value={openingHour} onChange={e => setOpeningHour(e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
+                            <select {...register('openingHour')} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
                               {['01','02','03','04','05','06','07','08','09','10','11','12'].map(h => <option key={h} value={h}>{h}</option>)}
                             </select>
                             <span className="text-slate-400 font-bold">:</span>
-                            <select value={openingMinute} onChange={e => setOpeningMinute(e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
+                            <select {...register('openingMinute')} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
                               {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
-                            <select value={openingAmpm} onChange={e => setOpeningAmpm(e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer ml-1">
+                            <select {...register('openingAmpm')} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer ml-1">
                               {['AM','PM'].map(ap => <option key={ap} value={ap}>{ap}</option>)}
                             </select>
                           </div>
@@ -636,14 +519,14 @@ export default function PharmacySignup() {
                         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex-1 w-full justify-between">
                           <span className="text-[10px] font-black uppercase text-slate-400 pl-1.5">Close:</span>
                           <div className="flex items-center gap-1">
-                            <select value={closingHour} onChange={e => setClosingHour(e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
+                            <select {...register('closingHour')} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
                               {['01','02','03','04','05','06','07','08','09','10','11','12'].map(h => <option key={h} value={h}>{h}</option>)}
                             </select>
                             <span className="text-slate-400 font-bold">:</span>
-                            <select value={closingMinute} onChange={e => setClosingMinute(e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
+                            <select {...register('closingMinute')} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer">
                               {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
-                            <select value={closingAmpm} onChange={e => setClosingAmpm(e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer ml-1">
+                            <select {...register('closingAmpm')} className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer ml-1">
                               {['AM','PM'].map(ap => <option key={ap} value={ap}>{ap}</option>)}
                             </select>
                           </div>
@@ -657,7 +540,7 @@ export default function PharmacySignup() {
                         <span className="text-[10px] text-slate-400">Tick if your pharmacy provides doorstep delivery to nearby customers</span>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer select-none">
-                        <input type="checkbox" checked={homeDelivery} onChange={e => setHomeDelivery(e.target.checked)} className="sr-only peer" />
+                        <input type="checkbox" {...register('homeDelivery')} className="sr-only peer" />
                         <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal"></div>
                       </label>
                     </div>
@@ -756,30 +639,30 @@ export default function PharmacySignup() {
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account & Owner</span>
                       <div className="text-xs text-slate-700 flex flex-col gap-1">
-                        <div>Name: <strong className="text-slate-800">{name}</strong></div>
-                        <div>Email: <strong className="text-slate-800">{email}</strong></div>
-                        <div>Mobile: <strong className="text-slate-800">{phone}</strong></div>
+                        <div>Name: <strong className="text-slate-800">{formData.name}</strong></div>
+                        <div>Email: <strong className="text-slate-800">{formData.email}</strong></div>
+                        <div>Mobile: <strong className="text-slate-800">{formData.phone}</strong></div>
                       </div>
                     </div>
 
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pharmacy Details</span>
                       <div className="text-xs text-slate-700 flex flex-col gap-1">
-                        <div>Store: <strong className="text-slate-800">{storeName}</strong></div>
-                        <div>Drug License: <strong className="text-slate-800">{drugLicenseNumber}</strong></div>
-                        <div>GST Number: <strong className="text-slate-800">{gstNumber}</strong></div>
-                        <div>Pharmacist Reg: <strong className="text-slate-800">{pharmacistRegistrationNumber}</strong></div>
+                        <div>Store: <strong className="text-slate-800">{formData.storeName}</strong></div>
+                        <div>Drug License: <strong className="text-slate-800">{formData.drugLicenseNumber}</strong></div>
+                        <div>GST Number: <strong className="text-slate-800">{formData.gstNumber}</strong></div>
+                        <div>Pharmacist Reg: <strong className="text-slate-800">{formData.pharmacistRegistrationNumber}</strong></div>
                       </div>
                     </div>
 
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-2 sm:col-span-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Store Operations & Address</span>
                       <div className="text-xs text-slate-700 grid grid-cols-2 gap-2">
-                        <div className="col-span-2">Address: <strong className="text-slate-800">{address}, {city}, {state} - {pincode}</strong></div>
-                        {landmark && <div>Landmark: <strong className="text-slate-800">{landmark}</strong></div>}
-                        <div>Radius: <strong className="text-slate-800">{deliveryRadius} KM</strong></div>
-                        <div>Timings: <strong className="text-slate-800">{openingHour}:{openingMinute} {openingAmpm} to {closingHour}:{closingMinute} {closingAmpm}</strong></div>
-                        <div>Home Delivery: <strong className="text-slate-800">{homeDelivery ? 'Yes' : 'No'}</strong></div>
+                        <div className="col-span-2">Address: <strong className="text-slate-800">{formData.address}, {formData.city}, {formData.state} - {formData.pincode}</strong></div>
+                        {formData.landmark && <div>Landmark: <strong className="text-slate-800">{formData.landmark}</strong></div>}
+                        <div>Radius: <strong className="text-slate-800">{formData.deliveryRadius} KM</strong></div>
+                        <div>Timings: <strong className="text-slate-800">{formData.openingHour}:{formData.openingMinute} {formData.openingAmpm} to {formData.closingHour}:{formData.closingMinute} {formData.closingAmpm}</strong></div>
+                        <div>Home Delivery: <strong className="text-slate-800">{formData.homeDelivery ? 'Yes' : 'No'}</strong></div>
                       </div>
                     </div>
 
@@ -826,8 +709,7 @@ export default function PharmacySignup() {
 
               {step === 4 ? (
                 <button
-                  type="button"
-                  onClick={handleSubmit}
+                  type="submit"
                   disabled={isLoading}
                   className="px-6 py-2.5 bg-teal hover:bg-teal-dark text-white text-xs font-black rounded-xl shadow-lg shadow-teal/25 vendor-btn flex items-center gap-2 ml-auto"
                 >
@@ -839,15 +721,14 @@ export default function PharmacySignup() {
                 </button>
               ) : (
                 <button
-                  type="button"
-                  onClick={handleNext}
+                  type="submit"
                   className="px-6 py-2.5 bg-teal hover:bg-teal-dark text-white text-xs font-black rounded-xl shadow-lg shadow-teal/25 vendor-btn flex items-center gap-2 ml-auto"
                 >
                   Next Step <FiArrowRight />
                 </button>
               )}
             </div>
-          </div>
+          </form>
 
           {step === 1 && (
             <p className="text-center text-xs font-bold text-slate-500 pb-4">

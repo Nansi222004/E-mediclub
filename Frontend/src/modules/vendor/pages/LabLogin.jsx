@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { FiEye, FiEyeOff, FiMail, FiLock } from 'react-icons/fi';
@@ -6,23 +6,30 @@ import { FcGoogle } from 'react-icons/fc';
 import Logo from '../../../shared/components/Logo';
 import apiClient from '../../../shared/services/apiClient';
 import { vendorLoginSuccess } from '../../auth/vendor/store/vendorAuthSlice';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { vendorLoginSchema } from '../schemas/vendor.schema';
 
 export default function LabLogin() {
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(vendorLoginSchema),
+    mode: 'onChange',
+    defaultValues: { email: '', password: '' }
+  });
+
+  const onSubmit = async (data) => {
     setIsLoading(true);
     setErrorMsg("");
     try {
       const response = await apiClient.post('/api/auth/login', {
-        emailOrPhone: formData.email,
-        password: formData.password
+        emailOrPhone: data.email,
+        password: data.password
       });
       const { user, accessToken } = response.data.data;
       if (user.role !== 'lab_vendor') {
@@ -95,20 +102,19 @@ export default function LabLogin() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3.5">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Email or Phone</label>
                 <div className="relative">
                   <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    required
-                    value={formData.email}
-                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                    {...register('email')}
                     placeholder="Enter email or phone number"
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 transition-colors placeholder:text-slate-400 placeholder:font-medium"
+                    className={`w-full pl-11 pr-4 py-3 bg-slate-50 border ${errors.email ? 'border-coral focus:border-coral focus:ring-coral/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 transition-colors placeholder:text-slate-400 placeholder:font-medium`}
                   />
                 </div>
+                {errors.email && <p className="text-coral text-[10px] font-bold px-1">{errors.email.message}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -122,11 +128,9 @@ export default function LabLogin() {
                   <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    required
-                    value={formData.password}
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    {...register('password')}
                     placeholder="Enter your password"
-                    className="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 transition-colors placeholder:text-slate-400 placeholder:font-medium"
+                    className={`w-full pl-11 pr-12 py-3 bg-slate-50 border ${errors.password ? 'border-coral focus:border-coral focus:ring-coral/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 transition-colors placeholder:text-slate-400 placeholder:font-medium`}
                   />
                   <button
                     type="button"
@@ -136,6 +140,7 @@ export default function LabLogin() {
                     {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                   </button>
                 </div>
+                {errors.password && <p className="text-coral text-[10px] font-bold px-1">{errors.password.message}</p>}
               </div>
 
               <button

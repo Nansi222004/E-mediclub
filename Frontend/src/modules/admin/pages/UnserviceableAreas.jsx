@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
 import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';

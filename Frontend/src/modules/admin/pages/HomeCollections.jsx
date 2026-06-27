@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FiTruck, FiSearch, FiFilter, FiCheckCircle } from 'react-icons/fi';
 import LocationFilter from '../components/LocationFilter';

@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FiPlus, FiSearch, FiFilter, FiEdit2, FiTrash2, FiBox, 
-  FiDollarSign, FiLayers, FiAlertTriangle, FiCheckCircle, 
-  FiInfo, FiSliders, FiFileText, FiEye, FiActivity
+import { FiSearch, FiFilter, FiEdit2, FiTrash2, FiBox, 
+  FiDollarSign, FiLayers, FiAlertTriangle, FiCheckCircle, FiEye, FiActivity
 } from 'react-icons/fi';
 
 // Rich Mock Medicine Data representing pharmacy inventory

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  FiUploadCloud, FiFileText, FiTrash2, FiSearch, FiCheckCircle, FiExternalLink, FiDownload, FiSend, FiAlertCircle 
+  FiUploadCloud, FiFileText, FiTrash2, FiSearch, FiExternalLink, FiSend 
 } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 
@@ -43,7 +43,7 @@ export default function UploadReportsPage() {
 
       await apiClient.put(`/api/labs/vendor/bookings/${activeBooking.id}/report`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': undefined
         }
       });
       setSuccessMsg("Report uploaded successfully and patient notified.");

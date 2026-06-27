@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, Navigate, useLocation, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
   FiHome, FiActivity, FiUser, FiGrid, FiFileText, 
-  FiMenu, FiBell, FiChevronDown, FiLogOut, FiArrowLeft, FiPlusCircle,
+  FiMenu, FiBell, FiChevronDown, FiArrowLeft,
   FiChevronRight, FiUpload, FiClock, FiLayers, FiUsers, FiDollarSign, FiPieChart, FiSettings
 } from 'react-icons/fi';
-import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 import Logo from '../../../shared/components/Logo';
 
 export default function LabVendorLayout() {

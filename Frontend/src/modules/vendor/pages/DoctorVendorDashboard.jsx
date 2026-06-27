@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { 
   FiCalendar, FiUsers, FiVideo, FiDollarSign, 
-  FiChevronDown, FiMoreVertical, FiPaperclip, FiPlus, FiClock, FiFileText,
-  FiActivity, FiCheckCircle, FiPhoneCall, FiTrendingUp, FiMessageSquare, FiBell, FiChevronRight
+  FiChevronDown, FiPaperclip, FiPlus, FiClock, FiFileText,
+  FiActivity, FiCheckCircle, FiTrendingUp, FiMessageSquare, FiBell, FiChevronRight
 } from 'react-icons/fi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export default function DoctorVendorDashboard() {
   const { appointments = [] } = useSelector(state => state.products || {});

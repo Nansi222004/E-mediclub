@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import AuthInput from '../../admin/components/AuthInput';
 import PasswordInput from '../../admin/components/PasswordInput';
 import LoadingButton from '../../admin/components/LoadingButton';
 import { vendorAuthStart, vendorAuthFailure, vendorLoginSuccess } from '../store/vendorAuthSlice';
-import { FiUser, FiMail, FiPhone, FiLock, FiCheckCircle } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone } from 'react-icons/fi';
 import apiClient from '../../../../shared/services/apiClient';
 import Logo from '../../../../shared/components/Logo';
 

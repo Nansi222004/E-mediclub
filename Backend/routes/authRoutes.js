@@ -28,20 +28,32 @@ const uploadPharmacyDocs = createUploadMiddleware("emediclub/pharmacy-docs").fie
   { name: 'pharmacyPhoto', maxCount: 1 }
 ]);
 
+const validate = require('../middleware/validate');
+const {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
+  updateProfileSchema,
+  sendOtpSchema,
+  verifyOtpSchema
+} = require('../validations/auth.validation');
+
 // Route configurations purely mapping to controllers
-router.post('/register', register);
+router.post('/register', validate(registerSchema), register);
 router.post('/register-pharmacy', uploadPharmacyDocs, registerPharmacy);
-router.post('/login', login);
+router.post('/login', validate(loginSchema), login);
 router.post('/logout', protect, logout);
 router.post('/refresh', refresh);
 
 // Enhanced Auth routes
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
-router.post('/change-password', protect, changePassword);
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
+router.post('/change-password', protect, validate(changePasswordSchema), changePassword);
 router.get('/me', protect, getMe);
-router.put('/update-profile', protect, updateProfile);
-router.post('/send-otp', sendOTP);
-router.post('/verify-otp', verifyOTP);
+router.put('/update-profile', protect, validate(updateProfileSchema), updateProfile);
+router.post('/send-otp', validate(sendOtpSchema), sendOTP);
+router.post('/verify-otp', validate(verifyOtpSchema), verifyOTP);
 
 module.exports = router;

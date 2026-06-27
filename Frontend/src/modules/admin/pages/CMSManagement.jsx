@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { motion } from 'framer-motion';
 import ReusableTable from '../components/ReusableTable';
 import { addCoupon, deleteCoupon, addHeroBanner, toggleBannerStatus } from '../store/adminSlice';
-import { FiLayers, FiPlus, FiTrash2, FiFileText, FiTag, FiLayout } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiTag, FiLayout } from 'react-icons/fi';
 
 export default function CMSManagement() {
   const dispatch = useDispatch();

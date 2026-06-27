@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { vendorLogout, vendorUpdateKycStatus } from '../../auth/vendor/store/vendorAuthSlice';
 import Logo from '../../../shared/components/Logo';
-import { FiShield, FiClock, FiCheck, FiRefreshCw, FiLogOut, FiLock, FiAlertCircle } from 'react-icons/fi';
+import { FiClock, FiCheck, FiRefreshCw, FiLogOut, FiLock, FiAlertCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import apiClient from '../../../shared/services/apiClient';
 

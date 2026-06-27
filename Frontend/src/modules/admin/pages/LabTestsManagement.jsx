@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addNewLabTest, deleteLabTest, editLabTest } from '../../user/store/productSlice';
 import { 
   FiTrash2, FiEye, FiEdit2, FiPlus, FiSearch, 
-  FiFilter, FiDollarSign, FiClock, FiAlertTriangle, 
-  FiCheck, FiX, FiCheckCircle, FiShield
+  FiFilter, FiX, FiShield
 } from 'react-icons/fi';
 import LocationFilter from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';

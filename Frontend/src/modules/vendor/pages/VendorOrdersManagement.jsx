@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiShoppingBag, FiClock, FiActivity, FiCheckCircle, FiXCircle, FiRefreshCw, FiDollarSign, 
-  FiSearch, FiSliders, FiCalendar, FiDownload, FiUser, FiPhone, FiMapPin, FiPackage, 
-  FiPrinter, FiTruck, FiChevronRight, FiFileText, FiEye, FiPaperclip, FiEdit, FiShield
+  FiSearch, FiSliders, FiCalendar, FiDownload, FiUser, FiPackage, FiFileText, FiEye, FiEdit, FiShield
 } from 'react-icons/fi';
 import { mockOrders, getTodayOrders, getPendingOrders, getOrderSummary } from './pharmacyVendorMockData';
 const getStrength = (name) => {

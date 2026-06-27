@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FiCheckCircle, FiClock, FiMapPin, FiPhone, FiFilter } from 'react-icons/fi';
+import { useState } from 'react';
+import { FiCheckCircle, FiMapPin, FiPhone, FiFilter } from 'react-icons/fi';
 
 export default function LabVendorBookings() {
   const [filter, setFilter] = useState("all");

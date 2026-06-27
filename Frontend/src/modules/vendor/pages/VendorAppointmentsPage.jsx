@@ -1,8 +1,7 @@
-import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import ReusableTable from '../../admin/components/ReusableTable';
 import { editAppointmentStatus } from '../store/vendorSlice';
-import { FiActivity, FiCheck, FiClock } from 'react-icons/fi';
+import { FiCheck } from 'react-icons/fi';
 
 export default function VendorAppointmentsPage() {
   const dispatch = useDispatch();

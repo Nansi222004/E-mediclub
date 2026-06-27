@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiArrowLeft, FiStar, FiCamera, FiCheckCircle, FiUpload, FiMessageSquare } from 'react-icons/fi';
+import { FiArrowLeft, FiStar, FiCamera, FiCheckCircle, FiMessageSquare } from 'react-icons/fi';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { reviewSchema } from '../../auth/user/schemas/auth.schema';
 
 export default function ProductRatingsPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
 
   // Review states
-  const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [emojiFeedback, setEmojiFeedback] = useState(''); // 'bad', 'okay', 'great'
-  const [reviewTitle, setReviewTitle] = useState('');
-  const [reviewText, setReviewText] = useState('');
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+    resolver: zodResolver(reviewSchema),
+    defaultValues: {
+      rating: 0,
+      emojiFeedback: '',
+      reviewTitle: '',
+      reviewText: ''
+    }
+  });
+
+  const rating = watch('rating');
+  const emojiFeedback = watch('emojiFeedback');
 
   const emojis = [
     { key: 'bad', symbol: '😞', label: 'Disappointed' },
@@ -35,12 +47,7 @@ export default function ProductRatingsPage() {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (rating === 0) {
-      alert("Please select a star rating.");
-      return;
-    }
+  const onSubmit = (data) => {
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
@@ -75,7 +82,7 @@ export default function ProductRatingsPage() {
           <p className="text-xs text-slate-400 font-semibold mt-1">Reference: <strong className="text-slate-600 font-extrabold">{orderId || 'ORD-General'}</strong></p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
           
           {/* 1. Emoji Feedback */}
           <div className="flex flex-col items-center text-center gap-2">
@@ -85,7 +92,7 @@ export default function ProductRatingsPage() {
                 <button
                   key={emoji.key}
                   type="button"
-                  onClick={() => setEmojiFeedback(emoji.key)}
+                  onClick={() => setValue('emojiFeedback', emoji.key, { shouldValidate: true })}
                   className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 ${
                     emojiFeedback === emoji.key 
                       ? 'bg-forest-light/30 scale-110' 
@@ -97,6 +104,7 @@ export default function ProductRatingsPage() {
                 </button>
               ))}
             </div>
+            {errors.emojiFeedback && <p className="text-coral text-[9px] font-bold px-1 mt-1">{errors.emojiFeedback.message}</p>}
           </div>
 
           {/* 2. Star Ratings */}
@@ -109,7 +117,7 @@ export default function ProductRatingsPage() {
                   type="button"
                   onMouseEnter={() => setHoverRating(star)}
                   onMouseLeave={() => setHoverRating(0)}
-                  onClick={() => setRating(star)}
+                  onClick={() => setValue('rating', star, { shouldValidate: true })}
                   className="p-1 hover:scale-125 transition-transform duration-200"
                 >
                   <FiStar 
@@ -127,6 +135,7 @@ export default function ProductRatingsPage() {
                 {['Disappointed', 'Needs Improvement', 'Good Quality', 'Very Pleased', 'Excellent & Sterile'][rating - 1]}
               </span>
             )}
+            {errors.rating && <p className="text-coral text-[9px] font-bold px-1 mt-1">{errors.rating.message}</p>}
           </div>
 
           {/* 3. Review Title */}
@@ -135,10 +144,10 @@ export default function ProductRatingsPage() {
             <input 
               type="text"
               placeholder="Summarize your experience (e.g., Express packaging, helpful consultation)"
-              value={reviewTitle}
-              onChange={(e) => setReviewTitle(e.target.value)}
-              className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400"
+              {...register('reviewTitle')}
+              className={`px-4 py-3 rounded-xl border ${errors.reviewTitle ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal/30'} bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400`}
             />
+            {errors.reviewTitle && <p className="text-coral text-[9px] font-bold px-1">{errors.reviewTitle.message}</p>}
           </div>
 
           {/* 4. Review Details */}
@@ -151,11 +160,11 @@ export default function ProductRatingsPage() {
               <textarea 
                 rows="4"
                 placeholder="Share details about the packaging condition, dosage guides, delivery speed, or general clinical experience..."
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400 resize-none"
+                {...register('reviewText')}
+                className={`w-full pl-10 pr-4 py-3 rounded-xl border ${errors.reviewText ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal/30'} bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400 resize-none`}
               />
             </div>
+            {errors.reviewText && <p className="text-coral text-[9px] font-bold px-1">{errors.reviewText.message}</p>}
           </div>
 
           {/* 5. Upload Images (Dummy) */}

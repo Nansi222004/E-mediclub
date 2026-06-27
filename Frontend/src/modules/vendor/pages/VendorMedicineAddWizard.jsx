@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FiInfo, FiLayers, FiAlertTriangle, FiUploadCloud, FiCheckCircle, 
-  FiArrowRight, FiArrowLeft, FiPlus, FiTrash2, FiCpu, FiFileText, FiCamera, FiEdit
+  FiArrowRight, FiArrowLeft, FiPlus, FiTrash2, FiCpu, FiCamera, FiEdit
 } from 'react-icons/fi';
 
 export default function VendorMedicineAddWizard() {

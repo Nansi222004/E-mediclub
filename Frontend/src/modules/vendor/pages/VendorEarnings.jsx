@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { requestWithdrawal } from '../store/vendorSlice';
 import { 
   getTodayRevenue, 
@@ -9,9 +8,8 @@ import {
   mockOrders 
 } from './pharmacyVendorMockData';
 import { 
-  FiDollarSign, FiPlus, FiCheckCircle, FiClock, FiActivity, FiFileText, 
-  FiCalendar, FiDownload, FiTrendingUp, FiArrowUpRight, FiAward, FiInfo,
-  FiList, FiRefreshCw, FiClipboard
+  FiDollarSign, FiCheckCircle, FiActivity, FiFileText, FiDownload, FiTrendingUp,
+  FiList, FiRefreshCw
 } from 'react-icons/fi';
 
 export default function VendorEarnings() {

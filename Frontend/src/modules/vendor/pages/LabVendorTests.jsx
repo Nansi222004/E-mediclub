@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FiPlusCircle, FiActivity, FiTrash2, FiSearch } from 'react-icons/fi';
+import { useState } from 'react';
+import { FiPlusCircle, FiTrash2, FiSearch } from 'react-icons/fi';
 
 export default function LabVendorTests() {
   const [tests, setTests] = useState([

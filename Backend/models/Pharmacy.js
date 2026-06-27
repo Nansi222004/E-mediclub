@@ -132,11 +132,23 @@ const pharmacySchema = new mongoose.Schema(
     vendorUserId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number]
+      }
     }
   },
   {
     timestamps: true
   }
 );
+
+pharmacySchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Pharmacy', pharmacySchema);

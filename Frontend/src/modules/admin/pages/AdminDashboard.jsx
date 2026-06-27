@@ -1,19 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiClient from '../../../shared/services/apiClient';
-import LocationBanner from '../components/LocationBanner';
-import LocationEmptyState from '../components/LocationEmptyState';
 import { 
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell
+  ResponsiveContainer, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import { 
-  FiDollarSign, FiShoppingBag, FiUsers, FiCalendar, 
-  FiActivity, FiPackage, FiVideo, FiMapPin, FiAlertTriangle, 
-  FiArrowUpRight, FiArrowDownRight, FiStar, FiPlus, 
-  FiDownload, FiFileText, FiClock, FiX, FiCheck, 
-  FiHeart, FiPhone, FiMessageSquare, FiSliders, FiEye, FiCheckCircle, FiPlusCircle, FiTrendingUp, FiUserCheck, FiCreditCard, FiPercent
+  FiDollarSign, FiShoppingBag, FiUsers, 
+  FiActivity, FiPackage, FiMapPin, FiAlertTriangle, 
+  FiDownload, FiX, 
+  FiHeart, FiSliders, FiCheckCircle, FiUserCheck, FiCreditCard
 } from 'react-icons/fi';
 import { approveVendor, rejectVendor } from '../store/adminSlice';
 import AdminFilterBar from '../components/AdminFilterBar';

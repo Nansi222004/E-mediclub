@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FiUsers, FiSearch, FiFileText, FiFolder } from 'react-icons/fi';
+import { useState } from 'react';
+import { FiSearch, FiFileText, FiFolder } from 'react-icons/fi';
 
 export default function DoctorVendorPatients() {
   const [search, setSearch] = useState("");

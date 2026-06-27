@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, Navigate, useLocation, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
-import { 
-  FiHome, FiCalendar, FiUser, FiGrid, FiUsers, 
-  FiMenu, FiBell, FiChevronDown, FiChevronRight, FiLogOut, FiArrowLeft, FiFileText, FiActivity,
+import { FiCalendar, FiUser, FiGrid, FiUsers, 
+  FiMenu, FiBell, FiChevronDown, FiArrowLeft, FiFileText, FiActivity,
   FiClock, FiVideo, FiDollarSign, FiStar, FiSettings
 } from 'react-icons/fi';
-import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 import Logo from '../../../shared/components/Logo';
 
 export default function DoctorVendorLayout() {
@@ -295,6 +293,54 @@ export default function DoctorVendorLayout() {
               <FiBell className="text-xl" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-coral"></span>
             </button>
+
+            {/* Profile Avatar */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/80 hover:bg-slate-200/80 transition-colors tap-scale cursor-pointer border-0"
+              >
+                <div className="w-7 h-7 rounded-full bg-teal text-white flex items-center justify-center text-xs">
+                  <FiUser />
+                </div>
+                <span className="text-xs font-medium text-slate-700 pr-1 hidden sm:block">{vendorUser?.name || 'Dr. Smith'}</span>
+              </button>
+
+              <AnimatePresence>
+                {showProfileDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowProfileDropdown(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-3 w-64 bg-white border border-slate-100 rounded-3xl shadow-premium z-20 overflow-hidden p-3 flex flex-col gap-2"
+                    >
+                      <div className="px-3 py-2 border-b border-slate-50">
+                        <h4 className="text-xs font-black text-slate-850 truncate">{vendorUser?.name || 'Dr. John Smith'}</h4>
+                        <span className="text-[8px] bg-teal/10 text-teal border border-teal/10 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 mt-1.5 inline-block">
+                          VERIFIED DOCTOR
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => { setShowProfileDropdown(false); navigate('/vendor/doctor/profile'); }}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-650 text-left w-full transition-colors border-0 bg-transparent cursor-pointer"
+                      >
+                        <FiUser className="text-sm text-teal shrink-0" />
+                        <span>My Profile</span>
+                      </button>
+                      <button 
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-coral-light/20 hover:bg-coral-light/50 text-xs font-black uppercase text-coral text-left w-full transition-colors shrink-0 border-0 cursor-pointer"
+                      >
+                        <span>🚪</span>
+                        <span>Log Out</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
           </div>
         </header>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthLayout from '../../admin/components/AuthLayout';
@@ -7,7 +7,7 @@ import AuthInput from '../../admin/components/AuthInput';
 import PasswordInput from '../../admin/components/PasswordInput';
 import LoadingButton from '../../admin/components/LoadingButton';
 import { vendorAuthStart, vendorSendOtpSuccess } from '../store/vendorAuthSlice';
-import { FiUser, FiShoppingBag, FiMapPin, FiShield, FiUploadCloud, FiCheck, FiArrowLeft, FiArrowRight } from 'react-icons/fi';
+import { FiUser, FiShoppingBag, FiMapPin, FiShield, FiUploadCloud, FiArrowLeft, FiArrowRight } from 'react-icons/fi';
 
 export default function VendorSignupPage() {
   const dispatch = useDispatch();

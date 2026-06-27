@@ -2,16 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  FiCalendar, FiClock, FiShield, FiFileText, FiSearch,
-  FiFilter, FiX, FiCheckCircle, FiChevronRight, FiChevronLeft, FiMapPin, FiActivity, FiPhoneCall,
-  FiUploadCloud
+import { FiSearch,
+  FiFilter, FiX, FiChevronRight, FiChevronLeft, FiPhoneCall
 } from 'react-icons/fi';
 import LabTestCard from '../../../shared/components/LabTestCard';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
-import { setPrescriptionFilterActive, fetchLabs, setLocation, normalizeCity } from '../store/productSlice';
-import LocationSelectorModal, { getStateAbbreviation } from '../../../shared/components/LocationSelectorModal';
+import { setPrescriptionFilterActive, setLocation, normalizeCity } from '../store/productSlice';
+import LocationSelectorModal from '../../../shared/components/LocationSelectorModal';
 import LabGalleryCarousel from '../../../shared/components/LabGalleryCarousel';
 
 export default function LabTestsPage() {

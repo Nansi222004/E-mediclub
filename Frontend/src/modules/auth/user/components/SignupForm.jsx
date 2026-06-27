@@ -1,95 +1,26 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiSmartphone } from 'react-icons/fi';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { userSignupSchema } from '../schemas/auth.schema';
 
 export default function SignupForm({ onSendOtp, loading }) {
-  const [userName, setUserName] = useState('');
-  const [emailAddress, setEmailAddress] = useState('');
-  const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
-  const [errors, setErrors] = useState({});
+  const { register, handleSubmit: formHandleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(userSignupSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      phone: ''
+    }
+  });
 
-  const handleNameChange = (e) => {
-    const val = e.target.value;
-    setUserName(val);
-    
-    // Live validation
-    if (/[0-9]/.test(val)) {
-      setErrors(prev => ({ ...prev, name: 'Name cannot contain numbers' }));
-    } else if (/[^a-zA-Z\s]/.test(val)) {
-      setErrors(prev => ({ ...prev, name: 'Name cannot contain special characters' }));
-    } else if (val && val.trim().length < 2) {
-      setErrors(prev => ({ ...prev, name: 'Name must be at least 2 characters' }));
-    } else {
-      setErrors(prev => ({ ...prev, name: '' }));
-    }
-  };
-
-  const handleEmailChange = (e) => {
-    const val = e.target.value;
-    setEmailAddress(val);
-    
-    // Live validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (val && !emailRegex.test(val)) {
-      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
-    } else {
-      setErrors(prev => ({ ...prev, email: '' }));
-    }
-  };
-
-  const handlePhoneChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setPhoneNumber(val);
-    
-    if (val && val.length < 10) {
-      setErrors(prev => ({ ...prev, phone: 'Mobile number must be 10 digits' }));
-    } else {
-      setErrors(prev => ({ ...prev, phone: '' }));
-    }
-  };
-
-  const handlePasswordChange = (e) => {
-    const val = e.target.value;
-    setPassword(val);
-    
-    if (val && val.length < 6) {
-      setErrors(prev => ({ ...prev, password: 'Password must be at least 6 characters' }));
-    } else {
-      setErrors(prev => ({ ...prev, password: '' }));
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newErrors = {};
-    
-    if (!userName || userName.trim().length < 2) {
-      newErrors.name = 'Please enter a valid full name';
-    } else if (/[^a-zA-Z\s]/.test(userName)) {
-      newErrors.name = 'Name can only contain letters and spaces';
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (emailAddress && !emailRegex.test(emailAddress)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!password || password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters long';
-    }
-    if (!phoneNumber || phoneNumber.length < 10) {
-      newErrors.phone = 'Please enter a valid 10-digit mobile number';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    onSendOtp({ phone: phoneNumber, name: userName, email: emailAddress, password });
+  const onSubmit = (data) => {
+    onSendOtp(data);
   };
 
   return (
@@ -98,7 +29,7 @@ export default function SignupForm({ onSendOtp, loading }) {
       initial={{ opacity: 0, x: 15 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -15 }}
-      onSubmit={handleSubmit}
+      onSubmit={formHandleSubmit(onSubmit)}
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
@@ -110,14 +41,12 @@ export default function SignupForm({ onSendOtp, loading }) {
           <input
             id="customer-signup-fullname"
             type="text"
-            required
             placeholder="Enter your name"
-            value={userName}
-            onChange={handleNameChange}
-            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${errors.name ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal-500'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium`}
+            {...register('name')}
+            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${errors.name ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium`}
           />
         </div>
-        {errors.name && <p className="text-coral text-xs font-bold px-1">{errors.name}</p>}
+        {errors.name && <p className="text-coral text-[10px] font-bold px-1">{errors.name.message}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -130,12 +59,11 @@ export default function SignupForm({ onSendOtp, loading }) {
             id="customer-signup-email"
             type="email"
             placeholder="name@example.com"
-            value={emailAddress}
-            onChange={handleEmailChange}
-            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${errors.email ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal-500'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium`}
+            {...register('email')}
+            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${errors.email ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium`}
           />
         </div>
-        {errors.email && <p className="text-coral text-xs font-bold px-1">{errors.email}</p>}
+        {errors.email && <p className="text-coral text-[10px] font-bold px-1">{errors.email.message}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -147,11 +75,9 @@ export default function SignupForm({ onSendOtp, loading }) {
           <input
             id="customer-signup-password"
             type={showPassword ? 'text' : 'password'}
-            required
             placeholder="Min. 6 characters"
-            value={password}
-            onChange={handlePasswordChange}
-            className={`w-full pl-10 pr-10 py-3 bg-slate-50 border ${errors.password ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal-500'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium`}
+            {...register('password')}
+            className={`w-full pl-10 pr-10 py-3 bg-slate-50 border ${errors.password ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium`}
           />
           <button
             type="button"
@@ -161,7 +87,7 @@ export default function SignupForm({ onSendOtp, loading }) {
             {showPassword ? <FiEyeOff className="text-base" /> : <FiEye className="text-base" />}
           </button>
         </div>
-        {errors.password && <p className="text-coral text-xs font-bold px-1">{errors.password}</p>}
+        {errors.password && <p className="text-coral text-[10px] font-bold px-1">{errors.password.message}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -176,15 +102,13 @@ export default function SignupForm({ onSendOtp, loading }) {
           <input
             id="customer-signup-phone"
             type="tel"
-            required
             maxLength={10}
             placeholder="Enter 10-digit number"
-            value={phoneNumber}
-            onChange={handlePhoneChange}
-            className={`w-full pl-22 pr-4 py-3 bg-slate-50 border ${errors.phone ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal-500'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium font-mono`}
+            {...register('phone')}
+            className={`w-full pl-22 pr-4 py-3 bg-slate-50 border ${errors.phone ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} focus:bg-white rounded-xl text-slate-800 text-sm outline-none transition-all font-semibold placeholder:text-slate-400 placeholder:font-medium font-mono`}
           />
         </div>
-        {errors.phone && <p className="text-coral text-xs font-bold px-1">{errors.phone}</p>}
+        {errors.phone && <p className="text-coral text-[10px] font-bold px-1">{errors.phone.message}</p>}
       </div>
 
       <button

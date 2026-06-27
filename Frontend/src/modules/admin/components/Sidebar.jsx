@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch } from 'react-redux';
@@ -8,7 +8,7 @@ import {
   FiHome, FiShoppingBag, FiPackage, FiActivity, FiHeart, 
   FiUsers, FiUserCheck, FiMapPin, FiTruck, FiFileText, 
   FiCreditCard, FiRefreshCw, FiStar, FiBarChart2, FiAlertTriangle, 
-  FiInbox, FiSliders, FiSettings, FiLogOut, FiArrowLeft, FiChevronDown
+  FiInbox, FiSliders, FiSettings, FiChevronDown
 } from 'react-icons/fi';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {

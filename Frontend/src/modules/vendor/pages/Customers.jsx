@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  FiSearch, FiUsers, FiClock, FiFileText, FiPhone, FiInfo, FiFolder 
+  FiSearch, FiClock, FiFileText, FiPhone 
 } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 

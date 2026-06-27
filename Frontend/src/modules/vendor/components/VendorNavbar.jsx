@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiBell, FiActivity, FiCheckCircle, FiUser, FiChevronDown } from 'react-icons/fi';
+import { FiMenu, FiBell, FiCheckCircle, FiUser, FiChevronDown } from 'react-icons/fi';
 import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 
 export default function VendorNavbar({ toggleSidebar }) {

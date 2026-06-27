@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiMapPin, FiPlus, FiX } from 'react-icons/fi';
 import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';

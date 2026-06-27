@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiGrid, FiPlus, FiX, FiCheckCircle, FiUser } from 'react-icons/fi';

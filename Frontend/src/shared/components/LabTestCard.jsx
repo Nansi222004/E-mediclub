@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiCalendar, FiCheckCircle, FiInfo, FiActivity } from 'react-icons/fi';
+import { FiCalendar, FiInfo, FiActivity } from 'react-icons/fi';
 import LabTestInfoModal from './LabTestInfoModal';
 
 export default function LabTestCard({ test }) {

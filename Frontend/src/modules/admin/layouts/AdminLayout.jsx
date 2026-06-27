@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, Navigate, useLocation, useNavigate, NavLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import { FiHome, FiUsers, FiPackage, FiShoppingBag, FiLayers, FiActivity } from 'react-icons/fi';
+import { FiHome, FiUsers, FiPackage, FiShoppingBag, FiLayers } from 'react-icons/fi';
 import { AdminLocationProvider } from '../context/AdminLocationContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/admin.css';

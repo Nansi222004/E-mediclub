@@ -1,11 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useState, useMemo } from 'react';
+import { useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { adjustProductStock, addProduct } from '../store/vendorSlice';
 import {
-  FiLayers, FiPlus, FiAlertTriangle, FiTrash2, FiSearch, FiSliders,
-  FiCheckCircle, FiX, FiActivity, FiDollarSign, FiPlusCircle, FiMinusCircle
+  FiLayers, FiPlus, FiAlertTriangle, FiTrash2, FiSearch, FiActivity, FiDollarSign
 } from 'react-icons/fi';
 import { mockInventory, getOutOfStockItems, getLowStockItems } from './pharmacyVendorMockData';
 

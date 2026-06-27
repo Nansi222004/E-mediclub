@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { FiFilter, FiList, FiGrid, FiX, FiCheck } from 'react-icons/fi';
+import { FiFilter, FiList, FiGrid, FiCheck } from 'react-icons/fi';
 import ProductCard from '../../../shared/components/ProductCard';
 import { setSearchTerm } from '../store/productSlice';
 

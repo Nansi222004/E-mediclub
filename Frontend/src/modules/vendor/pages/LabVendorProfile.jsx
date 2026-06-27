@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  FiCheckCircle, FiShield, FiFileText, FiLock, FiInfo, FiImage, FiAward, FiSettings, FiPlus, FiTrash2, FiExternalLink, FiUploadCloud, FiStar
+import { FiFileText, FiInfo, FiAward, FiPlus, FiTrash2, FiExternalLink, FiUploadCloud
 } from 'react-icons/fi';
 import { FaCheckCircle, FaStar } from 'react-icons/fa';
 import apiClient from '../../../shared/services/apiClient';

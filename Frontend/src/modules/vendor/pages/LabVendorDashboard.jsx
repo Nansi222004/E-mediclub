@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { 
-  FiCalendar, FiFileText, FiDroplet, FiDollarSign, 
-  FiSettings, FiImage, FiAward, FiEye, FiUpload, FiPlusCircle, FiUsers, FiStar, FiActivity, FiLayers, FiCheckCircle
+  FiCalendar, FiFileText, FiDroplet, FiDollarSign, FiImage, FiAward, FiEye, FiUpload, FiPlusCircle, FiUsers, FiStar, FiActivity, FiLayers, FiCheckCircle
 } from 'react-icons/fi';
 import { FaCheckCircle, FaStar, FaChevronRight } from 'react-icons/fa';
 import apiClient from '../../../shared/services/apiClient';

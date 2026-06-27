@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
-  FiSearch, FiShoppingBag, FiMapPin, FiUser, FiMenu, FiChevronDown, FiChevronLeft,
-  FiX, FiHome, FiActivity, FiCalendar, FiShoppingCart, FiPercent, FiTrash2, FiUploadCloud,
-  FiPlusCircle, FiShield
+  FiSearch, FiShoppingBag, FiMapPin, FiUser, FiChevronLeft,
+  FiX, FiHome, FiActivity, FiCalendar, FiUploadCloud,
+  FiPlusCircle
 } from 'react-icons/fi';
 import { AnimatePresence, motion } from 'framer-motion';
 import Logo from '../components/Logo';
@@ -13,7 +13,7 @@ import PrescriptionUpload from '../components/PrescriptionUpload';
 import LocationSelectorModal, { getStateAbbreviation } from '../components/LocationSelectorModal';
 import { logout } from '../../modules/auth/store/authSlice';
 import { setSelectedLocation, setLocation, setSearchTerm, setPrescriptionFilterActive, fetchDoctors, fetchLabs, fetchProducts, clearCityData } from '../../modules/user/store/productSlice';
-import { updateQuantity, removeFromCart, clearCart } from '../../modules/user/store/cartSlice';
+import { clearCart } from '../../modules/user/store/cartSlice';
 
 const getPageTitle = (pathname) => {
   if (pathname.startsWith('/medicines') || pathname.startsWith('/categories')) return 'Medicines';
@@ -222,10 +222,35 @@ export default function MainLayout() {
     if (locationState?.city) {
       params.city = locationState.city;
     }
+    if (locationState?.lat && locationState?.lng) {
+      params.lat = locationState.lat;
+      params.lng = locationState.lng;
+    }
     dispatch(fetchDoctors(params));
     dispatch(fetchLabs(params));
     dispatch(fetchProducts(params));
-  }, [locationState?.city, locationState?.pincode, dispatch]);
+  }, [locationState?.city, locationState?.pincode, locationState?.lat, locationState?.lng, dispatch]);
+
+  // Prompt for Browser Geolocation on load
+  useEffect(() => {
+    if (!locationState?.lat || !locationState?.lng) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            dispatch(setLocation({
+              ...locationState,
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }));
+          },
+          (error) => {
+            console.log("Geolocation error:", error.message);
+          }
+        );
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Compute live intelligent suggestions
   useEffect(() => {

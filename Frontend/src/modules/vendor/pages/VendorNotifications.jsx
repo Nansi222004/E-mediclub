@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   FiBell, FiShoppingBag, FiFileText, FiDollarSign, FiAlertTriangle, FiSettings, FiCheck 
 } from 'react-icons/fi';

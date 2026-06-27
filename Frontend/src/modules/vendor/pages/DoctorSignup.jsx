@@ -1,87 +1,59 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiArrowLeft, FiArrowRight, FiCheck, FiFileText, FiImage, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import Logo from '../../../shared/components/Logo';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { doctorSignupSchema } from '../schemas/vendor.schema';
 
 export default function DoctorSignup() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    fullName: '', email: '', phone: '', password: '', confirmPassword: '',
-    regNumber: '', specialization: 'General Physician', qualification: '', experience: '',
-    consultationType: 'Both', fee: '', clinicName: '', address: '', city: '', state: '', pincode: '',
+  const { register, handleSubmit: formHandleSubmit, trigger, watch, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(doctorSignupSchema),
+    mode: 'onChange',
+    defaultValues: {
+      fullName: '', email: '', phone: '', password: '', confirmPassword: '',
+      regNumber: '', specialization: 'General Physician', qualification: '', experience: '',
+      consultationType: 'Both', fee: '', clinicName: '', address: '', city: '', state: '', pincode: ''
+    }
+  });
+
+  const formData = watch();
+
+  const [files, setFiles] = useState({
     regDoc: null, degreeDoc: null, profilePhoto: null, clinicPhoto: null, idProof: null
   });
 
-  const handleNext = () => setStep(prev => Math.min(prev + 1, 4));
+  const handleNext = async () => {
+    let isValid = false;
+    if (step === 1) {
+      isValid = await trigger(['fullName', 'email', 'phone', 'password', 'confirmPassword']);
+    } else if (step === 2) {
+      const fields = ['regNumber', 'specialization', 'qualification', 'experience', 'consultationType', 'fee'];
+      if (formData.consultationType !== 'Online Only') {
+        fields.push('clinicName', 'address', 'city', 'state', 'pincode');
+      }
+      isValid = await trigger(fields);
+    } else if (step === 3) {
+      if (!files.regDoc || !files.degreeDoc || !files.profilePhoto || !files.idProof) {
+        return; // handle error visually if needed
+      }
+      isValid = true;
+    }
+    
+    if (isValid) {
+      setStep(prev => Math.min(prev + 1, 4));
+    }
+  };
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
 
-  const handleNameChange = (e) => {
-    let val = e.target.value;
-    if (!val.startsWith('Dr. ') && val.length > 0) val = 'Dr. ' + val.replace(/^Dr\.?\s*/i, '');
-    setFormData({...formData, fullName: val});
-    
-    const namePart = val.replace(/^Dr\.?\s*/i, '');
-    if (/[0-9]/.test(namePart)) {
-      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain numbers' }));
-    } else if (/[^a-zA-Z\s]/.test(namePart)) {
-      setErrors(prev => ({ ...prev, fullName: 'Name cannot contain special characters' }));
-    } else if (namePart && namePart.trim().length < 2) {
-      setErrors(prev => ({ ...prev, fullName: 'Name must be at least 2 characters' }));
-    } else {
-      setErrors(prev => ({ ...prev, fullName: '' }));
-    }
-  };
-
-  const handleEmailChange = (e) => {
-    const val = e.target.value;
-    setFormData({...formData, email: val});
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (val && !emailRegex.test(val)) {
-      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
-    } else {
-      setErrors(prev => ({ ...prev, email: '' }));
-    }
-  };
-
-  const handlePhoneChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setFormData({...formData, phone: val});
-    if (val && val.length < 10) {
-      setErrors(prev => ({ ...prev, phone: 'Mobile number must be 10 digits' }));
-    } else {
-      setErrors(prev => ({ ...prev, phone: '' }));
-    }
-  };
-
-  const handlePasswordChange = (e) => {
-    const val = e.target.value;
-    setFormData({...formData, password: val});
-    if (val && val.length < 6) {
-      setErrors(prev => ({ ...prev, password: 'Password must be at least 6 characters' }));
-    } else {
-      setErrors(prev => ({ ...prev, password: '' }));
-    }
-  };
-
-  const handleConfirmPasswordChange = (e) => {
-    const val = e.target.value;
-    setFormData({...formData, confirmPassword: val});
-    if (val && val !== formData.password) {
-      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
-    } else {
-      setErrors(prev => ({ ...prev, confirmPassword: '' }));
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const onSubmit = (data) => {
     setIsLoading(true);
     setTimeout(() => {
       navigate('/vendor/onboarding-pending', { state: { type: 'doctor' } });
@@ -90,7 +62,7 @@ export default function DoctorSignup() {
 
   const handleFileChange = (field, e) => {
     if (e.target.files && e.target.files[0]) {
-      setFormData({ ...formData, [field]: e.target.files[0] });
+      setFiles({ ...files, [field]: e.target.files[0] });
     }
   };
 
@@ -156,7 +128,7 @@ export default function DoctorSignup() {
             </div>
           </div>
 
-          <form onSubmit={step === 4 ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }} className="flex-1 flex flex-col">
+          <form onSubmit={step === 4 ? formHandleSubmit(onSubmit) : (e) => { e.preventDefault(); handleNext(); }} className="flex-1 flex flex-col">
             <div className="flex-1">
               {/* Step 1: Basic Info */}
               {step === 1 && (
@@ -165,38 +137,44 @@ export default function DoctorSignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Full Name (with Dr. prefix)</label>
-                      <input required type="text" value={formData.fullName} onChange={handleNameChange} placeholder="Dr. Full Name" className={`w-full px-4 py-3 bg-white border ${errors.fullName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.fullName && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.fullName}</p>}
+                      <input type="text" {...register('fullName', {
+                        onChange: (e) => {
+                          let val = e.target.value;
+                          if (!val.startsWith('Dr. ') && val.length > 0) val = 'Dr. ' + val.replace(/^Dr\.?\s*/i, '');
+                          setValue('fullName', val);
+                        }
+                      })} placeholder="Dr. Full Name" className={`w-full px-4 py-3 bg-white border ${errors.fullName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.fullName && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.fullName.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Email Address</label>
-                      <input required type="email" value={formData.email} onChange={handleEmailChange} className={`w-full px-4 py-3 bg-white border ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.email && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.email}</p>}
+                      <input type="email" {...register('email')} className={`w-full px-4 py-3 bg-white border ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.email && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.email.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Phone Number</label>
-                      <input required type="tel" value={formData.phone} onChange={handlePhoneChange} className={`w-full px-4 py-3 bg-white border ${errors.phone ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
-                      {errors.phone && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.phone}</p>}
+                      <input type="tel" {...register('phone')} className={`w-full px-4 py-3 bg-white border ${errors.phone ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.phone && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.phone.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Password</label>
                       <div className="relative">
-                        <input required type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handlePasswordChange} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.password ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                        <input type={showPassword ? 'text' : 'password'} {...register('password')} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.password ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
                           {showPassword ? <FiEyeOff /> : <FiEye />}
                         </button>
                       </div>
-                      {errors.password && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.password}</p>}
+                      {errors.password && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.password.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Confirm Password</label>
                       <div className="relative">
-                        <input required type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleConfirmPasswordChange} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.confirmPassword ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                        <input type={showConfirmPassword ? 'text' : 'password'} {...register('confirmPassword')} className={`w-full pr-10 pl-4 py-3 bg-white border ${errors.confirmPassword ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
                         <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
                           {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                         </button>
                       </div>
-                      {errors.confirmPassword && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.confirmPassword}</p>}
+                      {errors.confirmPassword && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.confirmPassword.message}</p>}
                     </div>
                   </div>
                 </div>
@@ -209,11 +187,12 @@ export default function DoctorSignup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Medical Registration No.</label>
-                      <input required type="text" value={formData.regNumber} onChange={e => setFormData({...formData, regNumber: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="text" {...register('regNumber')} className={`w-full px-4 py-3 bg-white border ${errors.regNumber ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.regNumber && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.regNumber.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Specialization</label>
-                      <select value={formData.specialization} onChange={e => setFormData({...formData, specialization: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20">
+                      <select {...register('specialization')} className={`w-full px-4 py-3 bg-white border ${errors.specialization ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`}>
                         <option>General Physician</option>
                         <option>Cardiologist</option>
                         <option>Dermatologist</option>
@@ -222,26 +201,31 @@ export default function DoctorSignup() {
                         <option>Psychiatrist</option>
                         <option>Gynecologist</option>
                       </select>
+                      {errors.specialization && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.specialization.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Qualification</label>
-                      <input required type="text" value={formData.qualification} onChange={e => setFormData({...formData, qualification: e.target.value})} placeholder="e.g. MBBS, MD" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="text" {...register('qualification')} placeholder="e.g. MBBS, MD" className={`w-full px-4 py-3 bg-white border ${errors.qualification ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.qualification && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.qualification.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Years of Experience</label>
-                      <input required type="number" value={formData.experience} onChange={e => setFormData({...formData, experience: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="number" {...register('experience')} className={`w-full px-4 py-3 bg-white border ${errors.experience ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.experience && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.experience.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Consultation Type</label>
-                      <select value={formData.consultationType} onChange={e => setFormData({...formData, consultationType: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20">
+                      <select {...register('consultationType')} className={`w-full px-4 py-3 bg-white border ${errors.consultationType ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`}>
                         <option>Online Only</option>
                         <option>In-Clinic Only</option>
                         <option>Both</option>
                       </select>
+                      {errors.consultationType && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.consultationType.message}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Consultation Fee (₹)</label>
-                      <input required type="number" value={formData.fee} onChange={e => setFormData({...formData, fee: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                      <input type="number" {...register('fee')} className={`w-full px-4 py-3 bg-white border ${errors.fee ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                      {errors.fee && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.fee.message}</p>}
                     </div>
                     
                     {formData.consultationType !== 'Online Only' && (
@@ -251,23 +235,28 @@ export default function DoctorSignup() {
                         </div>
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
                           <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Clinic Name</label>
-                          <input required type="text" value={formData.clinicName} onChange={e => setFormData({...formData, clinicName: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                          <input type="text" {...register('clinicName')} className={`w-full px-4 py-3 bg-white border ${errors.clinicName ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                          {errors.clinicName && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.clinicName.message}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
                           <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Address Line</label>
-                          <textarea required rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 resize-none" />
+                          <textarea rows="2" {...register('address')} className={`w-full px-4 py-3 bg-white border ${errors.address ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 resize-none`} />
+                          {errors.address && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.address.message}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">State</label>
-                          <input required type="text" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                          <input type="text" {...register('state')} className={`w-full px-4 py-3 bg-white border ${errors.state ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                          {errors.state && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.state.message}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">City</label>
-                          <input required type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                          <input type="text" {...register('city')} className={`w-full px-4 py-3 bg-white border ${errors.city ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                          {errors.city && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.city.message}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pincode</label>
-                          <input required type="text" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20" />
+                          <input type="text" {...register('pincode')} className={`w-full px-4 py-3 bg-white border ${errors.pincode ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-teal focus:ring-teal/20'} rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2`} />
+                          {errors.pincode && <p className="text-rose-500 text-[10px] font-bold px-1">{errors.pincode.message}</p>}
                         </div>
                       </>
                     )}
@@ -288,21 +277,21 @@ export default function DoctorSignup() {
                     ].map((doc) => (
                       <div key={doc.id} className="relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-white hover:bg-slate-50 transition-colors group cursor-pointer">
                         <input type="file" required onChange={(e) => handleFileChange(doc.id, e)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-3 ${formData[doc.id] ? 'bg-teal/10 text-teal' : 'bg-slate-100 text-slate-400 group-hover:bg-teal/10 group-hover:text-teal'} transition-colors`}>
-                          {formData[doc.id] ? <FiCheck /> : doc.icon}
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-3 ${files[doc.id] ? 'bg-teal/10 text-teal' : 'bg-slate-100 text-slate-400 group-hover:bg-teal/10 group-hover:text-teal'} transition-colors`}>
+                          {files[doc.id] ? <FiCheck /> : doc.icon}
                         </div>
                         <span className="text-xs font-bold text-slate-700 text-center">{doc.label}</span>
-                        {formData[doc.id] && <span className="text-[10px] font-semibold text-teal mt-1 max-w-[150px] truncate">{formData[doc.id].name}</span>}
+                        {files[doc.id] && <span className="text-[10px] font-semibold text-teal mt-1 max-w-[150px] truncate">{files[doc.id].name}</span>}
                       </div>
                     ))}
                     {formData.consultationType !== 'Online Only' && (
                       <div className="relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-white hover:bg-slate-50 transition-colors group cursor-pointer">
                         <input type="file" onChange={(e) => handleFileChange('clinicPhoto', e)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-3 ${formData.clinicPhoto ? 'bg-teal/10 text-teal' : 'bg-slate-100 text-slate-400 group-hover:bg-teal/10 group-hover:text-teal'} transition-colors`}>
-                          {formData.clinicPhoto ? <FiCheck /> : <FiImage />}
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-3 ${files.clinicPhoto ? 'bg-teal/10 text-teal' : 'bg-slate-100 text-slate-400 group-hover:bg-teal/10 group-hover:text-teal'} transition-colors`}>
+                          {files.clinicPhoto ? <FiCheck /> : <FiImage />}
                         </div>
                         <span className="text-xs font-bold text-slate-700 text-center">Clinic Photo (Optional)</span>
-                        {formData.clinicPhoto && <span className="text-[10px] font-semibold text-teal mt-1 max-w-[150px] truncate">{formData.clinicPhoto.name}</span>}
+                        {files.clinicPhoto && <span className="text-[10px] font-semibold text-teal mt-1 max-w-[150px] truncate">{files.clinicPhoto.name}</span>}
                       </div>
                     )}
                   </div>

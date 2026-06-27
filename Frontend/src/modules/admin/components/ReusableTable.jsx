@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useMemo } from 'react';
 import { FiSearch, FiChevronLeft, FiChevronRight, FiDownload, FiFilter } from 'react-icons/fi';
 
 export default function ReusableTable({ 

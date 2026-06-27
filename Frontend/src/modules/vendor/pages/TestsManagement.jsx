@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { FiPlusCircle, FiActivity, FiTrash2, FiSearch, FiEdit, FiCheck, FiX, FiCheckCircle } from 'react-icons/fi';
+import { FiPlusCircle, FiTrash2, FiSearch, FiEdit } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 
 export default function TestsManagement() {

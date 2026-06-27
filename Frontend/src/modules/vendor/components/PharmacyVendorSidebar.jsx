@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch } from 'react-redux';
-import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 import Logo from '../../../shared/components/Logo';
 import { 
   FiGrid, FiShoppingBag, FiLayers, FiPackage, FiFolder, 
-  FiArchive, FiTag, FiUsers, FiTruck, FiDollarSign, 
-  FiPieChart, FiBell, FiUser, FiSettings, FiLogOut, 
+  FiArchive, FiTag, FiUsers, FiDollarSign, 
+  FiPieChart, FiBell, FiUser, 
   FiArrowLeft, FiChevronDown, FiMapPin, FiStar
 } from 'react-icons/fi';
 

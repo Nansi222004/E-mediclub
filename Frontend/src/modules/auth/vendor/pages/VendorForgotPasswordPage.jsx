@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthLayout from '../../admin/components/AuthLayout';
 import AuthCard from '../../admin/components/AuthCard';

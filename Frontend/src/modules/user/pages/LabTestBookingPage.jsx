@@ -3,11 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiFileText,
-  FiUploadCloud, FiTrash2, FiShield, FiUser, FiInfo, FiActivity, FiMapPin, FiCreditCard, FiAlertCircle
+  FiArrowLeft, FiCalendar, FiCheckCircle,
+  FiUploadCloud, FiTrash2, FiShield, FiUser, FiInfo, FiActivity, FiMapPin
 } from 'react-icons/fi';
 import { bookLabPackage, normalizeCity } from '../store/productSlice';
 import apiClient from "../../../shared/services/apiClient";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { patientBookingSchema } from '../schemas/booking.schema';
 
 export default function LabTestBookingPage() {
   const { testId } = useParams();
@@ -45,10 +48,16 @@ export default function LabTestBookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
 
   // Form states
-  const [patientName, setPatientName] = useState('');
-  const [patientAge, setPatientAge] = useState('');
-  const [patientGender, setPatientGender] = useState('Male');
-  const [patientPhone, setPatientPhone] = useState('');
+  const { register: registerPatient, trigger: triggerPatient, getValues: getPatientValues, formState: { errors: patientErrors } } = useForm({
+    resolver: zodResolver(patientBookingSchema),
+    mode: 'onChange',
+    defaultValues: {
+      patientName: '',
+      patientAge: '',
+      patientGender: 'Male',
+      patientPhone: ''
+    }
+  });
 
   // Address selection states
   const [selectedAddressId, setSelectedAddressId] = useState('');
@@ -82,6 +91,9 @@ export default function LabTestBookingPage() {
   // Booking result details
   const [generatedRefId, setGeneratedRefId] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [errors, setErrors] = useState({});
+
+  // Validations handled by Zod Schema
 
   const timeSlots = [
     '06:00 AM - 09:00 AM (Early Bird)',
@@ -151,23 +163,16 @@ export default function LabTestBookingPage() {
   };
 
   // Step Navigations
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     setValidationError('');
 
     if (currentStep === 1) {
       setCurrentStep(2);
     }
     else if (currentStep === 2) {
-      if (!patientName.trim()) {
-        setValidationError('Patient Full Name is required.');
-        return;
-      }
-      if (!patientAge || isNaN(patientAge) || parseInt(patientAge) <= 0) {
-        setValidationError('Please enter a valid Patient Age.');
-        return;
-      }
-      if (!patientPhone.trim()) {
-        setValidationError('Phone Number is required.');
+      const isValid = await triggerPatient();
+      if (!isValid) {
+        setValidationError('Please fix the errors in patient information.');
         return;
       }
       setCurrentStep(3);
@@ -235,10 +240,11 @@ export default function LabTestBookingPage() {
       formData.append('city', bookingCity);
       formData.append('pincode', bookingPincode);
       formData.append('state', bookingState);
-      formData.append('patientName', patientName.trim());
-      formData.append('patientAge', patientAge);
-      formData.append('patientGender', patientGender);
-      formData.append('patientPhone', patientPhone.trim());
+      const pVals = getPatientValues();
+      formData.append('patientName', pVals.patientName.trim());
+      formData.append('patientAge', pVals.patientAge);
+      formData.append('patientGender', pVals.patientGender);
+      formData.append('patientPhone', pVals.patientPhone.trim());
       formData.append('timeSlot', preferredTimeSlot);
       formData.append('paymentStatus', 'Paid');
       formData.append('paymentMethod', paymentMethod);
@@ -252,7 +258,7 @@ export default function LabTestBookingPage() {
 
       const response = await apiClient.post('/api/labs/book', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': undefined
         }
       });
 
@@ -262,10 +268,10 @@ export default function LabTestBookingPage() {
         id: bookingRef,
         testId: test.id,
         packageName: test.name,
-        patientName: patientName.trim(),
-        patientAge: parseInt(patientAge),
-        patientGender: patientGender,
-        patientPhone: patientPhone.trim(),
+        patientName: pVals.patientName.trim(),
+        patientAge: parseInt(pVals.patientAge),
+        patientGender: pVals.patientGender,
+        patientPhone: pVals.patientPhone.trim(),
         address: selectedAddrStr,
         date: preferredDate,
         timeSlot: preferredTimeSlot,
@@ -414,49 +420,46 @@ export default function LabTestBookingPage() {
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Full Name *</label>
                 <input
                   type="text"
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
+                  {...registerPatient('patientName')}
                   placeholder="e.g. Aditi Sharma"
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400"
-                  required
+                  className={`px-4 py-3 rounded-xl border ${patientErrors.patientName ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal/30'} bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400`}
                 />
+                {patientErrors.patientName && <p className="text-coral text-[10px] font-bold mt-1">{patientErrors.patientName.message}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Age (Years) *</label>
                 <input
                   type="number"
-                  value={patientAge}
-                  onChange={(e) => setPatientAge(e.target.value)}
+                  {...registerPatient('patientAge')}
                   placeholder="e.g. 35"
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400"
-                  required
+                  className={`px-4 py-3 rounded-xl border ${patientErrors.patientAge ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal/30'} bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                 />
+                {patientErrors.patientAge && <p className="text-coral text-[10px] font-bold mt-1">{patientErrors.patientAge.message}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Gender *</label>
                 <select
-                  value={patientGender}
-                  onChange={(e) => setPatientGender(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer"
+                  {...registerPatient('patientGender')}
+                  className={`px-4 py-3 rounded-xl border ${patientErrors.patientGender ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal/30'} bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer`}
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
                 </select>
+                {patientErrors.patientGender && <p className="text-coral text-[10px] font-bold mt-1">{patientErrors.patientGender.message}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Contact Phone *</label>
                 <input
                   type="tel"
-                  value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
+                  {...registerPatient('patientPhone')}
                   placeholder="e.g. 9876543210"
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400"
-                  required
+                  className={`px-4 py-3 rounded-xl border ${patientErrors.patientPhone ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal/30'} bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 outline-none text-xs font-bold text-slate-800 transition-all placeholder:text-slate-400`}
                 />
+                {patientErrors.patientPhone && <p className="text-coral text-[10px] font-bold mt-1">{patientErrors.patientPhone.message}</p>}
               </div>
             </div>
 
@@ -608,24 +611,37 @@ export default function LabTestBookingPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 mt-2 sm:mt-0 sm:col-span-2">
                 <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Preferred Time Slot *</label>
-                <select
-                  value={preferredTimeSlot}
-                  onChange={(e) => setPreferredTimeSlot(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer"
-                  required
-                >
-                  <option value="" disabled>Select collection time slot</option>
+                {/* Hidden required input to maintain form validation */}
+                <input type="text" required value={preferredTimeSlot} onChange={() => {}} className="absolute opacity-0 w-0 h-0 pointer-events-none" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                   {timeSlots.map((slot) => {
                     const available = isLabSlotAvailable(slot, preferredDate);
+                    const slotTime = slot.split(' (')[0].replace(/ (AM|PM) - /, '-');
+                    const slotName = slot.includes('(') ? '(' + slot.split('(')[1] : '';
                     return (
-                      <option key={slot} value={slot} disabled={!available}>
-                        {slot} {!available && ' (Passed)'}
-                      </option>
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={!available}
+                        onClick={() => setPreferredTimeSlot(slot)}
+                        className={`py-3 px-3 rounded-xl border transition-all flex flex-col items-center justify-center gap-0.5 ${
+                          !available 
+                            ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed opacity-60' 
+                            : preferredTimeSlot === slot 
+                              ? 'bg-teal border-teal text-white shadow-md scale-[1.02]' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-teal hover:text-teal active:scale-[0.98]'
+                        }`}
+                      >
+                        <span className="text-[11px] font-black tracking-wide">{slotTime}</span>
+                        <span className={`text-[8.5px] font-bold uppercase tracking-wider ${preferredTimeSlot === slot ? 'text-teal-50' : 'text-slate-400'}`}>
+                          {slotName.replace(/[()]/g, '')}
+                        </span>
+                      </button>
                     );
                   })}
-                </select>
+                </div>
               </div>
             </div>
 
@@ -830,9 +846,9 @@ export default function LabTestBookingPage() {
                 <span className="text-[9px] text-slate-400 font-black uppercase">Booking Reference</span>
                 <span className="text-xs font-black text-forest">{generatedRefId}</span>
               </div>
-              <div className="flex justify-between items-center text-[10.5px]">
-                <span className="text-slate-400 font-semibold">Patient Name:</span>
-                <span className="text-slate-700 font-extrabold truncate max-w-[180px]">{patientName}</span>
+              <div className="flex justify-between items-center text-xs pb-3 border-b border-slate-100">
+                <span className="text-slate-500 font-bold">Patient</span>
+                <span className="text-slate-700 font-extrabold truncate max-w-[180px]">{getPatientValues('patientName')}</span>
               </div>
               <div className="flex justify-between items-center text-[10.5px]">
                 <span className="text-slate-400 font-semibold">Diagnostic Package:</span>

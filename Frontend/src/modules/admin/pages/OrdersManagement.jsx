@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAdminLocation } from '../context/AdminLocationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReusableTable from '../components/ReusableTable';
 import Logo from '../../../shared/components/Logo';
-import { FiShoppingBag, FiFileText, FiPrinter, FiXCircle, FiCheckCircle, FiTruck } from 'react-icons/fi';
-import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import { FiFileText, FiPrinter, FiTruck } from 'react-icons/fi';
+import LocationFilter from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';
 import ConfirmationModal from '../components/ConfirmationModal';

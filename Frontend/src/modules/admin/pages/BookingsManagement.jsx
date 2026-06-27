@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAdminLocation } from '../context/AdminLocationContext';
-import { FiCalendar, FiSearch, FiClock, FiActivity, FiFilter, FiCheckCircle } from 'react-icons/fi';
-import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
+import { FiSearch } from 'react-icons/fi';
+import LocationFilter from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';
 import apiClient from '../../../shared/services/apiClient';

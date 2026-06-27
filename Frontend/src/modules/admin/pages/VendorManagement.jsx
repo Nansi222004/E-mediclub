@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAdminLocation } from '../context/AdminLocationContext';
@@ -10,9 +10,9 @@ import {
   updateCommissionRate 
 } from '../store/adminSlice';
 import { 
-  FiCheckCircle, FiXCircle, FiShield, FiFileText, 
-  FiPercent, FiEye, FiTrash2, FiClock, FiDownload, 
-  FiSearch, FiFilter, FiDollarSign, FiCreditCard, FiAlertTriangle, FiArrowLeft
+  FiCheckCircle, FiXCircle, FiFileText, 
+  FiPercent, FiEye, FiTrash2, FiDownload, 
+  FiSearch, FiFilter, FiAlertTriangle, FiArrowLeft
 } from 'react-icons/fi';
 import LocationFilter, { CITY_MAPPINGS } from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';

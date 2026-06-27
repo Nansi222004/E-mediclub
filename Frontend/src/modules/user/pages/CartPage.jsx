@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FiTrash2, FiPlus, FiMinus, FiShoppingBag, FiPercent, 
-  FiChevronRight, FiCheck, FiX, FiShield, FiTrendingUp 
+  FiTrash2, FiPlus, FiMinus, FiPercent, 
+  FiChevronRight, FiCheck, FiX, FiShield 
 } from 'react-icons/fi';
 import { addToCart, updateQuantity, removeFromCart, applyCoupon, removeCoupon } from '../store/cartSlice';
 

@@ -507,10 +507,10 @@ const seedMockData = async () => {
     const appointmentCount = await Appointment.countDocuments();
     if (appointmentCount === 0) {
       await Appointment.create([
-        { id: 'APT-1001', doctorName: 'Dr. Ramesh Gupta', specialty: 'General Physician', patientName: 'Rajesh Kumar', date: '2026-06-03', timeSlot: '10:00 AM', type: 'Video', status: 'confirmed', city: 'Delhi', state: 'Delhi', pincode: '110001' },
-        { id: 'APT-1002', doctorName: 'Dr. Archana Sen', specialty: 'Dermatologist', patientName: 'Priya Patel', date: '2026-06-04', timeSlot: '11:00 AM', type: 'In-Clinic', status: 'pending', city: 'Mumbai', state: 'Maharashtra', pincode: '400001' },
-        { id: 'APT-1003', doctorName: 'Dr. Nitin Verma', specialty: 'Pediatrician', patientName: 'Anoop Singh', date: '2026-06-05', timeSlot: '02:00 PM', type: 'Video', status: 'completed', city: 'Pune', state: 'Maharashtra', pincode: '411001' },
-        { id: 'APT-1004', doctorName: 'Dr. Sameer Patel', specialty: 'General Physician', patientName: 'Indore Patient 1', date: '2026-06-06', timeSlot: '04:00 PM', type: 'Video', status: 'confirmed', city: 'Indore', state: 'Madhya Pradesh', pincode: '452010' }
+        { id: 'APT-1001', doctorName: 'Dr. Ramesh Gupta', specialty: 'General Physician', patientName: 'Rajesh Kumar', appointmentDate: '2026-06-03', timeSlot: '10:00 AM', consultationType: 'Video', bookingStatus: 'confirmed', city: 'Delhi', state: 'Delhi', pincode: '110001' },
+        { id: 'APT-1002', doctorName: 'Dr. Archana Sen', specialty: 'Dermatologist', patientName: 'Priya Patel', appointmentDate: '2026-06-04', timeSlot: '11:00 AM', consultationType: 'In-Clinic', bookingStatus: 'pending', city: 'Mumbai', state: 'Maharashtra', pincode: '400001' },
+        { id: 'APT-1003', doctorName: 'Dr. Nitin Verma', specialty: 'Pediatrician', patientName: 'Anoop Singh', appointmentDate: '2026-06-05', timeSlot: '02:00 PM', consultationType: 'Video', bookingStatus: 'completed', city: 'Pune', state: 'Maharashtra', pincode: '411001' },
+        { id: 'APT-1004', doctorName: 'Dr. Sameer Patel', specialty: 'General Physician', patientName: 'Indore Patient 1', appointmentDate: '2026-06-06', timeSlot: '04:00 PM', consultationType: 'Video', bookingStatus: 'confirmed', city: 'Indore', state: 'Madhya Pradesh', pincode: '452010' }
       ]);
       console.log('Seeded mock appointments successfully.');
     }

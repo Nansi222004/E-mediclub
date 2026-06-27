@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FiUploadCloud, FiChevronLeft, FiChevronRight, FiMapPin, FiX, FiFilter, FiSearch } from 'react-icons/fi';
-import { motion } from 'framer-motion';
-import { setSelectedCategory, setPrescriptionFilterActive, fetchProducts, setLocation, normalizeCity } from '../store/productSlice';
+import { FiUploadCloud, FiX, FiFilter, FiSearch } from 'react-icons/fi';
+import { setSelectedCategory, setPrescriptionFilterActive, setLocation, normalizeCity } from '../store/productSlice';
 import ProductCard from '../../../shared/components/ProductCard';
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
-import LocationSelectorModal, { getStateAbbreviation } from '../../../shared/components/LocationSelectorModal';
+import LocationSelectorModal from '../../../shared/components/LocationSelectorModal';
 
 // Static Mapping of Medicine IDs to Therapeutic Classes
 const MEDICINE_SUBCATEGORY_MAP = {

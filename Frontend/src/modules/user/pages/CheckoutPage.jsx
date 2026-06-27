@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Box, Stepper, Step, StepLabel, TextField, Button, 
-  Radio, RadioGroup, FormControlLabel, FormControl, FormLabel
+import { TextField, Button, 
+  Radio
 } from '@mui/material';
-import { FiMapPin, FiCreditCard, FiSmartphone, FiCheckCircle, FiShield, FiPlus, FiArrowLeft } from 'react-icons/fi';
+import { FiMapPin, FiCreditCard, FiSmartphone, FiCheckCircle, FiPlus, FiArrowLeft } from 'react-icons/fi';
 import { clearCart } from '../store/cartSlice';
 import { placeOrder, normalizeCity } from '../store/productSlice';
 import { addAddress, addSavedCard } from '../../auth/store/authSlice';
@@ -104,11 +103,37 @@ export default function CheckoutPage() {
   const [newAddrLine, setNewAddrLine] = useState('');
   const [newAddrCity, setNewAddrCity] = useState('');
   const [newAddrState, setNewAddrState] = useState('');
+  const [errors, setErrors] = useState({});
+
+  const handleAddrNameChange = (e) => {
+    const val = e.target.value;
+    setNewAddrName(val);
+    if (/[0-9]/.test(val)) {
+      setErrors(prev => ({ ...prev, name: 'Name cannot contain numbers' }));
+    } else if (/[^a-zA-Z\s]/.test(val)) {
+      setErrors(prev => ({ ...prev, name: 'Name cannot contain special characters' }));
+    } else {
+      setErrors(prev => ({ ...prev, name: '' }));
+    }
+  };
+
+  const handleAddrPhoneChange = (e) => {
+    const val = e.target.value;
+    setNewAddrPhone(val);
+    if (val && !/^\d+$/.test(val)) {
+      setErrors(prev => ({ ...prev, phone: 'Phone must contain only digits' }));
+    } else if (val && val.length !== 10) {
+      setErrors(prev => ({ ...prev, phone: 'Phone must be exactly 10 digits' }));
+    } else {
+      setErrors(prev => ({ ...prev, phone: '' }));
+    }
+  };
 
   const steps = ['Verify Address', 'Secure Payment'];
 
   const handleAddNewAddress = (e) => {
     e.preventDefault();
+    if (errors.name || errors.phone) return;
     const newAddressObj = {
       name: newAddrName,
       phone: newAddrPhone,
@@ -225,7 +250,9 @@ export default function CheckoutPage() {
                       size="small"
                       required
                       value={newAddrName}
-                      onChange={(e) => setNewAddrName(e.target.value)}
+                      onChange={handleAddrNameChange}
+                      error={!!errors.name}
+                      helperText={errors.name}
                     />
                     <TextField
                       label="Receiver Phone"
@@ -233,7 +260,9 @@ export default function CheckoutPage() {
                       size="small"
                       required
                       value={newAddrPhone}
-                      onChange={(e) => setNewAddrPhone(e.target.value)}
+                      onChange={handleAddrPhoneChange}
+                      error={!!errors.phone}
+                      helperText={errors.phone}
                     />
                   </div>
                   <TextField

@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FiStar, FiMessageSquare, FiCornerDownRight, FiSend, FiCheckCircle 
+import { useState, useEffect } from 'react';
+import { FiMessageSquare, FiCornerDownRight, FiSend 
 } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 import apiClient from '../../../shared/services/apiClient';

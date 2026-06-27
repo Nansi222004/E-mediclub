@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiClock, FiCheckCircle, FiDroplet } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';

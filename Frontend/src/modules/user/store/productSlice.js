@@ -2761,10 +2761,10 @@ const storedAppointments = localStorage.getItem('em_appointments')
         id: 'APT-10492',
         doctorName: 'Dr. Rajesh Sharma',
         specialty: 'Cardiologist',
-        date: '2026-05-28',
+        appointmentDate: '2026-05-28',
         timeSlot: '05:30 PM - 06:00 PM',
-        type: 'Online Consultation',
-        status: 'Confirmed',
+        consultationType: 'Online Consultation',
+        bookingStatus: 'Confirmed',
         city: 'Mumbai',
         pincode: '400001'
       }
@@ -2859,7 +2859,7 @@ const productSlice = createSlice({
       state.selectedLocation = action.payload;
     },
     setLocation: (state, action) => {
-      const { pincode, city, district, state: st, fullAddress } = action.payload;
+      const { pincode, city, district, state: st, fullAddress, lat, lng } = action.payload;
       
       const getStateAbbreviation = (stateName) => {
         if (!stateName) return "";
@@ -2913,7 +2913,9 @@ const productSlice = createSlice({
         city: normalizedCity,
         district: district || normalizedCity || "",
         state: st || "",
-        fullAddress: fullAddress || ""
+        fullAddress: fullAddress || "",
+        lat: lat || null,
+        lng: lng || null
       };
       if (pincode) {
         const areaLabel = (district && district.toLowerCase() !== normalizedCity.toLowerCase())
@@ -3075,7 +3077,7 @@ const productSlice = createSlice({
     completeDoctorAppointment: (state, action) => {
       const apt = state.appointments.find(a => a.id === action.payload);
       if (apt) {
-        apt.status = 'Completed';
+        apt.bookingStatus = 'Completed';
         localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
       }
     },
@@ -3089,7 +3091,7 @@ const productSlice = createSlice({
     cancelDoctorAppointment: (state, action) => {
       const apt = state.appointments.find(a => a.id === action.payload);
       if (apt) {
-        apt.status = 'Cancelled';
+        apt.bookingStatus = 'Cancelled';
         localStorage.setItem('em_appointments', JSON.stringify(current(state.appointments)));
       }
     },

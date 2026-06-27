@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiCreditCard, FiSearch } from 'react-icons/fi';
+import { FiCreditCard } from 'react-icons/fi';
 import LocationFilter from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';

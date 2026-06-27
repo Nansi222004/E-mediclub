@@ -1,9 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  FiLayers, FiUploadCloud, FiCheckCircle, FiXCircle, 
-  FiEye, FiTrendingUp, FiActivity, FiShoppingCart, FiFileText,
-  FiEdit3, FiCheck, FiCpu, FiAlertCircle, FiChevronRight, FiUser,
+import { useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { FiCheckCircle, FiCheck, FiAlertCircle,
   FiDownload, FiZoomIn, FiZoomOut, FiMaximize2, FiPhone, FiMapPin, FiClock
 } from 'react-icons/fi';
 

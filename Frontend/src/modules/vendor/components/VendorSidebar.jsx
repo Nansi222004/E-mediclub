@@ -1,12 +1,9 @@
-import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useDispatch } from 'react-redux';
-import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 import Logo from '../../../shared/components/Logo';
 import { 
-  FiGrid, FiPackage, FiShoppingBag, FiLayers, FiTrendingUp, 
-  FiDollarSign, FiUser, FiHome, FiLogOut, FiArrowLeft
+  FiGrid, FiPackage, FiShoppingBag, FiLayers, FiTrendingUp, FiUser, FiArrowLeft
 } from 'react-icons/fi';
 
 export default function VendorSidebar({ isOpen, toggleSidebar }) {

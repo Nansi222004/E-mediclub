@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  FiArrowLeft, FiInfo, FiLayers, FiAlertTriangle, FiUploadCloud, 
-  FiCheckCircle, FiSave, FiPlus, FiTrash2, FiCamera, FiLock
+  FiArrowLeft, FiInfo, FiLayers, FiAlertTriangle, FiUploadCloud, FiSave, FiPlus, FiTrash2, FiCamera, FiLock
 } from 'react-icons/fi';
 
 // Fallback Mock data for pre-filling the details form

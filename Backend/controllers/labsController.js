@@ -7,10 +7,20 @@ const ApiResponse = require('../utils/ApiResponse');
 // @access  Public
 const getLabs = async (req, res, next) => {
   try {
-    const { city, pincode } = req.query;
+    const { city, pincode, lat, lng, radius } = req.query;
     let query = {};
 
-    if (pincode) {
+    if (lat && lng) {
+      query.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(lng), parseFloat(lat)]
+          },
+          $maxDistance: radius ? parseInt(radius) : 10000
+        }
+      };
+    } else if (pincode) {
       query.pincode = pincode.trim();
     } else if (city) {
       query.city = new RegExp(`^${city.trim()}$`, 'i');
@@ -279,7 +289,7 @@ const getVendorProfile = async (req, res, next) => {
 const updateVendorProfile = async (req, res, next) => {
   try {
     const lab = await getOrCreateVendorLab(req.user._id, req.user.name);
-    const { name, rating, reviewsCount, city, pincode, state, address, ownerName, mobileNumber, emailAddress, promotionalBanner, facilitiesList, accreditations, gallery } = req.body;
+    const { name, rating, reviewsCount, city, pincode, state, address, ownerName, mobileNumber, emailAddress, promotionalBanner, facilitiesList, accreditations, gallery, lat, lng } = req.body;
     
     if (name) lab.name = name;
     if (rating !== undefined) lab.rating = rating;
@@ -295,6 +305,13 @@ const updateVendorProfile = async (req, res, next) => {
     if (facilitiesList) lab.facilitiesList = facilitiesList;
     if (accreditations) lab.accreditations = accreditations;
     if (gallery) lab.gallery = gallery;
+
+    if (lat && lng) {
+      lab.location = {
+        type: 'Point',
+        coordinates: [parseFloat(lng), parseFloat(lat)]
+      };
+    }
 
     await lab.save();
     return ApiResponse.success(res, 200, 'Lab profile updated successfully', lab);

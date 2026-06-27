@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import ReusableTable from '../components/ReusableTable';
 import { deleteMedicine } from '../../user/store/productSlice';
-import { FiPackage, FiTrash2, FiSearch, FiFilter } from 'react-icons/fi';
+import { FiTrash2 } from 'react-icons/fi';
 import LocationFilter from '../components/LocationFilter';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';

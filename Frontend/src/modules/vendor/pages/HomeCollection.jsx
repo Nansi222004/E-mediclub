@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { 
-  FiMapPin, FiPhone, FiCheckCircle, FiUsers, FiClock, FiActivity, FiKey, FiAlertCircle 
+  FiMapPin, FiPhone, FiCheckCircle, FiUsers, FiKey 
 } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAdminLocation } from '../context/AdminLocationContext';
 
 export default function LocationBanner() {

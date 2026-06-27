@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiMapPin, FiNavigation, FiActivity, FiSearch, FiChevronRight, FiPlus } from 'react-icons/fi';
 import { setLocation } from '../../modules/user/store/productSlice';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { addressSchema } from '../../modules/auth/user/schemas/auth.schema';
 
 const POPULAR_CITIES = [
   'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune',
@@ -114,13 +117,14 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
 
   // Address form states
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [addrName, setAddrName] = useState('');
-  const [addrPhone, setAddrPhone] = useState('');
-  const [addrPincode, setAddrPincode] = useState('');
-  const [addrFlat, setAddrFlat] = useState('');
-  const [addrArea, setAddrArea] = useState('');
-  const [addrCity, setAddrCity] = useState('');
-  const [addrState, setAddrState] = useState('');
+
+  const { register, handleSubmit, setValue, formState: { errors }, watch } = useForm({
+    resolver: zodResolver(addressSchema),
+    mode: 'onChange'
+  });
+
+  const watchPincode = watch('pincode', '');
+  const watchCity = watch('city', '');
 
   const [resolvedPincodeLocation, setResolvedPincodeLocation] = useState(null);
 
@@ -330,22 +334,24 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
     }
   };
 
-  const handleAddressPincodeChange = async (val) => {
+  const handleAddressPincodeChange = async (e) => {
+    const val = e.target.value;
     const pin = val.replace(/\D/g, '').slice(0, 6);
-    setAddrPincode(pin);
+    setValue('pincode', pin, { shouldValidate: true });
+    
     if (pin.length === 6) {
       try {
         const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
         const data = await res.json();
         if (data && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
           const po = data[0].PostOffice[0];
-          setAddrCity(po.District || po.Name);
-          setAddrState(po.State);
+          setValue('city', po.District || po.Name, { shouldValidate: true });
+          setValue('state', po.State, { shouldValidate: true });
         } else {
           const localCity = Object.keys(CITY_MAPPINGS).find(k => CITY_MAPPINGS[k].pincode === pin);
           if (localCity) {
-            setAddrCity(localCity);
-            setAddrState(CITY_MAPPINGS[localCity].state);
+            setValue('city', localCity, { shouldValidate: true });
+            setValue('state', CITY_MAPPINGS[localCity].state, { shouldValidate: true });
           }
         }
       } catch (err) {
@@ -354,15 +360,13 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
     }
   };
 
-  const handleSaveAddress = (e) => {
-    e.preventDefault();
-    if (!addrPincode || !addrCity) return;
+  const handleSaveAddress = (data) => {
     dispatch(setLocation({
-      pincode: addrPincode,
-      city: addrCity,
-      district: addrCity,
-      state: addrState,
-      fullAddress: `${addrFlat}, ${addrArea}`
+      pincode: data.pincode,
+      city: data.city,
+      district: data.city,
+      state: data.state,
+      fullAddress: data.flat
     }));
     setShowAddressForm(false);
     onClose();
@@ -466,7 +470,7 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
               </div>
             ) : showAddressForm ? (
               /* Add New Address Form */
-              <form onSubmit={handleSaveAddress} className="flex flex-col gap-3.5 text-left overflow-y-auto max-h-[70vh] pr-1">
+              <form onSubmit={handleSubmit(handleSaveAddress)} className="flex flex-col gap-3.5 text-left overflow-y-auto max-h-[70vh] pr-1">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Add delivery address</h3>
                   <button 
@@ -482,37 +486,35 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Full Name</label>
                   <input
                     type="text"
-                    required
-                    value={addrName}
-                    onChange={(e) => setAddrName(e.target.value)}
+                    {...register('name')}
                     placeholder="Enter full name"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
+                    className={`w-full p-2.5 bg-slate-50 border ${errors.name ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} rounded-xl text-xs font-semibold outline-none`}
                   />
+                  {errors.name && <p className="text-coral text-[9px] font-bold px-1">{errors.name.message}</p>}
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Phone Number</label>
                   <input
                     type="tel"
-                    required
-                    value={addrPhone}
-                    onChange={(e) => setAddrPhone(e.target.value)}
+                    {...register('phone')}
                     placeholder="Enter 10-digit number"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
+                    className={`w-full p-2.5 bg-slate-50 border ${errors.phone ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} rounded-xl text-xs font-semibold outline-none`}
                   />
+                  {errors.phone && <p className="text-coral text-[9px] font-bold px-1">{errors.phone.message}</p>}
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Pincode</label>
                   <input
                     type="text"
-                    required
                     maxLength={6}
-                    value={addrPincode}
-                    onChange={(e) => handleAddressPincodeChange(e.target.value)}
+                    {...register('pincode')}
+                    onChange={handleAddressPincodeChange}
                     placeholder="Enter 6-digit code"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
+                    className={`w-full p-2.5 bg-slate-50 border ${errors.pincode ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} rounded-xl text-xs font-semibold outline-none`}
                   />
+                  {errors.pincode && <p className="text-coral text-[9px] font-bold px-1">{errors.pincode.message}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3.5">
@@ -520,23 +522,21 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">City</label>
                     <input
                       type="text"
-                      required
-                      value={addrCity}
-                      onChange={(e) => setAddrCity(e.target.value)}
+                      {...register('city')}
                       placeholder="City"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
+                      className={`w-full p-2.5 bg-slate-50 border ${errors.city ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} rounded-xl text-xs font-semibold outline-none`}
                     />
+                    {errors.city && <p className="text-coral text-[9px] font-bold px-1">{errors.city.message}</p>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">State</label>
                     <input
                       type="text"
-                      required
-                      value={addrState}
-                      onChange={(e) => setAddrState(e.target.value)}
+                      {...register('state')}
                       placeholder="State"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
+                      className={`w-full p-2.5 bg-slate-50 border ${errors.state ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} rounded-xl text-xs font-semibold outline-none`}
                     />
+                    {errors.state && <p className="text-coral text-[9px] font-bold px-1">{errors.state.message}</p>}
                   </div>
                 </div>
 
@@ -544,18 +544,17 @@ export default function LocationSelectorModal({ isOpen, onClose }) {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Flat / House no. / Area</label>
                   <input
                     type="text"
-                    required
-                    value={addrFlat}
-                    onChange={(e) => setAddrFlat(e.target.value)}
+                    {...register('flat')}
                     placeholder="Flat, House no., Area info"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
+                    className={`w-full p-2.5 bg-slate-50 border ${errors.flat ? 'border-coral focus:border-coral' : 'border-slate-200 focus:border-teal'} rounded-xl text-xs font-semibold outline-none`}
                   />
+                  {errors.flat && <p className="text-coral text-[9px] font-bold px-1">{errors.flat.message}</p>}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={!addrPincode || !addrCity}
-                  className="w-full py-3.5 bg-[#0d9488] hover:bg-[#0b7e73] disabled:bg-slate-200 text-white text-xs font-black uppercase tracking-wider rounded-2xl border-0 cursor-pointer transition-colors"
+                  disabled={!watchPincode || !watchCity}
+                  className="w-full py-3.5 bg-[#0d9488] hover:bg-[#0b7e73] disabled:bg-slate-200 text-white text-xs font-black uppercase tracking-wider rounded-2xl border-0 cursor-pointer transition-colors mt-2"
                 >
                   Save & Select Location
                 </button>

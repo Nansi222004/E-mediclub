@@ -1,8 +1,6 @@
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '../shared/layouts/MainLayout';
-import Shimmer from '../shared/components/Shimmer';
-import ProtectedRoute from '../shared/components/ProtectedRoute';
 
 // Lazy loading clinical pages for enhanced performance (User Panel)
 const HomePage = lazy(() => import('../modules/user/pages/HomePage'));

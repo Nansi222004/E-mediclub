@@ -1,10 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  FiLayers, FiUploadCloud, FiSearch, FiSliders, FiCheckCircle, FiXCircle, 
-  FiEye, FiTrendingUp, FiActivity, FiSettings, FiShoppingCart, FiFileText,
-  FiEdit3, FiCheck, FiCpu, FiAlertCircle, FiChevronRight, FiGrid, FiList, 
-  FiAward, FiPlus, FiTrash2, FiClock, FiPercent, FiArrowRight, FiUser
+import { FiUploadCloud, FiSearch, FiCheckCircle, FiShoppingCart, FiCpu, FiAlertCircle
 } from 'react-icons/fi';
 import { mockPrescriptions, getPrescriptionOrders } from './pharmacyVendorMockData';
 

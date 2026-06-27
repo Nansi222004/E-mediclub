@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '../../../../shared/components/Logo';
 import Shimmer from '../../../../shared/components/Shimmer';

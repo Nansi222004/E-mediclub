@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiGrid, FiPlus, FiX, FiCheckCircle, FiInfo, FiUploadCloud } from 'react-icons/fi';
+import { FiGrid, FiPlus, FiX, FiCheckCircle } from 'react-icons/fi';
 import { addMedicineCategory, addNewMedicine } from '../../user/store/productSlice';
 
 export default function ProductManagement({ autoOpenAdd = false }) {

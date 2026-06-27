@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import ReusableTable from '../components/ReusableTable';
 import { toggleUserStatus } from '../store/adminSlice';
-import { FiUserCheck, FiSlash, FiCheck, FiUsers, FiEye, FiActivity, FiShoppingBag } from 'react-icons/fi';
+import { FiSlash, FiCheck, FiEye, FiActivity, FiShoppingBag } from 'react-icons/fi';
 import AdminFilterBar from '../components/AdminFilterBar';
 import LocationBanner from '../components/LocationBanner';
 import LocationEmptyState from '../components/LocationEmptyState';

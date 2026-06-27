@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { updateKycDetails } from '../store/vendorSlice';
-import { 
-  FiUser, FiHome, FiCreditCard, FiShield, FiCheckCircle, 
+import { FiHome, FiCreditCard, FiShield, FiCheckCircle, 
   FiMapPin, FiFolder, FiFileText, FiUploadCloud 
 } from 'react-icons/fi';
 

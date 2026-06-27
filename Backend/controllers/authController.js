@@ -74,11 +74,6 @@ const login = async (req, res, next) => {
 
     const identifier = emailOrPhone || phone || email;
 
-    // Validate email/phone and password
-    if (!identifier || !password) {
-      return ApiResponse.error(res, 400, 'Please provide email or phone number and password');
-    }
-
     // Find user (explicitly selecting password) by phone or email
     const user = await User.findOne({
       $or: [
@@ -236,9 +231,6 @@ const forgotPassword = async (req, res, next) => {
   try {
     const { email, phone } = req.body;
 
-    if (!email && !phone) {
-      return ApiResponse.error(res, 400, 'Please provide email or phone number');
-    }
 
     const query = {};
     if (email) query.email = email;
@@ -279,9 +271,7 @@ const resetPassword = async (req, res, next) => {
   try {
     const { email, phone, otp, newPassword } = req.body;
 
-    if ((!email && !phone) || !otp || !newPassword) {
-      return ApiResponse.error(res, 400, 'Please provide email/phone, OTP, and new password');
-    }
+
 
     const query = {};
     if (email) query.email = email;
@@ -323,9 +313,7 @@ const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    if (!currentPassword || !newPassword) {
-      return ApiResponse.error(res, 400, 'Please provide current and new passwords');
-    }
+
 
     // Find user and select password (protect middleware excludes password)
     const user = await User.findById(req.user._id).select('+password');
@@ -415,9 +403,7 @@ const sendOTP = async (req, res, next) => {
   try {
     const { phone } = req.body;
 
-    if (!phone) {
-      return ApiResponse.error(res, 400, 'Please provide a phone number');
-    }
+
 
     const user = await User.findOne({ phone });
     if (!user) {
@@ -448,9 +434,7 @@ const verifyOTP = async (req, res, next) => {
   try {
     const { phone, otp } = req.body;
 
-    if (!phone || !otp) {
-      return ApiResponse.error(res, 400, 'Please provide phone number and OTP');
-    }
+
 
     const user = await User.findOne({ phone });
     if (!user) {

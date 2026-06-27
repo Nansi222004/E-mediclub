@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { 
   FiArrowLeft, FiMapPin, FiClock, FiPhone, FiCheckCircle, FiShield, 
-  FiStar, FiActivity, FiImage, FiAward, FiMessageSquare, FiCalendar,
+  FiStar, FiActivity, FiImage, FiAward, FiMessageSquare,
   FiChevronLeft, FiChevronRight 
 } from 'react-icons/fi';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const cityCoordinates = {
   "Mumbai": { lat: 19.0760, lng: 72.8777 },

@@ -1,8 +1,7 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiCalendar, FiCheckCircle, FiClock, FiActivity, FiArrowRight, FiStar } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiClock, FiArrowRight, FiStar } from 'react-icons/fi';
 
 export default function DoctorCard({ doctor, onViewProfile }) {
   const navigate = useNavigate();

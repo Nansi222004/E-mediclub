@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiBell, FiActivity, FiUsers, FiShoppingBag, FiCreditCard } from 'react-icons/fi';

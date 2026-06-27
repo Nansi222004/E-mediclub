@@ -19,7 +19,7 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    date: {
+    appointmentDate: {
       type: String,
       required: true
     },
@@ -27,12 +27,12 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    type: {
+    consultationType: {
       type: String,
       enum: ['Video', 'In-Clinic'],
       default: 'Video'
     },
-    status: {
+    bookingStatus: {
       type: String,
       enum: ['pending', 'confirmed', 'completed', 'cancelled'],
       default: 'pending'

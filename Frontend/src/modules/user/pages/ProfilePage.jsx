@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FiUser, FiMapPin, FiCalendar, FiClock, FiTrash2, FiPlus, 
-  FiLogOut, FiEdit, FiCheck, FiShield, FiHeart, FiFileText, FiActivity, FiCreditCard, FiShoppingBag, FiDownload,
-  FiChevronRight, FiBell, FiChevronDown, FiX, FiInfo, FiUploadCloud, FiCopy, FiRefreshCw, FiStar
+import { FiMapPin, FiCalendar, FiClock, FiTrash2, FiPlus, 
+  FiLogOut, FiEdit, FiCheck, FiHeart, FiFileText, FiActivity, FiCreditCard, FiShoppingBag, FiDownload,
+  FiChevronRight, FiBell, FiX, FiInfo, FiUploadCloud, FiCopy, FiRefreshCw, FiStar
 } from 'react-icons/fi';
 import { logout, addAddress, deleteAddress, setDefaultAddress, updateUserProfile, addSavedCard, deleteSavedCard } from '../../auth/store/authSlice';
 import { addToCart } from '../store/cartSlice';
@@ -13,6 +12,9 @@ import { submitAppointmentFeedback, submitLabFeedback, updateOrderStatus, cancel
 import PrescriptionUpload from '../../../shared/components/PrescriptionUpload';
 import PrescriptionReviewModal from '../../../shared/components/PrescriptionReviewModal';
 import apiClient from '../../../shared/services/apiClient';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { updateProfileSchema } from '../../auth/user/schemas/auth.schema';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -29,33 +31,30 @@ export default function ProfilePage() {
 
   // Edit Profile States
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editGender, setEditGender] = useState('Male');
-  const [editAge, setEditAge] = useState('');
+
+  const { register: registerProfile, handleSubmit: handleProfileSubmit, formState: { errors: profileErrors }, reset: resetProfile } = useForm({
+    resolver: zodResolver(updateProfileSchema),
+    mode: 'onChange'
+  });
 
   const handleOpenEditProfile = () => {
-    setEditName(user?.name || 'Rishi');
-    setEditEmail(user?.email || 'rishi@emediclub.com');
-    setEditPhone(user?.phone || '9892989898');
-    setEditGender(user?.gender || 'Male');
-    setEditAge(user?.age || '25');
+    resetProfile({
+      name: user?.name || 'Rishi',
+      email: user?.email || 'rishi@emediclub.com',
+      phone: user?.phone || '9892989898',
+      gender: user?.gender || 'Male',
+      age: user?.age || 25
+    });
     setShowEditProfileModal(true);
   };
 
-  const handleSaveProfile = (e) => {
-    e.preventDefault();
-    if (!editName || !editPhone) {
-      alert("Name and Phone are mandatory!");
-      return;
-    }
+  const handleSaveProfile = (data) => {
     dispatch(updateUserProfile({
-      name: editName,
-      email: editEmail,
-      phone: editPhone,
-      gender: editGender,
-      age: editAge
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      gender: data.gender,
+      age: data.age
     }));
     setShowEditProfileModal(false);
   };
@@ -2009,19 +2008,18 @@ export default function ProfilePage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSaveProfile} className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto no-scrollbar">
+              <form onSubmit={handleProfileSubmit(handleSaveProfile)} className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto no-scrollbar">
                 
                 {/* Full Name */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider">Full Name</label>
                   <input
                     type="text"
-                    required
                     placeholder="Enter your name"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 focus:border-teal rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white"
+                    {...registerProfile('name')}
+                    className={`w-full px-4 py-3 bg-slate-50 border ${profileErrors.name ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal'} rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white`}
                   />
+                  {profileErrors.name && <p className="text-coral text-[9px] font-bold px-1 mt-0.5">{profileErrors.name.message}</p>}
                 </div>
 
                 {/* Contact phone */}
@@ -2031,15 +2029,13 @@ export default function ProfilePage() {
                     <span className="absolute left-4 top-3.5 text-xs font-bold text-slate-400">+91</span>
                     <input
                       type="tel"
-                      required
                       maxLength="10"
-                      pattern="[0-9]{10}"
                       placeholder="10-digit mobile number"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ''))}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 focus:border-teal rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white"
+                      {...registerProfile('phone')}
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${profileErrors.phone ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal'} rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white`}
                     />
                   </div>
+                  {profileErrors.phone && <p className="text-coral text-[9px] font-bold px-1 mt-0.5">{profileErrors.phone.message}</p>}
                 </div>
 
                 {/* Email address */}
@@ -2048,10 +2044,10 @@ export default function ProfilePage() {
                   <input
                     type="email"
                     placeholder="name@example.com"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 focus:border-teal rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white"
+                    {...registerProfile('email')}
+                    className={`w-full px-4 py-3 bg-slate-50 border ${profileErrors.email ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal'} rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white`}
                   />
+                  {profileErrors.email && <p className="text-coral text-[9px] font-bold px-1 mt-0.5">{profileErrors.email.message}</p>}
                 </div>
 
                 {/* Grid for Gender and Age */}
@@ -2060,14 +2056,14 @@ export default function ProfilePage() {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider">Gender</label>
                     <select
-                      value={editGender}
-                      onChange={(e) => setEditGender(e.target.value)}
+                      {...registerProfile('gender')}
                       className="px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold text-slate-650 cursor-pointer outline-none focus:border-teal/30 focus:bg-white"
                     >
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Other">Other</option>
                     </select>
+                    {profileErrors.gender && <p className="text-coral text-[9px] font-bold px-1 mt-0.5">{profileErrors.gender.message}</p>}
                   </div>
 
                   {/* Age */}
@@ -2078,10 +2074,10 @@ export default function ProfilePage() {
                       min="1"
                       max="120"
                       placeholder="e.g. 25"
-                      value={editAge}
-                      onChange={(e) => setEditAge(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 focus:border-teal rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white"
+                      {...registerProfile('age')}
+                      className={`w-full px-4 py-3 bg-slate-50 border ${profileErrors.age ? 'border-coral focus:border-coral' : 'border-slate-100 focus:border-teal'} rounded-2xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400 focus:bg-white`}
                     />
+                    {profileErrors.age && <p className="text-coral text-[9px] font-bold px-1 mt-0.5">{profileErrors.age.message}</p>}
                   </div>
                 </div>
 
