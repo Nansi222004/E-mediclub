@@ -25,21 +25,15 @@ const validate = (schema, property = 'body') => {
 =======
 const validate = (schema) => {
   return (req, res, next) => {
-    // Determine what to validate based on the request method
-    // Typically POST/PUT use req.body, GET uses req.query
-    const dataToValidate = req.method === 'GET' ? req.query : req.body;
-
-    const { error, value } = schema.validate(dataToValidate, { 
-      abortEarly: false, 
-      allowUnknown: true 
-    });
+    const { error, value } = schema.validate(req[property], { abortEarly: false });
 
     if (error) {
-      // Extract the first meaningful error message, or map all of them
-      const errorMessage = error.details.map(detail => detail.message).join(', ');
+      // Extract custom error messages
+      const errorMessage = error.details.map((detail) => detail.message).join(', ');
       return res.status(400).json({
         success: false,
-        message: errorMessage
+        message: errorMessage,
+        errors: error.details,
       });
     }
 
