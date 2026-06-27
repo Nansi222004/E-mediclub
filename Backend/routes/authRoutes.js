@@ -16,14 +16,7 @@ const {
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const { createUploadMiddleware } = require('../middleware/upload');
-const validate = require('../middleware/validate');
-const { 
-  registerSchema, 
-  loginSchema, 
-  sendOtpSchema, 
-  verifyOtpSchema, 
-  updateProfileSchema 
-} = require('../validations/auth.validation');
+
 
 const uploadPharmacyDocs = createUploadMiddleware("emediclub/pharmacy-docs").fields([
   { name: 'drugLicense', maxCount: 1 },
