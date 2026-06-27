@@ -8,7 +8,7 @@ const ApiResponse = require('../utils/ApiResponse');
 const uploadPrescription = async (req, res, next) => {
   try {
     if (!req.file) {
-      return ApiResponse.error(res, 400, 'Please upload a valid prescription file');
+      return ApiResponse.error(res, 400, 'Please upload a valid prescription file (JPG, PNG, JPEG, PDF)');
     }
 
     const { notes } = req.body;

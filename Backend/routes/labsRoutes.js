@@ -4,6 +4,7 @@ const {
   getLabs, 
   bookLab,
   getMyLabBookings,
+  cancelLabBooking,
   getVendorBookings,
   updateBookingStatus,
   uploadBookingReport,
@@ -22,13 +23,16 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { uploadLabReport } = require('../middleware/upload');
+const validate = require('../middleware/validate');
+const { labBookingSchema } = require('../validations/lab.validation');
 
 // Public routes
 router.get('/', getLabs);
 
 // Booking routes for users
-router.post('/book', protect, uploadLabReport.single('file'), bookLab);
+router.post('/book', protect, uploadLabReport.single('file'), validate(labBookingSchema), bookLab);
 router.get('/my-bookings', protect, getMyLabBookings);
+router.post('/bookings/:id/cancel', protect, cancelLabBooking);
 
 // Vendor specific routes
 router.get('/vendor/bookings', protect, authorize('lab_vendor'), getVendorBookings);

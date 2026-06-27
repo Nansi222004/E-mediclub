@@ -69,20 +69,20 @@ const getAvailableSlots = async (req, res, next) => {
     }
 
     // Get doctor's default slots
-    const allSlots = doctor.timeSlots && doctor.timeSlots.length > 0 
-      ? doctor.timeSlots 
+    const allSlots = doctor.timeSlots && doctor.timeSlots.length > 0
+      ? doctor.timeSlots
       : [
-          '09:00 AM - 09:30 AM',
-          '09:30 AM - 10:00 AM',
-          '10:00 AM - 10:30 AM',
-          '10:30 AM - 11:00 AM',
-          '11:00 AM - 11:30 AM',
-          '11:30 AM - 12:00 PM',
-          '04:00 PM - 04:30 PM',
-          '04:30 PM - 05:00 PM',
-          '05:00 PM - 05:30 PM',
-          '05:30 PM - 06:00 PM'
-        ];
+        '09:00 AM - 09:30 AM',
+        '09:30 AM - 10:00 AM',
+        '10:00 AM - 10:30 AM',
+        '10:30 AM - 11:00 AM',
+        '11:00 AM - 11:30 AM',
+        '11:30 AM - 12:00 PM',
+        '04:00 PM - 04:30 PM',
+        '04:30 PM - 05:00 PM',
+        '05:00 PM - 05:30 PM',
+        '05:30 PM - 06:00 PM'
+      ];
 
     // Find booked appointments for this doctor on the selected date
     const bookedAppointments = await Appointment.find({

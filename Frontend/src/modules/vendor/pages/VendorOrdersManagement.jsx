@@ -576,10 +576,14 @@ export default function VendorOrdersManagement() {
                             </div>
                           )}
                           {activeTab === 'Cancelled' && (
-                            <span className="text-xs font-bold text-rose-500" title={order.cancellationReason}>{order.cancellationReason}</span>
+                            <span className="text-xs font-bold text-rose-500" title={(order.cancelReason || order.cancellationReason) === 'Other' ? order.customReason : (order.cancelReason || order.cancellationReason)}>
+                              {(order.cancelReason || order.cancellationReason) === 'Other' ? order.customReason : (order.cancelReason || order.cancellationReason)}
+                            </span>
                           )}
                           {activeTab === 'Returns' && (
-                            <span className="text-xs font-bold text-slate-600" title={order.returnReason}>{order.returnReason}</span>
+                            <span className="text-xs font-bold text-slate-600" title={order.returnReason === 'Other' ? order.customReason : order.returnReason}>
+                              {order.returnReason === 'Other' ? order.customReason : order.returnReason}
+                            </span>
                           )}
                           {activeTab === 'Replacement Requests' && (
                             <span className="text-xs font-bold text-slate-600" title={order.replacementReason || 'Item damaged on arrival'}>{order.replacementReason || 'Item damaged on arrival'}</span>

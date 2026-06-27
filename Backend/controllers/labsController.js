@@ -161,6 +161,48 @@ const getMyLabBookings = async (req, res, next) => {
   }
 };
 
+// @desc    Cancel a lab booking
+// @route   POST /api/labs/bookings/:id/cancel
+// @access  Protected
+const cancelLabBooking = async (req, res, next) => {
+  try {
+    const { reason, customReason } = req.body;
+    
+    if (reason === "Other" && !customReason?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Please specify your reason."
+      });
+    }
+
+    const booking = await LabBooking.findOne({ id: req.params.id });
+    
+    if (!booking) {
+      return ApiResponse.error(res, 404, 'Lab booking not found');
+    }
+
+    if (booking.status === 'Cancelled' || booking.status === 'completed') {
+      return ApiResponse.error(res, 400, 'Booking cannot be cancelled');
+    }
+
+    booking.status = 'Cancelled';
+    booking.reason = reason;
+    booking.customReason = reason === 'Other' ? customReason.trim() : '';
+    booking.returnStatus = 'Requested'; // Treat as cancellation/refund request
+    
+    if (booking.paymentStatus === 'Paid') {
+      booking.refundStatus = 'Pending';
+    } else {
+      booking.refundStatus = 'Not Applicable';
+    }
+
+    await booking.save();
+    return ApiResponse.success(res, 200, 'Lab booking cancelled successfully', booking);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ==========================================
 // VENDOR PORTAL API ENDPOINTS
 // ==========================================
@@ -527,6 +569,7 @@ module.exports = {
   getLabs,
   bookLab,
   getMyLabBookings,
+  cancelLabBooking,
   getVendorBookings,
   updateBookingStatus,
   uploadBookingReport,

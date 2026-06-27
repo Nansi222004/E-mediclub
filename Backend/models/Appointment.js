@@ -48,6 +48,22 @@ const appointmentSchema = new mongoose.Schema(
     state: {
       type: String,
       required: true
+    },
+    reason: {
+      type: String
+    },
+    customReason: {
+      type: String
+    },
+    returnStatus: {
+      type: String,
+      enum: ["None", "Requested", "Under Review", "Approved", "Rejected"],
+      default: "None"
+    },
+    refundStatus: {
+      type: String,
+      enum: ["Not Applicable", "Pending", "Processing", "Completed", "Failed"],
+      default: "Not Applicable"
     }
   },
   {
