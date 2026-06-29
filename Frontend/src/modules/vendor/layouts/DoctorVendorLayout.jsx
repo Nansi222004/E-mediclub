@@ -17,6 +17,7 @@ export default function DoctorVendorLayout() {
   const [isMobile, setIsMobile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true);
   
   // State to manage expanded accordions
   const [expandedMenus, setExpandedMenus] = useState({});
@@ -55,55 +56,15 @@ export default function DoctorVendorLayout() {
 
   const sidebarItems = [
     { name: 'Dashboard', path: '/vendor/doctor/dashboard', icon: FiGrid },
-    { 
-      name: 'Appointments', icon: FiCalendar, 
-      subItems: [
-        { name: 'Upcoming', path: '/vendor/doctor/appointments/upcoming' },
-        { name: 'Completed', path: '/vendor/doctor/appointments/completed' },
-        { name: 'Cancelled', path: '/vendor/doctor/appointments/cancelled' }
-      ]
-    },
-    { 
-      name: 'Patients', icon: FiUsers,
-      subItems: [
-        { name: 'Patient List', path: '/vendor/doctor/patients/list' },
-        { name: 'Medical Records', path: '/vendor/doctor/patients/records' },
-        { name: 'Prescriptions', path: '/vendor/doctor/patients/prescriptions' }
-      ]
-    },
-    { 
-      name: 'Schedule Management', icon: FiClock,
-      subItems: [
-        { name: 'Availability', path: '/vendor/doctor/schedule/availability' },
-        { name: 'Time Slots', path: '/vendor/doctor/schedule/slots' },
-        { name: 'Leave Management', path: '/vendor/doctor/schedule/leave' }
-      ]
-    },
-    { 
-      name: 'Online Consultation', icon: FiVideo,
-      subItems: [
-        { name: 'Video Calls', path: '/vendor/doctor/consultations/video' },
-        { name: 'Chat Consultations', path: '/vendor/doctor/consultations/chat' }
-      ]
-    },
-    { 
-      name: 'Prescription Center', icon: FiFileText,
-      subItems: [
-        { name: 'Create Prescription', path: '/vendor/doctor/prescriptions/create' },
-        { name: 'Prescription History', path: '/vendor/doctor/prescriptions/history' }
-      ]
-    },
-    { 
-      name: 'Earnings', icon: FiDollarSign,
-      subItems: [
-        { name: 'Revenue', path: '/vendor/doctor/earnings/revenue' },
-        { name: 'Transactions', path: '/vendor/doctor/earnings/transactions' },
-        { name: 'Withdrawals', path: '/vendor/doctor/earnings/withdrawals' }
-      ]
-    },
-    { name: 'Reviews & Ratings', path: '/vendor/doctor/reviews', icon: FiStar },
+    { name: 'Appointments', path: '/vendor/doctor/appointments', icon: FiCalendar },
+    { name: 'Patients', path: '/vendor/doctor/patients', icon: FiUsers },
+    { name: 'Schedule', path: '/vendor/doctor/schedule', icon: FiClock },
+    { name: 'Consultations', path: '/vendor/doctor/consultations', icon: FiVideo },
+    { name: 'Prescriptions', path: '/vendor/doctor/prescriptions', icon: FiFileText },
+    { name: 'Earnings', path: '/vendor/doctor/earnings', icon: FiDollarSign },
+    { name: 'Reviews', path: '/vendor/doctor/reviews', icon: FiStar },
+    { name: 'Analytics', path: '/vendor/doctor/analytics', icon: FiActivity },
     { name: 'Notifications', path: '/vendor/doctor/notifications', icon: FiBell },
-    { name: 'Reports & Analytics', path: '/vendor/doctor/reports', icon: FiActivity },
     { name: 'Profile', path: '/vendor/doctor/profile', icon: FiUser },
     { name: 'Settings', path: '/vendor/doctor/settings', icon: FiSettings }
   ];
@@ -154,71 +115,13 @@ export default function DoctorVendorLayout() {
           <nav className="p-3 flex flex-col gap-1 overflow-y-auto custom-scrollbar flex-1 pb-4">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
-              const hasSubItems = item.subItems && item.subItems.length > 0;
-              const isExpanded = expandedMenus[item.name];
-              const isParentActive = hasSubItems && item.subItems.some(sub => location.pathname.startsWith(sub.path));
-              
-              if (hasSubItems) {
-                return (
-                  <div key={item.name} className="flex flex-col">
-                    <button
-                      onClick={() => {
-                        if (!isSidebarOpen) toggleSidebar();
-                        toggleMenu(item.name);
-                      }}
-                      className={`
-                        flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 border-0 cursor-pointer
-                        ${isParentActive 
-                          ? 'bg-[#0F4A4A] text-white' 
-                          : 'text-[#9ADCDA] bg-transparent hover:bg-white/10 hover:text-white'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <Icon className="text-lg shrink-0" />
-                        {isSidebarOpen && <span className="truncate">{item.name}</span>}
-                      </div>
-                      {isSidebarOpen && (
-                        <FiChevronDown className={`transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
-                      )}
-                    </button>
-                    
-                    {/* Sub Items */}
-                    <AnimatePresence>
-                      {isSidebarOpen && isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden flex flex-col mt-1 ml-2 pl-4 border-l-2 border-[#207B7B]"
-                        >
-                          {item.subItems.map(subItem => (
-                            <NavLink
-                              key={subItem.path}
-                              to={subItem.path}
-                              className={({ isActive }) => `
-                                py-2 px-3 rounded-lg text-xs font-semibold tracking-wide transition-colors my-0.5
-                                ${isActive ? 'bg-[#207B7B] text-white' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
-                              `}
-                            >
-                              {subItem.name}
-                            </NavLink>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              }
-
-              // Normal single item
               return (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) => `
                     flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 tap-scale
-                    ${isActive 
+                    ${isActive || location.pathname.startsWith(item.path + '/') 
                       ? 'bg-teal text-white shadow-md' 
                       : 'text-[#9ADCDA] hover:bg-white/10 hover:text-white'
                     }
@@ -282,14 +185,24 @@ export default function DoctorVendorLayout() {
               />
             </div>
 
-            {/* Online Toggle */}
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-50 border border-emerald-100 px-2 sm:px-3 py-1.5 rounded-full select-none cursor-pointer hover:bg-emerald-100 transition-colors">
-              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shrink-0"></div>
-              <span className="text-xs sm:text-sm font-semibold text-emerald-700 hidden sm:block">Online</span>
-            </div>
+            {/* Availability Toggle */}
+            <button 
+              onClick={() => setIsAvailable(!isAvailable)}
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full select-none cursor-pointer transition-colors tap-scale border ${
+                isAvailable 
+                  ? 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100 text-emerald-700' 
+                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-500'
+              }`}
+            >
+              <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 transition-colors ${isAvailable ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider">{isAvailable ? 'Available' : 'Offline'}</span>
+            </button>
 
             {/* Notifications */}
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors border-0 bg-transparent cursor-pointer">
+            <button 
+              onClick={() => navigate('/vendor/doctor/notifications')}
+              className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors border-0 bg-transparent cursor-pointer tap-scale"
+            >
               <FiBell className="text-xl" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-coral"></span>
             </button>

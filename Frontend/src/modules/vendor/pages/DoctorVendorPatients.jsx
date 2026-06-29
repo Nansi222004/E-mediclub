@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { useParams, useNavigate, NavLink } from 'react-router-dom';
 import { FiSearch, FiFileText, FiFolder } from 'react-icons/fi';
 
 export default function DoctorVendorPatients() {
+  const { tab } = useParams();
+  const activeTab = tab || 'list';
   const [search, setSearch] = useState("");
 
   const [patients, setPatients] = useState([
@@ -28,6 +31,24 @@ export default function DoctorVendorPatients() {
             Access records, consultation notes, and health timelines of your patients.
           </p>
         </div>
+      </div>
+
+      <div className="flex bg-slate-50 p-1 rounded-2xl w-full overflow-x-auto no-scrollbar border border-slate-100">
+        {[
+          { id: 'list', label: 'Patient List' },
+          { id: 'records', label: 'Medical Records' },
+          { id: 'prescriptions', label: 'Prescriptions' }
+        ].map(t => (
+          <NavLink
+            key={t.id}
+            to={`/vendor/doctor/patients/${t.id}`}
+            className={({ isActive }) => `flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap tap-scale border-0 cursor-pointer text-center ${
+              isActive || (activeTab === t.id) ? 'bg-teal text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700 bg-transparent'
+            }`}
+          >
+            {t.label}
+          </NavLink>
+        ))}
       </div>
 
       <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">

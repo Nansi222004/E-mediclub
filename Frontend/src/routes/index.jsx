@@ -86,6 +86,10 @@ const VendorPrescriptionDetail = lazy(() => import('../modules/vendor/pages/Vend
 const VendorMedicineAddWizard = lazy(() => import('../modules/vendor/pages/VendorMedicineAddWizard'));
 const VendorMedicineDetails = lazy(() => import('../modules/vendor/pages/VendorMedicineDetails'));
 const VendorProfile = lazy(() => import('../modules/vendor/pages/VendorProfile'));
+const VendorServiceAreas = lazy(() => import('../modules/vendor/pages/VendorServiceAreas'));
+const VendorPromotions = lazy(() => import('../modules/vendor/pages/VendorPromotions'));
+const VendorAnalytics = lazy(() => import('../modules/vendor/pages/VendorAnalytics'));
+const VendorSettings = lazy(() => import('../modules/vendor/pages/VendorSettings'));
 
 // Lab Vendor Page Modules
 const LabVendorLayout = lazy(() => import('../modules/vendor/layouts/LabVendorLayout'));
@@ -99,6 +103,9 @@ const UploadReportsPage = lazy(() => import('../modules/vendor/pages/UploadRepor
 const ReportHistory = lazy(() => import('../modules/vendor/pages/ReportHistory'));
 const Customers = lazy(() => import('../modules/vendor/pages/Customers'));
 const ReviewsRatings = lazy(() => import('../modules/vendor/pages/ReviewsRatings'));
+const LabVendorSlots = lazy(() => import('../modules/vendor/pages/LabVendorSlots'));
+const LabVendorAnalytics = lazy(() => import('../modules/vendor/pages/LabVendorAnalytics'));
+const LabVendorServiceAreas = lazy(() => import('../modules/vendor/pages/LabVendorServiceAreas'));
 
 // Doctor Vendor Page Modules
 const DoctorVendorLayout = lazy(() => import('../modules/vendor/layouts/DoctorVendorLayout'));
@@ -106,6 +113,12 @@ const DoctorVendorDashboard = lazy(() => import('../modules/vendor/pages/DoctorV
 const DoctorVendorSchedule = lazy(() => import('../modules/vendor/pages/DoctorVendorSchedule'));
 const DoctorVendorPatients = lazy(() => import('../modules/vendor/pages/DoctorVendorPatients'));
 const DoctorVendorProfile = lazy(() => import('../modules/vendor/pages/DoctorVendorProfile'));
+const DoctorVendorAppointments = lazy(() => import('../modules/vendor/pages/DoctorVendorAppointments'));
+const DoctorVendorConsultations = lazy(() => import('../modules/vendor/pages/DoctorVendorConsultations'));
+const DoctorVendorPrescriptions = lazy(() => import('../modules/vendor/pages/DoctorVendorPrescriptions'));
+const DoctorVendorAnalytics = lazy(() => import('../modules/vendor/pages/DoctorVendorAnalytics'));
+const DoctorVendorReviews = lazy(() => import('../modules/vendor/pages/DoctorVendorReviews'));
+const DoctorVendorEarnings = lazy(() => import('../modules/vendor/pages/DoctorVendorEarnings'));
 
 // Minimal Suspense Fallback with branded shimmer treatment
 const SuspenseFallback = () => (
@@ -209,21 +222,23 @@ export default function AppRoutes() {
         <Route path="medicines/add" element={<VendorMedicineAddWizard />} />
         <Route path="medicines/:id" element={<VendorMedicineDetails />} />
         
-        {/* Fallbacks for other routes requested in the sidebar */}
-        <Route path="products" element={<VendorProductManagement />} />
+        {/* New Flattened Routes */}
+        <Route path="devices" element={<VendorProductManagement />} />
         <Route path="orders/*" element={<VendorOrdersManagement />} />
         <Route path="prescriptions" element={<VendorPrescriptionManagement />} />
         <Route path="prescriptions/:id" element={<VendorPrescriptionDetail />} />
-        <Route path="categories/*" element={<VendorProductManagement />} />
         <Route path="inventory/*" element={<VendorStocksManagement />} />
-        <Route path="promotions/*" element={<VendorEarnings />} />
+        
+        <Route path="service-areas" element={<VendorServiceAreas />} />
+        <Route path="promotions" element={<VendorPromotions />} />
         <Route path="customers/*" element={<VendorCustomers />} />
-        <Route path="delivery" element={<VendorOrdersManagement />} />
+        
         <Route path="revenue/*" element={<VendorEarnings />} />
-        <Route path="analytics" element={<VendorEarnings />} />
+        <Route path="analytics" element={<VendorAnalytics />} />
+        <Route path="reviews" element={<ReviewsRatings />} />
         <Route path="notifications" element={<VendorNotifications />} />
         <Route path="profile" element={<VendorProfile />} />
-        <Route path="settings" element={<VendorProfile />} />
+        <Route path="settings" element={<VendorSettings />} />
       </Route>
 
       {/* 5. Lab Vendor Auth & Routes */}
@@ -234,19 +249,27 @@ export default function AppRoutes() {
       <Route path="/vendor/lab" element={<LabVendorLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<LabVendorDashboard />} />
+        <Route path="orders" element={<Navigate to="/vendor/lab/orders/all" replace />} />
         <Route path="orders/:status" element={<TestOrders />} />
+        
+        <Route path="collections" element={<Navigate to="/vendor/lab/collections/requests" replace />} />
         <Route path="collections/:tab" element={<HomeCollection />} />
+        
+        <Route path="tests" element={<Navigate to="/vendor/lab/tests/all" replace />} />
         <Route path="tests/:tab" element={<TestsManagement />} />
+        
+        <Route path="packages" element={<Navigate to="/vendor/lab/packages/all" replace />} />
         <Route path="packages/:tab" element={<TestPackages />} />
+        
         <Route path="reports/upload" element={<UploadReportsPage />} />
         <Route path="reports/history" element={<ReportHistory />} />
         <Route path="customers" element={<Customers />} />
         <Route path="reviews" element={<ReviewsRatings />} />
-        <Route path="revenue" element={<VendorEarnings />} />
-        <Route path="analytics" element={<VendorEarnings />} />
+        <Route path="analytics" element={<LabVendorAnalytics />} />
+        <Route path="revenue" element={<Navigate to="../analytics" replace />} />
         <Route path="notifications" element={<VendorNotifications />} />
         <Route path="profile/:tab" element={<LabVendorProfile />} />
-        <Route path="profile" element={<Navigate to="profile/basic" replace />} />
+        <Route path="profile" element={<Navigate to="/vendor/lab/profile/basic" replace />} />
         <Route path="settings" element={<LabVendorProfile defaultTab="settings" />} />
       </Route>
 
@@ -262,14 +285,33 @@ export default function AppRoutes() {
       <Route path="/vendor/doctor" element={<DoctorVendorLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DoctorVendorDashboard />} />
-        <Route path="schedule" element={<DoctorVendorSchedule />} />
-        <Route path="appointments" element={<DoctorVendorPatients />} />
-        <Route path="appointments/today" element={<DoctorVendorPatients />} />
-        <Route path="consultations" element={<DoctorVendorPatients />} />
-        <Route path="prescriptions" element={<DoctorVendorPatients />} />
+        <Route path="schedule" element={<Navigate to="/vendor/doctor/schedule/availability" replace />} />
+        <Route path="schedule/:tab" element={<DoctorVendorSchedule />} />
+        
+        {/* Appointments Module */}
+        <Route path="appointments" element={<Navigate to="/vendor/doctor/appointments/all" replace />} />
+        <Route path="appointments/:tab" element={<DoctorVendorAppointments />} />
+        
+        {/* Patients & Records */}
+        <Route path="patients" element={<Navigate to="/vendor/doctor/patients/list" replace />} />
+        <Route path="patients/:tab" element={<DoctorVendorPatients />} />
+        
+        {/* Consultations */}
+        <Route path="consultations" element={<Navigate to="/vendor/doctor/consultations/video" replace />} />
+        <Route path="consultations/:tab" element={<DoctorVendorConsultations />} />
+        
+        {/* Prescriptions */}
+        <Route path="prescriptions" element={<Navigate to="/vendor/doctor/prescriptions/create" replace />} />
+        <Route path="prescriptions/:tab" element={<DoctorVendorPrescriptions />} />
+        
+        {/* Earnings & Analytics */}
+        <Route path="earnings" element={<Navigate to="/vendor/doctor/earnings/revenue" replace />} />
+        <Route path="earnings/:tab" element={<DoctorVendorEarnings />} />
+        <Route path="analytics" element={<DoctorVendorAnalytics />} />
+        <Route path="reviews" element={<DoctorVendorReviews />} />
+        
         <Route path="availability" element={<DoctorVendorSchedule />} />
-        <Route path="earnings" element={<VendorEarnings />} />
-        <Route path="patients" element={<DoctorVendorPatients />} />
+        <Route path="notifications" element={<VendorNotifications />} />
         <Route path="profile" element={<DoctorVendorProfile />} />
         <Route path="settings" element={<DoctorVendorProfile />} />
       </Route>

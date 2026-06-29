@@ -28,6 +28,7 @@ export default function VendorStocksManagement() {
   const [localProducts, setLocalProducts] = useState(mockInventory);
 
   // States
+  const [activeTab, setActiveTab] = useState(filterParam === 'low-stock' ? 'Low Stock Alerts' : 'Stock Management'); // 'Stock Management' | 'Low Stock Alerts' | 'Expiry Tracking' | 'Purchase Orders'
   const [searchQuery, setSearchQuery] = useState("");
   const [healthFilter, setHealthFilter] = useState("all"); // 'all' | 'instock' | 'outofstock'
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,10 +85,10 @@ export default function VendorStocksManagement() {
         (p.sku && p.sku.toLowerCase().includes(q));
 
       let matchesHealth = true;
-      if (filterParam === 'out-of-stock') {
-        matchesHealth = p.stock === 0;
-      } else if (filterParam === 'low-stock') {
+      if (activeTab === 'Low Stock Alerts' || filterParam === 'low-stock') {
         matchesHealth = p.stock > 0 && p.stock <= p.reorderLevel;
+      } else if (filterParam === 'out-of-stock') {
+        matchesHealth = p.stock === 0;
       } else {
         matchesHealth =
           healthFilter === 'all' ||
@@ -97,7 +98,7 @@ export default function VendorStocksManagement() {
 
       return matchesSearch && matchesHealth;
     });
-  }, [localProducts, searchQuery, healthFilter, filterParam]);
+  }, [localProducts, searchQuery, healthFilter, filterParam, activeTab]);
 
   // Pagination Slice
   const paginatedProducts = useMemo(() => {
@@ -225,6 +226,27 @@ export default function VendorStocksManagement() {
 
       </section>
 
+      {/* Tabs Row */}
+      <div className="bg-white border border-slate-100 p-2.5 rounded-2xl shadow-sm flex flex-wrap gap-1.5 overflow-x-auto shrink-0">
+        {[
+          { key: 'Stock Management', label: 'Stock Management' },
+          { key: 'Low Stock Alerts', label: 'Low Stock Alerts' },
+          { key: 'Expiry Tracking', label: 'Expiry Tracking' },
+          { key: 'Purchase Orders', label: 'Purchase Orders' }
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
+            className={`px-4.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border
+              ${activeTab === tab.key 
+                ? 'bg-teal border-teal text-white shadow-premium' 
+                : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50'}`}
+          >
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Filters & Actions Bar (Screenshot 1 Reference) */}
       <section className="bg-white border border-slate-100 rounded-3xl p-3 sm:p-4.5 shadow-sm shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
 
@@ -280,6 +302,20 @@ export default function VendorStocksManagement() {
       {/* Main Table view / Card Grid (Internally Scrollable Viewport) */}
       <div className="flex-1 min-h-0 bg-white border border-slate-100 rounded-3xl shadow-premium overflow-hidden flex flex-col justify-between">
 
+        {activeTab === 'Purchase Orders' ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+            <FiLayers className="text-4xl mb-4 text-slate-200" />
+            <h3 className="text-lg font-black text-slate-800 mb-2">Purchase Orders</h3>
+            <p className="text-sm font-semibold max-w-md">Manage your purchase orders to suppliers here. This feature will be integrated soon.</p>
+          </div>
+        ) : activeTab === 'Expiry Tracking' ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+            <FiLayers className="text-4xl mb-4 text-slate-200" />
+            <h3 className="text-lg font-black text-slate-800 mb-2">Expiry Tracking</h3>
+            <p className="text-sm font-semibold max-w-md">Track batches that are near expiry to avoid inventory loss.</p>
+          </div>
+        ) : (
+          <>
         {/* Desktop Table View Layout */}
         <div className="hidden md:block overflow-x-auto custom-scrollbar flex-1">
 
@@ -456,7 +492,8 @@ export default function VendorStocksManagement() {
             </button>
           </div>
         </footer>
-
+          </>
+        )}
       </div>
 
       {/* Adjust Stock Inventory Modal (Screenshot 2 Reference) */}
