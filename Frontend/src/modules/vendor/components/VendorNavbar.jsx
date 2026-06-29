@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiBell, FiCheckCircle, FiUser, FiChevronDown } from 'react-icons/fi';
+import { FiMenu, FiBell, FiCheckCircle, FiUser, FiChevronDown, FiPlus } from 'react-icons/fi';
 import { vendorLogout } from '../../auth/vendor/store/vendorAuthSlice';
 
 export default function VendorNavbar({ toggleSidebar }) {
@@ -10,6 +10,7 @@ export default function VendorNavbar({ toggleSidebar }) {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showAddNewDropdown, setShowAddNewDropdown] = useState(false);
   const { kycDetails } = useSelector(state => state.vendor);
   const { vendorUser } = useSelector(state => state.vendorAuth || {});
 
@@ -48,6 +49,47 @@ export default function VendorNavbar({ toggleSidebar }) {
       {/* Right side controls */}
       <div className="flex items-center gap-3">
         
+        {/* Add New Dropdown */}
+        <div className="relative hidden md:block">
+          <button 
+            onClick={() => setShowAddNewDropdown(!showAddNewDropdown)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#135A5A] hover:bg-[#0F4A4A] text-white text-[11px] font-black uppercase tracking-wider transition-colors tap-scale"
+          >
+            <FiPlus className="text-sm" />
+            <span>Add New</span>
+          </button>
+          
+          <AnimatePresence>
+            {showAddNewDropdown && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowAddNewDropdown(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute right-0 mt-3 w-48 bg-white border border-slate-100 rounded-2xl shadow-premium z-20 p-2 flex flex-col gap-1"
+                >
+                  <button onClick={() => { setShowAddNewDropdown(false); navigate('/vendor/pharmacy/medicines/add'); }} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-[#135A5A] transition-colors">
+                    + Add Medicine
+                  </button>
+                  <button onClick={() => { setShowAddNewDropdown(false); navigate('/vendor/pharmacy/devices'); }} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-[#135A5A] transition-colors">
+                    + Add Health Device
+                  </button>
+                  <button onClick={() => { setShowAddNewDropdown(false); navigate('/vendor/pharmacy/promotions'); }} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-[#135A5A] transition-colors">
+                    + Create Coupon
+                  </button>
+                  <button onClick={() => { setShowAddNewDropdown(false); navigate('/vendor/pharmacy/promotions'); }} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-[#135A5A] transition-colors">
+                    + Upload Banner
+                  </button>
+                  <button onClick={() => { setShowAddNewDropdown(false); navigate('/vendor/pharmacy/medicines?tab=Bulk Upload'); }} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-[#135A5A] transition-colors">
+                    + Bulk Upload CSV
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
         {/* Notifications Icon Dropdown */}
         <div className="relative">
           <button 
@@ -122,7 +164,7 @@ export default function VendorNavbar({ toggleSidebar }) {
                   </div>
 
                   <button 
-                    onClick={() => { setShowProfileDropdown(false); navigate('/vendor/profile'); }}
+                    onClick={() => { setShowProfileDropdown(false); navigate('/vendor/pharmacy/profile'); }}
                     className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-650 text-left w-full transition-colors"
                   >
                     <FiUser className="text-sm text-teal shrink-0" />

@@ -25,41 +25,24 @@ export default function VendorDashboard() {
   const [analyticsTab, setAnalyticsTab] = useState('Daily');
   const summary = getOrderSummary();
 
-  // Map Redux orders to Dashboard Recent Orders format
-  const mappedRecentOrders = orders.map(order => ({
+  // Combine Redux orders with Mock Orders (if Redux is empty, mock is shown)
+  const combinedOrders = orders.length > 0 ? orders : getTodayOrders();
+  const displayOrders = combinedOrders.slice(0, 5).map(order => ({
     id: order.id,
     customer: order.customerName,
-    status: order.status === 'pending' ? 'PROCESSING' : order.status === 'shipped' ? 'READY' : 'DELIVERED',
-    amount: `₹${order.totalAmount.toLocaleString('en-IN')}.00`
+    status: order.status === 'New Orders' || order.status === 'Accepted Orders' || order.status === 'Processing' ? 'PROCESSING' : order.status === 'Ready for Dispatch' ? 'READY' : 'DELIVERED',
+    amount: `₹${(order.totalAmount || 0).toLocaleString('en-IN')}.00`
   }));
 
-  // Fallback default list from reference screenshot if Redux is empty
-  const defaultRecentOrders = [
-    { id: '#EMC-89212', customer: 'Rahul Mehta', status: 'PROCESSING', amount: '₹1,240.00' },
-    { id: '#EMC-89211', customer: 'Sara Jacob', status: 'READY', amount: '₹450.50' },
-    { id: '#EMC-89210', customer: 'Karan Singh', status: 'PROCESSING', amount: '₹2,800.00' }
-  ];
+  // Map unique customers from Mock Orders
+  const uniqueCustomers = Array.from(new Set(combinedOrders.map(o => o.customerName)))
+    .map((name, index) => ({
+      name,
+      email: `${name.toLowerCase().replace(' ', '.')}@gmail.com`,
+      badge: index === 0 ? 'NEW' : `${(index % 3) + 1} Orders`
+    }));
 
-  // Combine Redux orders with default orders
-  const displayOrders = [...mappedRecentOrders, ...defaultRecentOrders].slice(0, 5);
-
-  // Mapped unique customers from Redux orders
-  const mappedCustomers = orders.map((order, index) => ({
-    name: order.customerName,
-    email: `${order.customerName.toLowerCase().replace(' ', '.')}@gmail.com`,
-    badge: index === 0 ? 'NEW' : '1 Order'
-  }));
-
-  const defaultCustomers = [
-    { name: 'Anita Desai', email: 'anita.d@gmail.com', badge: 'NEW' },
-    { name: 'Vikram Sharma', email: 'v.sharma@outlook.com', badge: '3 Orders' },
-    { name: 'Sneha Kapoor', email: 'sneha.k@yahoo.com', badge: '1 Order' }
-  ];
-
-  // Combine Redux customers with default ones
-  const displayCustomers = [...mappedCustomers, ...defaultCustomers].filter(
-    (c, i, self) => self.findIndex(t => t.name === c.name) === i
-  ).slice(0, 4);
+  const displayCustomers = uniqueCustomers.slice(0, 4);
 
   // Pharmacy Vendor Dashboard KPIs
   const kpis = [
@@ -210,61 +193,134 @@ export default function VendorDashboard() {
 
           </div>
 
-          {/* RIGHT COLUMN: Alerts and Feed (Takes up 5 columns on Desktop) */}
+          {/* RIGHT COLUMN: Operational Widgets (Takes up 5 columns on Desktop) */}
           <div className="lg:col-span-5 flex flex-col gap-4 md:gap-6">
             
-            {/* Stock Alerts */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              <div onClick={() => navigate('/vendor/pharmacy/inventory?filter=out-of-stock')} className="bg-rose-50 border border-rose-100 rounded-3xl p-4 md:p-5 flex flex-col justify-center items-center text-center cursor-pointer select-none shadow-sm hover:shadow-md transition-shadow group">
-                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-rose-600">Out of Stock</span>
-                <span className="text-3xl md:text-4xl font-black text-rose-600 my-2 group-hover:scale-110 transition-transform">{getOutOfStockItems().length}</span>
-                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-rose-500">Medicines</span>
-              </div>
-              <div onClick={() => navigate('/vendor/pharmacy/inventory?filter=low-stock')} className="bg-amber-50 border border-amber-100 rounded-3xl p-4 md:p-5 flex flex-col justify-center items-center text-center cursor-pointer select-none shadow-sm hover:shadow-md transition-shadow group">
-                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-amber-600">Low Stock</span>
-                <span className="text-3xl md:text-4xl font-black text-amber-600 my-2 group-hover:scale-110 transition-transform">{getLowStockItems().length}</span>
-                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-amber-500">Critical Level</span>
+            {/* Quick Actions */}
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-premium">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">Quick Actions</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {[
+                  { name: 'Add Medicine', path: '/vendor/pharmacy/medicines/add', icon: FiPlus },
+                  { name: 'Bulk Upload', path: '/vendor/pharmacy/medicines?tab=Bulk Upload', icon: FiFileText },
+                  { name: 'Create Coupon', path: '/vendor/pharmacy/promotions', icon: FiStar },
+                  { name: 'Upload Banner', path: '/vendor/pharmacy/promotions', icon: FiEye },
+                  { name: 'Manage Inventory', path: '/vendor/pharmacy/inventory', icon: FiShoppingBag },
+                  { name: 'Add Health Device', path: '/vendor/pharmacy/devices', icon: FiPlus },
+                ].map((action, idx) => (
+                  <button key={idx} onClick={() => navigate(action.path)} className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-slate-50 hover:bg-teal-50 border border-slate-100 hover:border-teal-100 text-[#135A5A] transition-colors cursor-pointer text-center">
+                    <action.icon className="text-lg" />
+                    <span className="text-[9px] font-black uppercase tracking-wider">{action.name}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Prescription Requests */}
-            <div className="bg-white border border-slate-100 rounded-3xl p-5 md:p-6 shadow-premium flex flex-col flex-1 min-h-[300px]">
+            {/* Return Requests Widget */}
+            <div className="grid grid-cols-3 gap-3">
+              <div onClick={() => navigate('/vendor/pharmacy/orders?tab=Returns')} className="bg-white border border-slate-100 rounded-2xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer hover:border-slate-200">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Returns</span>
+                <span className="text-xl font-black text-slate-800">{summary.returns}</span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-amber-500 mt-1">Pending</span>
+              </div>
+              <div onClick={() => navigate('/vendor/pharmacy/orders?tab=Returns')} className="bg-white border border-slate-100 rounded-2xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer hover:border-slate-200">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Returns</span>
+                <span className="text-xl font-black text-slate-800">{summary.returnApproved}</span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-emerald-500 mt-1">Approved</span>
+              </div>
+              <div onClick={() => navigate('/vendor/pharmacy/orders?tab=Refunds')} className="bg-white border border-slate-100 rounded-2xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer hover:border-slate-200">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Refunds</span>
+                <span className="text-xl font-black text-slate-800">{summary.refunds}</span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-blue-500 mt-1">Processed</span>
+              </div>
+            </div>
+
+            {/* Critical Stock & Expiry Alerts Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-rose-50 border border-rose-100 rounded-3xl p-5 shadow-sm">
+                <h3 className="text-xs font-black text-rose-700 uppercase tracking-widest mb-3">Critical Stock</h3>
+                <div className="flex flex-col gap-2">
+                  {getOutOfStockItems().slice(0, 3).map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-rose-100/50">
+                      <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">{item.name}</span>
+                      <span className="text-[10px] font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md shrink-0">0 Units</span>
+                    </div>
+                  ))}
+                  {getLowStockItems().slice(0, Math.max(0, 3 - getOutOfStockItems().length)).map((item, idx) => (
+                    <div key={`low-${idx}`} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-amber-100/50">
+                      <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">{item.name}</span>
+                      <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md shrink-0">{item.stock} Units</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-100 rounded-3xl p-5 shadow-sm">
+                <h3 className="text-xs font-black text-amber-700 uppercase tracking-widest mb-3">Expiring Soon</h3>
+                <div className="flex flex-col gap-2">
+                  {[
+                    { name: 'Crocin 500', days: '10 Days' },
+                    { name: 'Insulin Glargine', days: '7 Days' },
+                    { name: 'Vitamin C Forte', days: '15 Days' }
+                  ].map((exp, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-amber-100/50">
+                      <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">{exp.name}</span>
+                      <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md shrink-0">{exp.days}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery Overview */}
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-premium">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3">Delivery Overview</h3>
+              <div className="flex justify-between items-center gap-2">
+                <div className="flex-1 bg-slate-50 border border-slate-100 p-3 rounded-2xl flex flex-col items-center">
+                  <span className="text-lg font-black text-[#135A5A]">5</span>
+                  <span className="text-[9px] font-black uppercase text-slate-500 mt-1 text-center">Available Riders</span>
+                </div>
+                <div className="flex-1 bg-slate-50 border border-slate-100 p-3 rounded-2xl flex flex-col items-center">
+                  <span className="text-lg font-black text-indigo-600">{summary.readyToShip}</span>
+                  <span className="text-[9px] font-black uppercase text-slate-500 mt-1 text-center">Orders Out</span>
+                </div>
+                <div className="flex-1 bg-slate-50 border border-slate-100 p-3 rounded-2xl flex flex-col items-center">
+                  <span className="text-lg font-black text-emerald-600">{summary.delivered}</span>
+                  <span className="text-[9px] font-black uppercase text-slate-500 mt-1 text-center">Delivered Today</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pending Prescription Approvals */}
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-premium flex flex-col flex-1">
               <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
-                <h3 className="text-sm md:text-base font-black text-slate-800 uppercase tracking-widest">Prescriptions</h3>
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-100 px-3 py-1 rounded-xl shadow-sm">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Pending Prescriptions</h3>
+                <span className="text-[9px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-lg">
                   {getPrescriptionOrders().length} New
                 </span>
               </div>
               
-              <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
-                {[
-                  { name: 'Johnathan Doe', medicine: 'Augmentin 625mg', time: '2 mins', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
-                  { name: 'Sarah Miller', medicine: 'Metformin 500mg', time: '15 mins', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
-                  { name: 'Robert Wilson', medicine: 'Lisinopril 10mg', time: '1 hr', color: 'bg-slate-50 text-slate-600 border-slate-200' },
-                  { name: 'Emily Davis', medicine: 'Amoxicillin 250mg', time: '3 hrs', color: 'bg-teal-50 text-[#135A5A] border-teal-100' },
-                  { name: 'Michael Brown', medicine: 'Ibuprofen 400mg', time: '5 hrs', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-                ].map((req, idx) => (
-                  <div key={idx} onClick={() => navigate('/vendor/pharmacy/prescriptions')} className="bg-white border border-slate-100 rounded-2xl p-3 md:p-4 flex items-center justify-between hover:border-slate-200 hover:shadow-sm transition-all group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 border ${req.color}`}>
-                        <span className="font-black text-sm md:text-base">{req.name.charAt(0)}</span>
-                      </div>
+              <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1 max-h-[300px]">
+                {getPrescriptionOrders().slice(0, 3).map((req, idx) => (
+                  <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        <h4 className="text-xs md:text-sm font-black text-slate-800 leading-tight">{req.name}</h4>
-                        <p className="text-[10px] md:text-xs text-slate-500 font-bold mt-1">
-                          {req.medicine}
-                        </p>
-                        <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{req.time} ago</p>
+                        <h4 className="text-xs font-black text-slate-800">{req.customerName}</h4>
+                        <p className="text-[10px] text-slate-500 font-bold mt-0.5">{req.extractedMedicines && req.extractedMedicines[0] ? req.extractedMedicines[0].name : 'Unknown Rx'}</p>
                       </div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{req.uploadedTime || '2 mins ago'}</span>
                     </div>
-                    <button className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 group-hover:bg-[#135A5A] group-hover:border-[#135A5A] group-hover:text-white flex items-center justify-center transition-colors shadow-sm shrink-0 cursor-pointer outline-none">
-                      <FiEye className="text-sm md:text-base" />
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button className="py-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-[9px] font-black uppercase hover:bg-emerald-100 transition-colors">Approve</button>
+                      <button className="py-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[9px] font-black uppercase hover:bg-rose-100 transition-colors">Reject</button>
+                      <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black uppercase hover:bg-slate-100 transition-colors">Request Info</button>
+                      <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black uppercase hover:bg-slate-100 transition-colors">Call Cust</button>
+                    </div>
                   </div>
                 ))}
               </div>
               
-              <button onClick={() => navigate('/vendor/pharmacy/prescriptions')} className="w-full mt-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-colors border border-slate-200 cursor-pointer outline-none">
+              <button onClick={() => navigate('/vendor/pharmacy/prescriptions')} className="w-full mt-4 py-3 bg-white hover:bg-slate-50 text-[#135A5A] text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-colors border border-[#135A5A]/20 cursor-pointer outline-none">
                 View All Prescriptions
               </button>
             </div>
@@ -605,10 +661,7 @@ export default function VendorDashboard() {
 
       </div>
 
-      {/* Floating Action Button */}
-      <button onClick={() => navigate('/vendor/pharmacy/medicines/add')} className="fixed bottom-6 right-6 lg:bottom-8 lg:right-8 w-14 h-14 lg:w-16 lg:h-16 bg-[#135A5A] hover:bg-[#0F4A4A] text-white rounded-2xl flex items-center justify-center shadow-xl shadow-[#135A5A]/30 transition-transform hover:scale-105 hover:-translate-y-1 border-0 cursor-pointer z-50 outline-none group">
-        <FiPlus className="text-2xl lg:text-3xl group-hover:rotate-90 transition-transform duration-300" />
-      </button>
+
 
     </div>
   );

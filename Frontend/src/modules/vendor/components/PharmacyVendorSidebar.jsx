@@ -7,7 +7,7 @@ import {
   FiGrid, FiShoppingBag, FiLayers, FiPackage, FiFolder, 
   FiArchive, FiTag, FiUsers, FiDollarSign, 
   FiPieChart, FiBell, FiUser, 
-  FiArrowLeft, FiChevronDown, FiMapPin, FiStar
+  FiArrowLeft, FiChevronDown, FiMapPin, FiStar, FiSettings
 } from 'react-icons/fi';
 
 export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
@@ -15,93 +15,28 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Keep track of which accordion is open
-  const [openAccordion, setOpenAccordion] = useState(null);
-
   const menuItems = [
     { name: 'Dashboard', path: '/vendor/pharmacy/dashboard', icon: FiGrid },
     { name: 'Orders', path: '/vendor/pharmacy/orders', icon: FiShoppingBag },
     { name: 'Prescription Orders', path: '/vendor/pharmacy/prescriptions', icon: FiLayers },
-    { 
-      name: 'Medicine Catalog', 
-      icon: FiPackage,
-      subItems: [
-        { name: 'All Medicines', path: '/vendor/pharmacy/medicines' },
-        { name: 'Add Medicine', path: '/vendor/pharmacy/medicines/add' },
-        { name: 'Prescription Medicines', path: '/vendor/pharmacy/medicines/prescriptions' },
-        { name: 'Featured Medicines', path: '/vendor/pharmacy/medicines/featured' },
-      ]
-    },
-    { name: 'Health Devices', path: '/vendor/pharmacy/health-devices', icon: FiFolder },
-
-    { 
-      name: 'Inventory', 
-      icon: FiArchive,
-      subItems: [
-        { name: 'Stock Management', path: '/vendor/pharmacy/inventory/stock' },
-        { name: 'Low Stock Alerts', path: '/vendor/pharmacy/inventory/alerts' },
-        { name: 'Expiry Tracking', path: '/vendor/pharmacy/inventory/expiry' },
-      ]
-    },
-    { 
-      name: 'Service Areas', 
-      icon: FiMapPin,
-      subItems: [
-        { name: 'Store Location', path: '/vendor/pharmacy/service/location' },
-        { name: 'Coverage Request', path: '/vendor/pharmacy/service/coverage-request' },
-      ]
-    },
-    { 
-      name: 'Promotions', 
-      icon: FiTag,
-      subItems: [
-        { name: 'Discounts', path: '/vendor/pharmacy/promotions/discounts' },
-        { name: 'Coupons', path: '/vendor/pharmacy/promotions/coupons' },
-        { name: 'Banner Management', path: '/vendor/pharmacy/promotions/banners' },
-      ]
-    },
+    { name: 'Medicines', path: '/vendor/pharmacy/medicines', icon: FiPackage },
+    { name: 'Health Devices', path: '/vendor/pharmacy/devices', icon: FiFolder },
+    { name: 'Inventory', path: '/vendor/pharmacy/inventory', icon: FiArchive },
+    { name: 'Service Areas', path: '/vendor/pharmacy/service-areas', icon: FiMapPin },
+    { name: 'Promotions', path: '/vendor/pharmacy/promotions', icon: FiTag },
     { name: 'Customers', path: '/vendor/pharmacy/customers', icon: FiUsers },
-    { name: 'Revenue & Payments', path: '/vendor/pharmacy/revenue', icon: FiDollarSign },
-    { 
-      name: 'Analytics', 
-      icon: FiPieChart,
-      subItems: [
-        { name: 'Sales Analytics', path: '/vendor/pharmacy/analytics/sales' },
-        { name: 'Top Medicines', path: '/vendor/pharmacy/analytics/medicines' },
-        { name: 'Order Analytics', path: '/vendor/pharmacy/analytics/orders' },
-        { name: 'Customer Analytics', path: '/vendor/pharmacy/analytics/customers' },
-      ]
-    },
-    { 
-      name: 'Reviews & Ratings', 
-      icon: FiStar,
-      subItems: [
-        { name: 'Product Review', path: '/vendor/pharmacy/reviews/products' },
-        { name: 'Customer Feedback', path: '/vendor/pharmacy/reviews/feedback' },
-      ]
-    },
+    { name: 'Revenue', path: '/vendor/pharmacy/revenue', icon: FiDollarSign },
+    { name: 'Analytics', path: '/vendor/pharmacy/analytics', icon: FiPieChart },
+    { name: 'Reviews', path: '/vendor/pharmacy/reviews', icon: FiStar },
     { name: 'Notifications', path: '/vendor/pharmacy/notifications', icon: FiBell },
     { name: 'Profile', path: '/vendor/pharmacy/profile', icon: FiUser },
+    { name: 'Settings', path: '/vendor/pharmacy/settings', icon: FiSettings },
   ];
 
   const handleLogout = () => {
     localStorage.removeItem('pharmacyToken');
     localStorage.removeItem('pharmacyProfile');
     navigate('/vendor/pharmacy/login');
-  };
-
-  const toggleAccordion = (name) => {
-    if (!isOpen) {
-      toggleSidebar(); // Force open sidebar if they click an accordion while collapsed
-      setOpenAccordion(name);
-    } else {
-      setOpenAccordion(openAccordion === name ? null : name);
-    }
-  };
-
-  // Determine if a submenu item is active
-  const isSubmenuActive = (subItems) => {
-    return subItems?.some(sub => location.pathname.includes(sub.path));
   };
 
   return (
@@ -128,36 +63,8 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
         <nav className="p-3.5 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 150px)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const hasSubMenu = !!item.subItems;
-            const isActive = item.path ? location.pathname === item.path : isSubmenuActive(item.subItems);
-            const isExpanded = openAccordion === item.name;
-
             return (
               <div key={item.name} className="flex flex-col">
-                {hasSubMenu ? (
-                  <button
-                    onClick={() => toggleAccordion(item.name)}
-                    className={`
-                      flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 border-0 cursor-pointer w-full
-                      ${isExpanded 
-                        ? 'bg-[#0F4A4A] text-white' 
-                        : 'text-[#9ADCDA] bg-transparent hover:bg-white/10 hover:text-white'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <Icon className="text-lg shrink-0" />
-                      {isOpen && (
-                        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="truncate">
-                          {item.name}
-                        </motion.span>
-                      )}
-                    </div>
-                    {isOpen && (
-                      <FiChevronDown className={`text-sm transition-transform duration-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
-                    )}
-                  </button>
-                ) : (
                   <NavLink
                     to={item.path}
                     className={({ isActive: isLinkActive }) => `
@@ -175,36 +82,6 @@ export default function PharmacyVendorSidebar({ isOpen, toggleSidebar }) {
                       </motion.span>
                     )}
                   </NavLink>
-                )}
-
-                {/* Render Accordion Sub-items */}
-                {hasSubMenu && isOpen && (
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="flex flex-col gap-1 py-1.5 pl-11 pr-2">
-                          {item.subItems.map((subItem) => (
-                            <NavLink
-                              key={subItem.path}
-                              to={subItem.path}
-                              className={({ isActive: isSubActive }) => `
-                                py-2 px-3 rounded-lg text-xs font-semibold tracking-wide transition-colors my-0.5 block truncate
-                                ${isSubActive ? 'bg-[#207B7B] text-white' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
-                              `}
-                            >
-                              {subItem.name}
-                            </NavLink>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                )}
               </div>
             );
           })}

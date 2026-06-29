@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { useParams, useNavigate, NavLink } from 'react-router-dom';
 import { FiCalendar, FiClock, FiCheckCircle, FiSearch, FiVideo, FiFilter } from 'react-icons/fi';
 
 export default function DoctorVendorSchedule() {
+  const { tab } = useParams();
+  const activeTab = tab || 'availability';
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
@@ -31,11 +34,29 @@ export default function DoctorVendorSchedule() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Consultations Schedule</h1>
+          <h1 className="text-xl font-extrabold text-slate-800 leading-none">Schedule Management</h1>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
-            Review patient appointments, video consult slots, and prescription records.
+            Manage your availability, working slots, and leaves.
           </p>
         </div>
+      </div>
+
+      <div className="flex bg-slate-50 p-1 rounded-2xl w-full overflow-x-auto no-scrollbar border border-slate-100">
+        {[
+          { id: 'availability', label: 'Availability' },
+          { id: 'slots', label: 'Time Slots' },
+          { id: 'leaves', label: 'Leaves' }
+        ].map(t => (
+          <NavLink
+            key={t.id}
+            to={`/vendor/doctor/schedule/${t.id}`}
+            className={({ isActive }) => `flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap tap-scale border-0 cursor-pointer text-center ${
+              isActive || (activeTab === t.id) ? 'bg-teal text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700 bg-transparent'
+            }`}
+          >
+            {t.label}
+          </NavLink>
+        ))}
       </div>
 
       <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">

@@ -86,22 +86,44 @@ export const orders = Array.from({ length: 120 }, (_, i) => {
 // 15 prescriptions
 export const prescriptions = Array.from({ length: 15 }, (_, i) => {
   let rxStatus = 'NEW';
-  if (i < 3) rxStatus = 'NEW';
-  else if (i < 6) rxStatus = 'AI_PARSED';
-  else if (i < 8) rxStatus = 'REVIEW_REQUIRED';
-  else if (i < 12) rxStatus = 'MEDICINE_MATCHED';
-  else rxStatus = 'CUSTOMER_CART_UPDATED';
+  if (i < 2) rxStatus = 'NEW';
+  else if (i < 4) rxStatus = 'AI_PROCESSED';
+  else if (i < 6) rxStatus = 'UNDER_REVIEW';
+  else if (i < 9) rxStatus = 'QUOTE_SENT';
+  else if (i < 11) rxStatus = 'CUSTOMER_APPROVED';
+  else if (i < 14) rxStatus = 'ORDER_CREATED';
+  else rxStatus = 'REJECTED';
+
+  const isEmergency = i % 5 === 0;
 
   return {
     prescriptionId: `RX-771${100 + i}`,
     customerId: `cust-10${i}`,
     customerName: ['Rahul Mehta', 'Sara Jacob', 'Karan Singh', 'Anita Desai', 'Vikram Sharma', 'Sneha Kapoor', 'Johnathan Doe', 'Emily Davis'][i % 8],
-    uploadedTime: `${i + 2} mins ago`,
+    patientAge: 30 + (i % 40),
+    doctorName: ['Dr. Sharma', 'Dr. Gupta', 'Dr. Reddy', 'Dr. Patel'][i % 4],
+    isEmergency,
+    uploadedDate: new Date().toISOString().substring(0, 10),
+    uploadedTime: '10:30 AM',
     prescriptionImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
     status: rxStatus,
-    rejectionReason: '',
+    rejectionReason: rxStatus === 'REJECTED' ? 'Image unclear' : '',
+    patientHistory: {
+      previousOrders: i % 5,
+      allergies: i % 4 === 0 ? ['Penicillin'] : ['None'],
+      frequentMedicines: ['Paracetamol', 'Vitamin C']
+    },
+    validation: {
+      doctorSignature: true,
+      doctorRegNo: 'MCI-883' + i,
+      prescriptionAge: i % 3 === 0 ? '5 Days' : '1 Day',
+      imageQuality: i % 7 === 0 ? 'Poor' : 'Good',
+      medicineRestrictions: 'None'
+    },
     extractedMedicines: [
-      { name: 'Amoxicillin 500mg', quantity: 10, confidenceScore: 95, matchedMedicineId: 'cat-1', variantId: '10 tablets', price: 164, stock: 45, matched: true }
+      { name: 'Paracetamol 500mg', quantity: 10, confidenceScore: 98, matchedMedicineId: 'cat-2', variantId: '15 tablets', price: 28, stock: 8, matched: true, alternatives: [] },
+      { name: 'Azithromycin 250mg', quantity: 6, confidenceScore: 92, matchedMedicineId: 'cat-1', variantId: '10 tablets', price: 164, stock: 45, matched: true, alternatives: [] },
+      { name: 'Crocin Advance', quantity: 15, confidenceScore: 65, matchedMedicineId: '', variantId: '', price: 0, stock: 0, matched: false, alternatives: ['cat-2'] }
     ]
   };
 });
@@ -192,7 +214,7 @@ export const getPendingOrders = (data = orders) => {
 
 export const getPrescriptionOrders = (data = prescriptions) => {
   // filtered by status pending/verified
-  // 'NEW', 'AI_PARSED', 'REVIEW_REQUIRED', 'MEDICINE_MATCHED', 'CUSTOMER_CART_UPDATED' are all active / pending conversion
+  // 'NEW', 'AI_PROCESSED', 'UNDER_REVIEW', 'QUOTE_SENT', 'CUSTOMER_APPROVED' are all active / pending conversion
   return data.filter(p => p.status !== 'ORDER_CREATED' && p.status !== 'REJECTED');
 };
 
@@ -219,6 +241,9 @@ export const getOrderSummary = (data = orders) => {
   const readyToShip = data.filter(o => o.status === 'Ready for Dispatch').length;
   const delivered = data.filter(o => o.status === 'Delivered').length;
   const cancelled = data.filter(o => o.status === 'Cancelled').length;
+  const returns = data.filter(o => o.status === 'Returns').length;
+  const returnApproved = data.filter(o => o.returnStatus === 'Approved' || o.status === 'Refund Requests').length;
+  const refunds = data.filter(o => o.status === 'Refund Requests').length;
   
   const total = newOrders + processing + readyToShip + delivered + cancelled || 1;
   const fulfillmentPercent = Math.round((delivered / total) * 100);
@@ -229,6 +254,9 @@ export const getOrderSummary = (data = orders) => {
     readyToShip,
     delivered,
     cancelled,
+    returns,
+    returnApproved,
+    refunds,
     fulfillmentPercent
   };
 };

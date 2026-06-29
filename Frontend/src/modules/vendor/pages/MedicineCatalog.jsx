@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FiSearch, FiFilter, FiEdit2, FiTrash2, FiBox, 
   FiDollarSign, FiLayers, FiAlertTriangle, FiCheckCircle, FiEye, FiActivity
 } from 'react-icons/fi';
@@ -121,8 +121,15 @@ export default function MedicineCatalog() {
   const navigate = useNavigate();
   const [medicines, setMedicines] = useState(INITIAL_MEDICINES);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('All'); // 'All' | 'Active' | 'Draft' | 'Low Stock' | 'Expiring Soon'
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = searchParams.get('tab') || 'All Medicines';
+  const [activeTab, setActiveTab] = useState(initialTab); // 'All Medicines' | 'Prescription Medicines' | 'Featured' | 'Bulk Upload'
   const [showFilters, setShowFilters] = useState(false);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -159,10 +166,8 @@ export default function MedicineCatalog() {
     
     // Tab Filter
     let matchesTab = true;
-    if (activeTab === 'Active') matchesTab = med.status === 'Active';
-    else if (activeTab === 'Draft') matchesTab = med.status === 'Draft';
-    else if (activeTab === 'Low Stock') matchesTab = med.status === 'Low Stock' || med.stock > 0 && med.stock < 15;
-    else if (activeTab === 'Expiring Soon') matchesTab = med.expiryStatus === 'Expiring Soon';
+    if (activeTab === 'Prescription Medicines') matchesTab = med.prescriptionRequired === true;
+    else if (activeTab === 'Featured') matchesTab = med.status === 'Active'; // Mocking featured as active for now
 
     // Detailed Filters
     const matchesCategory = !filters.category || med.category === filters.category;
@@ -177,6 +182,12 @@ export default function MedicineCatalog() {
 
     return matchesSearch && matchesTab && matchesCategory && matchesBrand && matchesRx && matchesStock && matchesExpiry && matchesStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredMedicines.length / itemsPerPage));
+  const paginatedMedicines = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredMedicines.slice(start, start + itemsPerPage);
+  }, [filteredMedicines, currentPage]);
 
   // Tab counters calculation (from baseline inventory)
   const allCount = medicines.length;
@@ -401,11 +412,10 @@ export default function MedicineCatalog() {
       {/* 4. Filter Tabs Row */}
       <div className="bg-white border border-slate-100 p-2.5 rounded-2xl shadow-sm flex flex-wrap gap-1.5 overflow-x-auto">
         {[
-          { key: 'All', label: 'All Medicines', count: allCount },
-          { key: 'Active', label: 'Active', count: activeCount },
-          { key: 'Draft', label: 'Draft', count: draftCount },
-          { key: 'Low Stock', label: 'Low Stock', count: lowStockCount },
-          { key: 'Expiring Soon', label: 'Expiring Soon', count: expiringCount }
+          { key: 'All Medicines', label: 'All Medicines' },
+          { key: 'Prescription Medicines', label: 'Prescription Medicines' },
+          { key: 'Featured', label: 'Featured' },
+          { key: 'Bulk Upload', label: 'Bulk Upload' }
         ].map(tab => (
           <button
             key={tab.key}
@@ -416,143 +426,227 @@ export default function MedicineCatalog() {
                 : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50'}`}
           >
             <span>{tab.label}</span>
-            <span className={`text-[10px] font-black px-1.5 py-0.25 rounded-md
-              ${activeTab === tab.key ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
-              {tab.count}
-            </span>
           </button>
         ))}
+        <button
+          onClick={() => navigate('/vendor/pharmacy/medicines/add')}
+          className="px-4.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 ml-auto"
+        >
+          <span>+ Add Medicine</span>
+        </button>
       </div>
 
-      {/* 5. Medicine ERP Cards Catalog Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-6">
-        {filteredMedicines.map((med) => {
-          let badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-250";
-          if (med.status === 'Low Stock') badgeColor = "bg-amber-50 text-amber-700 border-amber-250";
-          if (med.status === 'Out of Stock') badgeColor = "bg-rose-50 text-rose-700 border-rose-250";
-          if (med.status === 'Draft') badgeColor = "bg-slate-50 text-slate-500 border-slate-250";
-          if (med.status === 'Inactive') badgeColor = "bg-red-50 text-red-700 border-red-250";
-
-          return (
-            <div 
-              key={med.id} 
-              className="bg-white border border-slate-100 rounded-3xl p-4.5 flex flex-col justify-between hover:shadow-premium group transition-all duration-300 relative min-h-[360px]"
-            >
-              
-              {/* Image & Header Details */}
-              <div className="flex flex-col gap-3">
-                
-                {/* Image Showcase Container */}
-                <div className="w-full aspect-video rounded-2xl overflow-hidden bg-slate-50 border border-slate-50 flex items-center justify-center p-2 relative">
-                  <img src={med.image} alt={med.name} className="max-h-full max-w-full object-contain mix-blend-multiply" />
-                  
-                  {/* Status Badge */}
-                  <span className={`absolute top-2 right-2 text-[8.5px] font-black uppercase px-2 py-0.5 border rounded-lg tracking-wider ${badgeColor}`}>
-                    {med.status}
-                  </span>
-
-                  {med.prescriptionRequired && (
-                    <span className="absolute bottom-2 left-2 text-[8px] bg-teal-500 text-white font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
-                      Rx Req
-                    </span>
-                  )}
-                </div>
-
-                {/* Product Meta */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8.5px] text-slate-400 font-bold uppercase tracking-wider">{med.brand}</span>
-                  <h3 className="text-xs font-black text-slate-850 line-clamp-1 leading-tight">{med.name}</h3>
-                  <span className="text-[10px] text-[#135A5A] font-extrabold truncate">Salt: {med.composition}</span>
-                </div>
-
-                {/* Variants Details */}
-                <div className="flex flex-col gap-1 border-t border-slate-50 pt-2 text-[11px] font-semibold text-slate-600">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9.5px] text-slate-400 font-bold uppercase">Pack Variants</span>
-                    <span className="font-bold text-slate-800 font-mono">{med.variantsCount} Pack sizes</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {med.variants.map((v, i) => (
-                      <span key={i} className="text-[8.5px] bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded border border-slate-100 font-bold font-mono">
-                        {v.packSize}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
+      {/* 5. Medicine ERP Cards Catalog Grid (OR BULK UPLOAD VIEW) */}
+      {activeTab === 'Bulk Upload' ? (
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm min-h-[400px]">
+          <h3 className="text-lg font-black text-slate-800 mb-6">Bulk Upload Medicines</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-[#135A5A] cursor-pointer transition-all">
+              <div className="w-12 h-12 bg-[#135A5A]/10 text-[#135A5A] rounded-full flex items-center justify-center mb-3">
+                <FiFileText className="text-xl" />
               </div>
-
-              {/* Pricing, Stock & Operational Status bottom row */}
-              <div className="border-t border-slate-50 pt-3 mt-3 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[8px] text-slate-400 font-black uppercase">ERP Price</span>
-                  <span className="text-sm font-black text-slate-850 font-mono">₹{med.price}</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[8px] text-slate-400 font-black uppercase">Stock Qty</span>
-                  <span className={`text-xs font-black font-mono ${med.stock === 0 ? 'text-rose-600' : med.stock < 15 ? 'text-amber-600' : 'text-slate-800'}`}>
-                    {med.stock} pcs
-                  </span>
-                </div>
-              </div>
-
-              {/* ERP HOVER ACTIONS DRAWER */}
-              <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center gap-2.5 p-5">
-                <span className="text-[10px] text-slate-200 font-bold uppercase tracking-widest absolute top-4 left-4">
-                  ERP Operations
-                </span>
-
-                <button 
-                  onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=basic`)}
-                  className="w-full py-2 bg-white text-slate-805 hover:bg-slate-100 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm border border-slate-200"
-                >
-                  <FiEdit2 className="w-3 h-3" /> Edit Medicine
-                </button>
-
-                <button 
-                  onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=variants`)}
-                  className="w-full py-2 bg-[#135A5A] text-white hover:bg-[#0F4A4A] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                >
-                  <FiLayers className="w-3 h-3" /> Manage Variants
-                </button>
-
-                <button 
-                  onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=inventory`)}
-                  className="w-full py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                >
-                  <FiBox className="w-3 h-3" /> Manage Stock
-                </button>
-
-                <button 
-                  onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=variants`)}
-                  className="w-full py-2 bg-teal-800 text-white hover:bg-teal-900 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                >
-                  <FiDollarSign className="w-3 h-3" /> Update Pricing
-                </button>
-
-                <button 
-                  onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}`)}
-                  className="w-full py-2 bg-slate-100 text-slate-800 hover:bg-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                >
-                  <FiEye className="w-3 h-3" /> View Details
-                </button>
-
-                <button 
-                  onClick={() => handleToggleDeactivate(med.id)}
-                  className={`w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all border
-                    ${med.status === 'Inactive' 
-                      ? 'bg-emerald-500/10 text-emerald-100 border-emerald-500/20 hover:bg-emerald-500 hover:text-white' 
-                      : 'bg-rose-500/10 text-rose-100 border-rose-500/20 hover:bg-rose-500 hover:text-white'}`}
-                >
-                  <FiActivity className="w-3 h-3" />
-                  <span>{med.status === 'Inactive' ? 'Activate' : 'Deactivate'}</span>
-                </button>
-              </div>
-
+              <span className="text-sm font-bold text-slate-700">Upload CSV</span>
+              <span className="text-[10px] font-semibold text-slate-400 mt-1">Import new inventory</span>
             </div>
-          );
-        })}
-      </div>
+            
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-emerald-500 cursor-pointer transition-all">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-3">
+                <FiFileText className="text-xl" />
+              </div>
+              <span className="text-sm font-bold text-slate-700">Upload Excel</span>
+              <span className="text-[10px] font-semibold text-slate-400 mt-1">.xlsx or .xls files</span>
+            </div>
+
+            <div className="border border-slate-100 bg-slate-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-100 cursor-pointer transition-all">
+              <div className="w-12 h-12 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center mb-3">
+                <FiLayers className="text-xl" />
+              </div>
+              <span className="text-sm font-bold text-slate-700">Bulk Stock Update</span>
+              <span className="text-[10px] font-semibold text-slate-400 mt-1">Update quantities fast</span>
+            </div>
+
+            <div className="border border-slate-100 bg-indigo-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-indigo-100 cursor-pointer transition-all">
+              <div className="w-12 h-12 bg-white text-indigo-600 rounded-full flex items-center justify-center mb-3 shadow-sm">
+                <FiCheckCircle className="text-xl" />
+              </div>
+              <span className="text-sm font-bold text-indigo-900">Download Template</span>
+              <span className="text-[10px] font-semibold text-indigo-400 mt-1">Get the CSV structure</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-6">
+            {paginatedMedicines.length === 0 ? (
+              <div className="col-span-full py-12 text-center text-slate-400 font-semibold">
+                <FiBox className="text-3xl mx-auto mb-2 text-slate-300" />
+                <p>No medicines found.</p>
+              </div>
+            ) : (
+              paginatedMedicines.map((med) => {
+                let badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-250";
+            if (med.status === 'Low Stock') badgeColor = "bg-amber-50 text-amber-700 border-amber-250";
+            if (med.status === 'Out of Stock') badgeColor = "bg-rose-50 text-rose-700 border-rose-250";
+            if (med.status === 'Draft') badgeColor = "bg-slate-50 text-slate-500 border-slate-250";
+            if (med.status === 'Inactive') badgeColor = "bg-red-50 text-red-700 border-red-250";
+
+            return (
+              <div 
+                key={med.id} 
+                className="bg-white border border-slate-100 rounded-3xl p-4.5 flex flex-col justify-between hover:shadow-premium group transition-all duration-300 relative min-h-[360px]"
+              >
+                
+                {/* Image & Header Details */}
+                <div className="flex flex-col gap-3">
+                  
+                  {/* Image Showcase Container */}
+                  <div className="w-full aspect-video rounded-2xl overflow-hidden bg-slate-50 border border-slate-50 flex items-center justify-center p-2 relative">
+                    <img src={med.image} alt={med.name} className="max-h-full max-w-full object-contain mix-blend-multiply" />
+                    
+                    {/* Status Badge */}
+                    <span className={`absolute top-2 right-2 text-[8.5px] font-black uppercase px-2 py-0.5 border rounded-lg tracking-wider ${badgeColor}`}>
+                      {med.status}
+                    </span>
+
+                    {med.prescriptionRequired && (
+                      <span className="absolute bottom-2 left-2 text-[8px] bg-teal-500 text-white font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
+                        Rx Req
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Product Meta */}
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[8.5px] text-slate-400 font-bold uppercase tracking-wider">{med.brand}</span>
+                    <h3 className="text-xs font-black text-slate-850 line-clamp-1 leading-tight">{med.name}</h3>
+                    <span className="text-[10px] text-[#135A5A] font-extrabold truncate">Salt: {med.composition}</span>
+                  </div>
+
+                  {/* Variants Details */}
+                  <div className="flex flex-col gap-1 border-t border-slate-50 pt-2 text-[11px] font-semibold text-slate-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9.5px] text-slate-400 font-bold uppercase">Pack Variants</span>
+                      <span className="font-bold text-slate-800 font-mono">{med.variantsCount} Pack sizes</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {med.variants.map((v, i) => (
+                        <span key={i} className="text-[8.5px] bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded border border-slate-100 font-bold font-mono">
+                          {v.packSize}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Pricing, Stock & Operational Status bottom row */}
+                <div className="border-t border-slate-50 pt-3 mt-3 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-slate-400 font-black uppercase">ERP Price</span>
+                    <span className="text-sm font-black text-slate-850 font-mono">₹{med.price}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[8px] text-slate-400 font-black uppercase">Stock Qty</span>
+                    <span className={`text-xs font-black font-mono ${med.stock === 0 ? 'text-rose-600' : med.stock < 15 ? 'text-amber-600' : 'text-slate-800'}`}>
+                      {med.stock} pcs
+                    </span>
+                  </div>
+                </div>
+
+                {/* ERP HOVER ACTIONS DRAWER */}
+                <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center gap-2.5 p-5">
+                  <span className="text-[10px] text-slate-200 font-bold uppercase tracking-widest absolute top-4 left-4">
+                    ERP Operations
+                  </span>
+
+                  <button 
+                    onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=basic`)}
+                    className="w-full py-2 bg-white text-slate-805 hover:bg-slate-100 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm border border-slate-200"
+                  >
+                    <FiEdit2 className="w-3 h-3" /> Edit Medicine
+                  </button>
+
+                  <button 
+                    onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=variants`)}
+                    className="w-full py-2 bg-[#135A5A] text-white hover:bg-[#0F4A4A] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <FiLayers className="w-3 h-3" /> Manage Variants
+                  </button>
+
+                  <button 
+                    onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=inventory`)}
+                    className="w-full py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <FiBox className="w-3 h-3" /> Manage Stock
+                  </button>
+
+                  <button 
+                    onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}?tab=variants`)}
+                    className="w-full py-2 bg-teal-800 text-white hover:bg-teal-900 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <FiDollarSign className="w-3 h-3" /> Update Pricing
+                  </button>
+
+                  <button 
+                    onClick={() => navigate(`/vendor/pharmacy/medicines/${med.id}`)}
+                    className="w-full py-2 bg-slate-100 text-slate-800 hover:bg-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <FiEye className="w-3 h-3" /> View Details
+                  </button>
+
+                  <button 
+                    onClick={() => handleToggleDeactivate(med.id)}
+                    className={`w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all border
+                      ${med.status === 'Inactive' 
+                        ? 'bg-emerald-500/10 text-emerald-100 border-emerald-500/20 hover:bg-emerald-500 hover:text-white' 
+                        : 'bg-rose-500/10 text-rose-100 border-rose-500/20 hover:bg-rose-500 hover:text-white'}`}
+                  >
+                    <FiActivity className="w-3 h-3" />
+                    <span>{med.status === 'Inactive' ? 'Activate' : 'Deactivate'}</span>
+                  </button>
+                </div>
+
+              </div>
+            );
+          })
+        )}
+        </div>
+
+        {/* Custom Pagination Footer */}
+        {paginatedMedicines.length > 0 && (
+          <footer className="mt-4 border-t border-slate-100 pt-4 flex items-center justify-between shrink-0">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              Page {currentPage} of {totalPages} ({filteredMedicines.length} items)
+            </span>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className={`px-3 py-1.5 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer
+                  ${currentPage === 1
+                    ? 'bg-slate-50 text-slate-300 pointer-events-none'
+                    : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+              >
+                Prev
+              </button>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                className={`px-3 py-1.5 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer
+                  ${currentPage === totalPages
+                    ? 'bg-slate-50 text-slate-300 pointer-events-none'
+                    : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+              >
+                Next
+              </button>
+            </div>
+          </footer>
+        )}
+        </>
+      )}
 
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { FiPlusCircle, FiTrash2, FiSearch, FiEdit } from 'react-icons/fi';
+import { useParams, useNavigate, NavLink } from 'react-router-dom';
+import { FiPlusCircle, FiTrash2, FiSearch, FiEdit, FiFolder } from 'react-icons/fi';
 import apiClient from '../../../shared/services/apiClient';
 
 export default function TestsManagement() {
@@ -17,16 +17,29 @@ export default function TestsManagement() {
     name: "", category: "Blood Test", price: "", turnaround: "12 Hours", code: ""
   });
 
+  // --- DUMMY DATA FOR CATEGORIES ---
+  const [categories, setCategories] = useState([
+    { id: 'CAT-001', name: 'Blood Test', description: 'Comprehensive blood profiles and markers', testCount: 45, status: 'Active' },
+    { id: 'CAT-002', name: 'Urine Test', description: 'Urine analysis and toxicology', testCount: 12, status: 'Active' },
+    { id: 'CAT-003', name: 'Imaging Scan', description: 'MRI, X-Ray, CT Scans, and Ultrasound', testCount: 8, status: 'Inactive' }
+  ]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+
   const fetchTests = async () => {
-    try {
-      setLoading(true);
-      const res = await apiClient.get('/api/labs/vendor/tests');
-      setTests(res.data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
+    if (tab === 'categories') {
       setLoading(false);
+      return;
     }
+    setLoading(true);
+    // Dummy data bypass to prevent 401 network errors
+    setTimeout(() => {
+      setTests([
+        { id: 'TST-001', code: 'LP-01', name: 'Lipid Profile', category: 'Blood Test', turnaround: '12 Hours', price: 500, isActive: true },
+        { id: 'TST-002', code: 'CBC-01', name: 'Complete Blood Count', category: 'Blood Test', turnaround: '6 Hours', price: 350, isActive: true }
+      ]);
+      setLoading(false);
+    }, 500);
   };
 
   useEffect(() => {
@@ -77,29 +90,155 @@ export default function TestsManagement() {
     }
   };
 
+  const handleAddCategory = (e) => {
+    e.preventDefault();
+    const cat = {
+      id: `CAT-00${categories.length + 1}`,
+      name: newCategory.name,
+      description: newCategory.description,
+      testCount: 0,
+      status: 'Active'
+    };
+    setCategories([...categories, cat]);
+    setShowAddCategory(false);
+    setNewCategory({ name: '', description: '' });
+  };
+
   const getFilteredTests = () => {
     const matchesSearch = tests.filter(t => 
       t.name.toLowerCase().includes(search.toLowerCase()) || 
       t.category.toLowerCase().includes(search.toLowerCase()) ||
       t.code.toLowerCase().includes(search.toLowerCase())
     );
-
     if (tab === 'pricing') {
-      return matchesSearch; // Full list but highlight/focus on pricing
-    } else if (tab === 'categories') {
-      // Sort by category
-      return [...matchesSearch].sort((a, b) => a.category.localeCompare(b.category));
+      return matchesSearch;
     }
     return matchesSearch;
   };
 
   const filteredTests = getFilteredTests();
 
+  const tabs = [
+    { label: 'All Tests', id: 'all' },
+    { label: 'Categories', id: 'categories' },
+    { label: 'Pricing', id: 'pricing' }
+  ];
+
+  const renderTabs = () => (
+    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 mb-4 border-b border-slate-100">
+      {tabs.map(t => (
+        <NavLink
+          key={t.id}
+          to={`/vendor/lab/tests/${t.id}`}
+          className={({ isActive }) => `
+            px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors tap-scale
+            ${isActive || (tab === undefined && t.id === 'all')
+              ? 'bg-teal text-white shadow-sm'
+              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }
+          `}
+        >
+          {t.label}
+        </NavLink>
+      ))}
+    </div>
+  );
+
+  // render UI specifically for categories tab
+  if (tab === 'categories') {
+    return (
+      <div className="flex flex-col gap-6 animate-fade-in font-sans pb-12">
+        {renderTabs()}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-800 leading-none">Test Categories</h1>
+            <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
+              Manage functional groupings for diagnostic tests.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddCategory(true)}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-teal hover:bg-teal-dark text-white text-xs font-black tracking-wider uppercase rounded-xl shadow-sm transition-all cursor-pointer border-0 tap-scale shrink-0"
+          >
+            <FiPlusCircle className="text-sm" /> Add New Category
+          </button>
+        </div>
+
+        {showAddCategory && (
+          <form onSubmit={handleAddCategory} className="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium flex flex-col gap-4 animate-slideUp">
+            <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Create Test Category</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black uppercase text-slate-455 tracking-wide">Category Name</label>
+                <input 
+                  type="text" 
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                  required
+                  placeholder="e.g. Hormonal Panel"
+                  className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal w-full"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black uppercase text-slate-455 tracking-wide">Brief Description</label>
+                <input 
+                  type="text" 
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                  placeholder="e.g. Endocrine system and hormone checks"
+                  className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal w-full"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-2">
+              <button type="button" onClick={() => setShowAddCategory(false)} className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-black uppercase tracking-wider bg-transparent cursor-pointer border-0">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer border-0 shadow-sm">Save Category</button>
+            </div>
+          </form>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories.map((cat) => (
+            <div key={cat.id} className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex flex-col gap-4 relative overflow-hidden group hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-teal-600 shadow-inner border border-slate-100">
+                    <FiFolder className="text-2xl" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h3 className="text-base font-black text-slate-800 tracking-tight leading-tight">{cat.name}</h3>
+                    <span className="text-xs text-slate-400 font-bold tracking-wide">{cat.id}</span>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${cat.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                  {cat.status}
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-slate-500 leading-relaxed mt-1">{cat.description}</p>
+              <div className="flex justify-between items-center bg-slate-50/80 px-3.5 py-2.5 rounded-xl border border-slate-200/50 mt-1">
+                <span className="text-slate-500 font-extrabold uppercase text-xs tracking-wider">Associated Tests:</span>
+                <span className="text-slate-800 font-black text-lg leading-none">{cat.testCount}</span>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2 mt-auto">
+                <button className="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-all cursor-pointer border border-slate-200 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 tap-scale" title="Edit">
+                  <FiEdit className="text-sm" /> Edit
+                </button>
+                <button className="flex-1 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all cursor-pointer border border-rose-100 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 tap-scale" title="Delete">
+                  <FiTrash2 className="text-sm" /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDER DEFAULT TESTS REGISTRY UI ---
   return (
     <div className="flex flex-col gap-6 animate-fade-in font-sans pb-12">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      {renderTabs()}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
         <div>
           <h1 className="text-xl font-extrabold text-slate-800 leading-none">Diagnostic Test Registry</h1>
           <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-wider">
@@ -114,11 +253,9 @@ export default function TestsManagement() {
         </button>
       </div>
 
-      {/* Add Form */}
       {showAddForm && (
         <form onSubmit={handleAddTest} className="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium flex flex-col gap-4 animate-slideUp">
           <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Register Diagnostic Test</h3>
-          
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Test Name</label>
@@ -131,7 +268,6 @@ export default function TestsManagement() {
                 className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal w-full"
               />
             </div>
-            
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Category</label>
               <select
@@ -147,7 +283,6 @@ export default function TestsManagement() {
                 <option value="Imaging">Imaging Scan</option>
               </select>
             </div>
-            
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Pricing (INR)</label>
               <input 
@@ -159,7 +294,6 @@ export default function TestsManagement() {
                 className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal w-full"
               />
             </div>
-            
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Turnaround Time</label>
               <select
@@ -175,30 +309,16 @@ export default function TestsManagement() {
               </select>
             </div>
           </div>
-
           <div className="flex justify-end gap-3 mt-2">
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-black uppercase tracking-wider bg-transparent cursor-pointer border-0"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer border-0 shadow-sm"
-            >
-              Register Test
-            </button>
+            <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-black uppercase tracking-wider bg-transparent cursor-pointer border-0">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer border-0 shadow-sm">Register Test</button>
           </div>
         </form>
       )}
 
-      {/* Edit Modal */}
       {editingTest && (
         <form onSubmit={handleUpdateTest} className="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium flex flex-col gap-4 animate-slideUp">
           <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Edit Diagnostic Test</h3>
-          
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Test Name</label>
@@ -210,7 +330,6 @@ export default function TestsManagement() {
                 className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal w-full"
               />
             </div>
-            
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Category</label>
               <select
@@ -226,7 +345,6 @@ export default function TestsManagement() {
                 <option value="Imaging">Imaging Scan</option>
               </select>
             </div>
-            
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Pricing (INR)</label>
               <input 
@@ -237,7 +355,6 @@ export default function TestsManagement() {
                 className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal w-full"
               />
             </div>
-            
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase text-slate-450 tracking-wide">Turnaround Time</label>
               <select
@@ -253,29 +370,14 @@ export default function TestsManagement() {
               </select>
             </div>
           </div>
-
           <div className="flex justify-end gap-3 mt-2">
-            <button
-              type="button"
-              onClick={() => setEditingTest(null)}
-              className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-black uppercase tracking-wider bg-transparent cursor-pointer border-0"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer border-0 shadow-sm"
-            >
-              Save Changes
-            </button>
+            <button type="button" onClick={() => setEditingTest(null)} className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-black uppercase tracking-wider bg-transparent cursor-pointer border-0">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer border-0 shadow-sm">Save Changes</button>
           </div>
         </form>
       )}
 
-      {/* Registry Table */}
       <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium">
-        
-        {/* Search */}
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-150 rounded-2xl mb-5 max-w-sm">
           <FiSearch className="text-slate-400 text-sm shrink-0" />
           <input 
@@ -286,7 +388,6 @@ export default function TestsManagement() {
             className="bg-transparent border-none outline-none text-[11px] font-semibold text-slate-700 w-full placeholder:text-slate-400"
           />
         </div>
-
         {loading ? (
           <div className="flex items-center justify-center min-h-[30vh]">
             <div className="w-10 h-10 border-4 border-teal border-t-transparent rounded-full animate-spin" />
@@ -328,18 +429,10 @@ export default function TestsManagement() {
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => { setEditingTest(t); setShowAddForm(false); }}
-                          className="p-2 bg-slate-50 hover:bg-slate-200 text-slate-600 rounded-xl transition-all cursor-pointer border-0 tap-scale"
-                          title="Edit"
-                        >
+                        <button onClick={() => { setEditingTest(t); setShowAddForm(false); }} className="p-2 bg-slate-50 hover:bg-slate-200 text-slate-600 rounded-xl transition-all cursor-pointer border-0 tap-scale" title="Edit">
                           <FiEdit className="text-sm shrink-0" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(t.id)}
-                          className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition-all cursor-pointer border-0 tap-scale"
-                          title="Delete"
-                        >
+                        <button onClick={() => handleDelete(t.id)} className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition-all cursor-pointer border-0 tap-scale" title="Delete">
                           <FiTrash2 className="text-sm shrink-0" />
                         </button>
                       </div>
@@ -351,7 +444,6 @@ export default function TestsManagement() {
           </div>
         )}
       </div>
-
     </div>
   );
 }

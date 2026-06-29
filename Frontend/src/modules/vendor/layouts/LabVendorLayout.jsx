@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { 
   FiHome, FiActivity, FiUser, FiGrid, FiFileText, 
   FiMenu, FiBell, FiChevronDown, FiArrowLeft,
-  FiChevronRight, FiUpload, FiClock, FiLayers, FiUsers, FiDollarSign, FiPieChart, FiSettings
+  FiChevronRight, FiUpload, FiClock, FiLayers, FiUsers, FiDollarSign, FiPieChart, FiSettings, FiStar
 } from 'react-icons/fi';
 import Logo from '../../../shared/components/Logo';
 
@@ -56,61 +56,18 @@ export default function LabVendorLayout() {
 
   const sidebarItems = [
     { name: 'Dashboard', path: '/vendor/lab/dashboard', icon: FiGrid },
-    { 
-      name: 'Test Orders', icon: FiFileText,
-      subItems: [
-        { name: 'New Bookings', path: '/vendor/lab/orders/new' },
-        { name: 'Confirmed', path: '/vendor/lab/orders/confirmed' },
-        { name: 'Collector Assigned', path: '/vendor/lab/orders/assigned' },
-        { name: 'Sample Collected', path: '/vendor/lab/orders/collected' },
-        { name: 'In Progress', path: '/vendor/lab/orders/progress' },
-        { name: 'Report Uploaded', path: '/vendor/lab/orders/uploaded' },
-        { name: 'Completed', path: '/vendor/lab/orders/completed' },
-        { name: 'Cancelled', path: '/vendor/lab/orders/cancelled' },
-      ]
-    },
-    { 
-      name: 'Home Collection', icon: FiHome,
-      subItems: [
-        { name: 'New Requests', path: '/vendor/lab/collections/new' },
-        { name: 'Assigned Collections', path: '/vendor/lab/collections/assigned' },
-        { name: 'Collection Agents', path: '/vendor/lab/collections/agents' },
-      ]
-    },
-    { 
-      name: 'Tests Management', icon: FiActivity,
-      subItems: [
-        { name: 'All Tests', path: '/vendor/lab/tests/all' },
-        { name: 'Test Categories', path: '/vendor/lab/tests/categories' },
-        { name: 'Pricing', path: '/vendor/lab/tests/pricing' },
-      ]
-    },
-    { 
-      name: 'Test Packages', icon: FiLayers,
-      subItems: [
-        { name: 'All Packages', path: '/vendor/lab/packages/all' },
-        { name: 'Add Package', path: '/vendor/lab/packages/add' },
-        { name: 'Offers & Discounts', path: '/vendor/lab/packages/offers' },
-      ]
-    },
+    { name: 'Test Orders', path: '/vendor/lab/orders', icon: FiFileText },
+    { name: 'Home Collection', path: '/vendor/lab/collections', icon: FiHome },
+    { name: 'Tests', path: '/vendor/lab/tests', icon: FiActivity },
+    { name: 'Packages', path: '/vendor/lab/packages', icon: FiLayers },
     { name: 'Upload Reports', path: '/vendor/lab/reports/upload', icon: FiUpload },
     { name: 'Report History', path: '/vendor/lab/reports/history', icon: FiClock },
     { name: 'Customers', path: '/vendor/lab/customers', icon: FiUsers },
-    { name: 'Reviews & Ratings', path: '/vendor/lab/reviews', icon: FiUsers },
-    { name: 'Revenue', path: '/vendor/lab/revenue', icon: FiDollarSign },
-    { name: 'Analytics', path: '/vendor/lab/analytics', icon: FiPieChart },
+    { name: 'Reviews', path: '/vendor/lab/reviews', icon: FiStar },
+    { name: 'Revenue', path: '/vendor/lab/revenue', icon: FiPieChart },
+    { name: 'Analytics', path: '/vendor/lab/analytics', icon: FiActivity },
     { name: 'Notifications', path: '/vendor/lab/notifications', icon: FiBell },
-    { 
-      name: 'Profile', icon: FiUser,
-      subItems: [
-        { name: 'Basic Information', path: '/vendor/lab/profile/basic' },
-        { name: 'Lab Gallery', path: '/vendor/lab/profile/gallery' },
-        { name: 'Promotional Banner', path: '/vendor/lab/profile/banner' },
-        { name: 'Facilities & Amenities', path: '/vendor/lab/profile/facilities' },
-        { name: 'Accreditation', path: '/vendor/lab/profile/accreditation' },
-        { name: 'User View Preview', path: '/vendor/lab/profile/preview' },
-      ]
-    },
+    { name: 'Profile', path: '/vendor/lab/profile', icon: FiUser },
     { name: 'Settings', path: '/vendor/lab/settings', icon: FiSettings },
   ];
 
@@ -163,70 +120,13 @@ export default function LabVendorLayout() {
           <nav className="p-3.5 flex flex-col gap-1.5 overflow-y-auto no-scrollbar max-h-[calc(100vh-160px)]">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
-              const hasSubItems = item.subItems && item.subItems.length > 0;
-              const isExpanded = expandedMenu === item.name;
-              const isParentActive = hasSubItems && item.subItems.some(sub => location.pathname.startsWith(sub.path));
-
-              if (hasSubItems) {
-                return (
-                  <div key={item.name} className="flex flex-col gap-1">
-                    <button
-                      onClick={() => setExpandedMenu(isExpanded ? '' : item.name)}
-                      className={`
-                        flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 border-0 cursor-pointer
-                        ${isParentActive 
-                          ? 'bg-[#0F4A4A] text-white' 
-                          : 'text-[#9ADCDA] bg-transparent hover:bg-white/10 hover:text-white'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <Icon className="text-lg shrink-0" />
-                        {isSidebarOpen && (
-                          <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="truncate">
-                            {item.name}
-                          </motion.span>
-                        )}
-                      </div>
-                      {isSidebarOpen && (
-                        isExpanded ? <FiChevronDown className="text-[#88D4D3]" /> : <FiChevronRight className="text-[#88D4D3]" />
-                      )}
-                    </button>
-                    
-                    <AnimatePresence>
-                      {isExpanded && isSidebarOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="flex flex-col gap-1 overflow-hidden ml-10 border-l border-slate-100 pl-3 mr-4"
-                        >
-                          {item.subItems.map(sub => (
-                            <NavLink
-                              key={sub.name}
-                              to={sub.path}
-                              className={({ isActive }) => `
-                                py-2 px-3 rounded-lg text-xs font-semibold tracking-wide transition-colors my-0.5
-                                ${isActive ? 'bg-[#207B7B] text-white' : 'text-[#88D4D3] hover:text-white hover:bg-white/5'}
-                              `}
-                            >
-                              {sub.name}
-                            </NavLink>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              }
-
               return (
                 <NavLink
-                  key={item.name}
+                  key={item.path}
                   to={item.path}
                   className={({ isActive }) => `
                     flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 tap-scale
-                    ${isActive 
+                    ${isActive || location.pathname.startsWith(item.path + '/') 
                       ? 'bg-teal text-white shadow-md' 
                       : 'text-[#9ADCDA] hover:bg-white/10 hover:text-white'
                     }

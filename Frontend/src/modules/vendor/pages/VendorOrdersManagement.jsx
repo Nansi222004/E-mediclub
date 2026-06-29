@@ -93,7 +93,8 @@ export default function VendorOrdersManagement() {
 
   // 2. Active States
   const [orders, setOrders] = useState(initialOrders);
-  const [activeTab, setActiveTab] = useState('New Orders');
+  const [activeTab, setActiveTab] = useState('Active');
+  const [activeSecondaryFilter, setActiveSecondaryFilter] = useState('New');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -117,39 +118,33 @@ export default function VendorOrdersManagement() {
   // Sync activeTab with sidebar sub-routes
   useEffect(() => {
     const path = location.pathname.toLowerCase();
-    if (path.includes('/orders/new')) {
-      setActiveTab('New Orders');
-    } else if (path.includes('/orders/processing')) {
-      setActiveTab('Processing');
-    } else if (path.includes('/orders/ready')) {
-      setActiveTab('Ready for Dispatch');
-    } else if (path.includes('/orders/delivered')) {
-      setActiveTab('Delivered');
-    } else if (path.includes('/orders/cancelled')) {
-      setActiveTab('Cancelled');
-    } else if (path.includes('/orders/returns')) {
+    if (path.includes('/orders/returns')) {
       setActiveTab('Returns');
     } else if (path.includes('/orders/refunds')) {
-      setActiveTab('Refund Requests');
+      setActiveTab('Refunds');
+    } else {
+      setActiveTab('Active');
+      if (path.includes('/orders/new')) setActiveSecondaryFilter('New');
+      else if (path.includes('/orders/processing')) setActiveSecondaryFilter('Packed');
+      else if (path.includes('/orders/ready')) setActiveSecondaryFilter('Ready For Dispatch');
+      else if (path.includes('/orders/delivered')) setActiveSecondaryFilter('Delivered');
+      else if (path.includes('/orders/cancelled')) setActiveSecondaryFilter('Cancelled');
     }
   }, [location]);
 
   // Sync activeTab with status query parameter (from dashboard Order Summary click)
   useEffect(() => {
-    if (statusParam === 'new') {
-      setActiveTab('New Orders');
-    } else if (statusParam === 'processing') {
-      setActiveTab('Processing');
-    } else if (statusParam === 'ready-dispatch') {
-      setActiveTab('Ready for Dispatch');
-    } else if (statusParam === 'delivered') {
-      setActiveTab('Delivered');
-    } else if (statusParam === 'cancelled') {
-      setActiveTab('Cancelled');
-    } else if (statusParam === 'returns') {
+    if (statusParam === 'returns') {
       setActiveTab('Returns');
     } else if (statusParam === 'refunds') {
-      setActiveTab('Refund Requests');
+      setActiveTab('Refunds');
+    } else if (statusParam) {
+      setActiveTab('Active');
+      if (statusParam === 'new') setActiveSecondaryFilter('New');
+      else if (statusParam === 'processing') setActiveSecondaryFilter('Packed');
+      else if (statusParam === 'ready-dispatch') setActiveSecondaryFilter('Ready For Dispatch');
+      else if (statusParam === 'delivered') setActiveSecondaryFilter('Delivered');
+      else if (statusParam === 'cancelled') setActiveSecondaryFilter('Cancelled');
     }
   }, [statusParam]);
 
@@ -159,18 +154,21 @@ export default function VendorOrdersManagement() {
   const [rxFilter, setRxFilter] = useState('All');
 
   // Lifecycles categories
-  const tabs = [
-    'New Orders',
-    'Accepted Orders',
-    'Processing',
-    'Ready for Dispatch',
-    'Out for Delivery',
-    'Delivered',
-    'Cancelled',
-    'Returns',
-    'Replacement Requests',
-    'Refund Requests'
-  ];
+  const mainTabs = ['Active', 'Returns', 'Replacements', 'Refunds'];
+  const secondaryFilters = ['All', 'New', 'Confirmed', 'Packed', 'Ready For Dispatch', 'Out For Delivery', 'Delivered', 'Cancelled'];
+
+  const getOrderStatusEquivalent = (secondaryFilter) => {
+    switch (secondaryFilter) {
+      case 'New': return 'New Orders';
+      case 'Confirmed': return 'Accepted Orders';
+      case 'Packed': return 'Processing';
+      case 'Ready For Dispatch': return 'Ready for Dispatch';
+      case 'Out For Delivery': return 'Out for Delivery';
+      case 'Delivered': return 'Delivered';
+      case 'Cancelled': return 'Cancelled';
+      default: return 'All';
+    }
+  };
 
   // 3. Compute Metrics Dashboard counts dynamically
   const metrics = useMemo(() => {
@@ -196,7 +194,20 @@ export default function VendorOrdersManagement() {
         if (!pendingList.some(o => o.id === order.id)) return false;
       } else {
         // Tab matching
-        if (order.status !== activeTab) return false;
+        if (activeTab === 'Active') {
+          if (activeSecondaryFilter !== 'All') {
+             if (order.status !== getOrderStatusEquivalent(activeSecondaryFilter)) return false;
+          } else {
+             // If All, still exclude returns/replacements/refunds
+             if (['Returns', 'Replacement Requests', 'Refund Requests'].includes(order.status)) return false;
+          }
+        } else if (activeTab === 'Returns') {
+          if (order.status !== 'Returns') return false;
+        } else if (activeTab === 'Replacements') {
+          if (order.status !== 'Replacement Requests') return false;
+        } else if (activeTab === 'Refunds') {
+          if (order.status !== 'Refund Requests') return false;
+        }
       }
 
       // If filterParam is 'today', we filter for today's orders
@@ -223,7 +234,7 @@ export default function VendorOrdersManagement() {
 
       return matchesSearch && matchesDate && matchesPayment && matchesRx;
     });
-  }, [orders, activeTab, searchQuery, dateFilter, paymentFilter, rxFilter, filterParam, statusParam]);
+  }, [orders, activeTab, activeSecondaryFilter, searchQuery, dateFilter, paymentFilter, rxFilter, filterParam, statusParam]);
 
   const paginatedOrders = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -348,14 +359,14 @@ export default function VendorOrdersManagement() {
       {/* 2. Top Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3 shrink-0">
         {[
-          { label: "Today's Orders", val: metrics.today, icon: FiShoppingBag, color: 'text-teal bg-teal-50 border-teal-100', tab: 'New Orders', params: { filter: 'today' } },
-          { label: "Pending Orders", val: metrics.pending, icon: FiClock, color: 'text-amber-600 bg-amber-50 border-amber-100', tab: 'New Orders', params: { status: 'pending' } },
-          { label: "Processing", val: metrics.processing, icon: FiActivity, color: 'text-indigo-600 bg-indigo-50 border-indigo-100', tab: 'Processing' },
-          { label: "Delivered", val: metrics.delivered, icon: FiCheckCircle, color: 'text-emerald-600 bg-emerald-50 border-emerald-100', tab: 'Delivered' },
-          { label: "Cancelled", val: metrics.cancelled, icon: FiXCircle, color: 'text-rose-600 bg-rose-50 border-rose-100', tab: 'Cancelled' },
+          { label: "Today's Orders", val: metrics.today, icon: FiShoppingBag, color: 'text-teal bg-teal-50 border-teal-100', tab: 'Active', sec: 'New', params: { filter: 'today' } },
+          { label: "Pending Orders", val: metrics.pending, icon: FiClock, color: 'text-amber-600 bg-amber-50 border-amber-100', tab: 'Active', sec: 'New', params: { status: 'pending' } },
+          { label: "Processing", val: metrics.processing, icon: FiActivity, color: 'text-indigo-600 bg-indigo-50 border-indigo-100', tab: 'Active', sec: 'Packed' },
+          { label: "Delivered", val: metrics.delivered, icon: FiCheckCircle, color: 'text-emerald-600 bg-emerald-50 border-emerald-100', tab: 'Active', sec: 'Delivered' },
+          { label: "Cancelled", val: metrics.cancelled, icon: FiXCircle, color: 'text-rose-600 bg-rose-50 border-rose-100', tab: 'Active', sec: 'Cancelled' },
           { label: "Returns", val: metrics.returns, icon: FiRefreshCw, color: 'text-violet-600 bg-violet-50 border-violet-100', tab: 'Returns' },
-          { label: "Replacements", val: metrics.replacements, icon: FiRefreshCw, color: 'text-blue-600 bg-blue-50 border-blue-100', tab: 'Replacement Requests' },
-          { label: "Refunds", val: metrics.refunds, icon: FiDollarSign, color: 'text-orange-600 bg-orange-50 border-orange-100', tab: 'Refund Requests' },
+          { label: "Replacements", val: metrics.replacements, icon: FiRefreshCw, color: 'text-blue-600 bg-blue-50 border-blue-100', tab: 'Replacements' },
+          { label: "Refunds", val: metrics.refunds, icon: FiDollarSign, color: 'text-orange-600 bg-orange-50 border-orange-100', tab: 'Refunds' },
           { label: "Total Revenue", val: `₹${metrics.revenue.toLocaleString('en-IN')}`, icon: FiDollarSign, color: 'text-white bg-[#135A5A] border-[#0F4A4A]' }
         ].map((m, idx) => (
           <div 
@@ -363,6 +374,7 @@ export default function VendorOrdersManagement() {
             onClick={() => {
               if (m.tab) {
                 setActiveTab(m.tab);
+                if (m.sec) setActiveSecondaryFilter(m.sec);
                 setSearchParams(m.params || {});
               }
             }}
@@ -450,35 +462,68 @@ export default function VendorOrdersManagement() {
       </div>
 
       {/* 4. Tab selection strip */}
-      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1.5 border-b border-slate-100 shrink-0">
-        {tabs.map(tab => {
-          const summary = getOrderSummary(orders);
-          let count = orders.filter(o => o.status === tab).length;
-          if (tab === 'New Orders') count = summary.newOrders;
-          else if (tab === 'Processing') count = summary.processing;
-          else if (tab === 'Ready for Dispatch') count = summary.readyToShip;
-          else if (tab === 'Delivered') count = summary.delivered;
-          else if (tab === 'Cancelled') count = summary.cancelled;
-          return (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setSearchParams({});
-              }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-0 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === tab 
-                  ? 'bg-[#135A5A] text-white shadow-sm' 
-                  : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-850'
-              }`}
-            >
-              <span>{tab}</span>
-              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${
-                activeTab === tab ? 'bg-white text-[#135A5A]' : 'bg-slate-100 text-slate-500'
-              }`}>{count}</span>
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-3 shrink-0">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1.5 border-b border-slate-100">
+          {mainTabs.map(tab => {
+            const summary = getOrderSummary(orders);
+            let count = 0;
+            if (tab === 'Active') count = orders.filter(o => !['Returns', 'Replacement Requests', 'Refund Requests'].includes(o.status)).length;
+            else if (tab === 'Returns') count = summary.returns || orders.filter(o => o.status === 'Returns').length;
+            else if (tab === 'Replacements') count = orders.filter(o => o.status === 'Replacement Requests').length;
+            else if (tab === 'Refunds') count = orders.filter(o => o.status === 'Refund Requests').length;
+
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  if (tab === 'Active') setActiveSecondaryFilter('New');
+                  setSearchParams({});
+                }}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-0 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === tab 
+                    ? 'bg-[#135A5A] text-white shadow-sm' 
+                    : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-850'
+                }`}
+              >
+                <span>{tab}</span>
+                <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${
+                  activeTab === tab ? 'bg-white text-[#135A5A]' : 'bg-slate-100 text-slate-500'
+                }`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+        
+        {activeTab === 'Active' && (
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1.5">
+            {secondaryFilters.map(filter => {
+              let count = 0;
+              if (filter === 'All') count = orders.filter(o => !['Returns', 'Replacement Requests', 'Refund Requests'].includes(o.status)).length;
+              else count = orders.filter(o => o.status === getOrderStatusEquivalent(filter)).length;
+
+              return (
+                <button
+                  key={filter}
+                  onClick={() => {
+                    setActiveSecondaryFilter(filter);
+                    setSearchParams({});
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                    activeSecondaryFilter === filter 
+                      ? 'border-[#135A5A] text-[#135A5A] bg-[#135A5A]/5' 
+                      : 'border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-850 bg-white'
+                  }`}
+                >
+                  <span>{filter}</span>
+                  <span className={`px-1 py-0.5 rounded-md text-[8px] font-black ${
+                    activeSecondaryFilter === filter ? 'bg-[#135A5A]/10 text-[#135A5A]' : 'bg-slate-100 text-slate-500'
+                  }`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 5. Main Content Area: Desktop Table vs Mobile Cards */}
@@ -545,50 +590,50 @@ export default function VendorOrdersManagement() {
                         </td>
                         <td className="p-4">
                           {/* Render context based on tab */}
-                          {activeTab === 'New Orders' && (
+                          {order.status === 'New Orders' && (
                             <span className="text-xs font-bold text-slate-500 uppercase">{order.paymentMethod}</span>
                           )}
-                          {activeTab === 'Accepted Orders' && (
+                          {order.status === 'Accepted Orders' && (
                             <span className="text-xs font-bold text-emerald-600 uppercase">Availability: In Stock</span>
                           )}
-                          {activeTab === 'Processing' && (
+                          {order.status === 'Processing' && (
                             <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                               <div className="bg-[#135A5A] h-full" style={{ width: `${order.packingProgress || 50}%` }} />
                             </div>
                           )}
-                          {activeTab === 'Ready for Dispatch' && (
+                          {order.status === 'Ready for Dispatch' && (
                             <div className="flex flex-col text-[10px]">
                               <span className="font-extrabold text-slate-700">Inv: {order.invoiceNumber}</span>
                               <span className="text-slate-400 font-semibold">{order.deliveryPartner}</span>
                             </div>
                           )}
-                          {activeTab === 'Out for Delivery' && (
+                          {order.status === 'Out for Delivery' && (
                             <div className="flex flex-col text-[10px]">
                               <span className="font-extrabold text-indigo-600">{order.deliveryStatus}</span>
                               <span className="text-slate-400 font-semibold">ETA: {order.expectedDelivery}</span>
                             </div>
                           )}
-                          {activeTab === 'Delivered' && (
+                          {order.status === 'Delivered' && (
                             <div className="flex items-center gap-1">
                               {[...Array(5)].map((_, i) => (
                                 <span key={i} className={`text-xs ${i < (order.customerRating || 5) ? 'text-amber-500' : 'text-slate-200'}`}>★</span>
                               ))}
                             </div>
                           )}
-                          {activeTab === 'Cancelled' && (
+                          {order.status === 'Cancelled' && (
                             <span className="text-xs font-bold text-rose-500" title={(order.cancelReason || order.cancellationReason) === 'Other' ? order.customReason : (order.cancelReason || order.cancellationReason)}>
                               {(order.cancelReason || order.cancellationReason) === 'Other' ? order.customReason : (order.cancelReason || order.cancellationReason)}
                             </span>
                           )}
-                          {activeTab === 'Returns' && (
+                          {order.status === 'Returns' && (
                             <span className="text-xs font-bold text-slate-600" title={order.returnReason === 'Other' ? order.customReason : order.returnReason}>
                               {order.returnReason === 'Other' ? order.customReason : order.returnReason}
                             </span>
                           )}
-                          {activeTab === 'Replacement Requests' && (
+                          {order.status === 'Replacement Requests' && (
                             <span className="text-xs font-bold text-slate-600" title={order.replacementReason || 'Item damaged on arrival'}>{order.replacementReason || 'Item damaged on arrival'}</span>
                           )}
-                          {activeTab === 'Refund Requests' && (
+                          {order.status === 'Refund Requests' && (
                             <span className="text-xs font-bold text-slate-600">{order.refundMethod}</span>
                           )}
                         </td>
@@ -600,7 +645,7 @@ export default function VendorOrdersManagement() {
                         </td>
                         <td className="p-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-center gap-1.5">
-                            {activeTab === 'New Orders' && (
+                            {order.status === 'New Orders' && (
                               <>
                                 <button 
                                   onClick={() => handleUpdateStatus(order.id, 'Accepted Orders')}
@@ -609,14 +654,14 @@ export default function VendorOrdersManagement() {
                                   Accept
                                 </button>
                                 <button 
-                                  onClick={() => triggerRejectModal(order.id)}
+                                  onClick={() => { setRejectOrderId(order.id); setShowRejectModal(true); }}
                                   className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
                                 >
                                   Reject
                                 </button>
                               </>
                             )}
-                            {activeTab === 'Accepted Orders' && (
+                            {order.status === 'Accepted Orders' && (
                               <button 
                                 onClick={() => handleUpdateStatus(order.id, 'Processing')}
                                 className="px-3 py-1.5 bg-[#135A5A] hover:bg-[#0F4A4A] text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors border-0 cursor-pointer"
@@ -624,7 +669,7 @@ export default function VendorOrdersManagement() {
                                 Pack Order
                               </button>
                             )}
-                            {activeTab === 'Processing' && (
+                            {order.status === 'Processing' && (
                               <button 
                                 onClick={() => handleUpdateStatus(order.id, 'Ready for Dispatch', { invoiceNumber: `EMC-INV-${order.id.split('-')[1]}`, deliveryPartner: 'Shadowfax Express', deliveryStatus: 'Pending Pickup' })}
                                 className="px-3 py-1.5 bg-[#135A5A] hover:bg-[#0F4A4A] text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors border-0 cursor-pointer"
@@ -632,7 +677,7 @@ export default function VendorOrdersManagement() {
                                 Mark Ready
                               </button>
                             )}
-                            {activeTab === 'Ready for Dispatch' && (
+                            {order.status === 'Ready for Dispatch' && (
                               <button 
                                 onClick={() => handleUpdateStatus(order.id, 'Out for Delivery', { deliveryStatus: 'In Transit', expectedDelivery: '1 Hour' })}
                                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors border-0 cursor-pointer"
@@ -640,7 +685,7 @@ export default function VendorOrdersManagement() {
                                 Ship Out
                               </button>
                             )}
-                            {activeTab === 'Out for Delivery' && (
+                            {order.status === 'Out for Delivery' && (
                               <button 
                                 onClick={() => handleUpdateStatus(order.id, 'Delivered', { deliveryDate: '2026-06-17', customerRating: 5 })}
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors border-0 cursor-pointer"
@@ -648,7 +693,7 @@ export default function VendorOrdersManagement() {
                                 Complete
                               </button>
                             )}
-                            {activeTab === 'Returns' && (
+                            {order.status === 'Returns' && (
                               <>
                                 <button 
                                   onClick={() => handleUpdateStatus(order.id, 'Refund Requests', { returnStatus: 'Approved', refundAmount: calculateOrderDetails(order).grandTotal, refundMethod: 'UPI Wallet', refundStatus: 'Pending Approval' })}
@@ -664,7 +709,7 @@ export default function VendorOrdersManagement() {
                                 </button>
                               </>
                             )}
-                            {activeTab === 'Replacement Requests' && (
+                            {order.status === 'Replacement Requests' && (
                               <>
                                 <button 
                                   onClick={() => handleUpdateStatus(order.id, 'Processing', { replacementStatus: 'Approved' })}
@@ -680,7 +725,7 @@ export default function VendorOrdersManagement() {
                                 </button>
                               </>
                             )}
-                            {activeTab === 'Refund Requests' && (
+                            {order.status === 'Refund Requests' && (
                               <>
                                 <button 
                                   onClick={() => handleUpdateStatus(order.id, 'Delivered', { refundStatus: 'Settled', paymentStatus: 'Refunded' })}
@@ -696,7 +741,7 @@ export default function VendorOrdersManagement() {
                                 </button>
                               </>
                             )}
-                            {['Delivered', 'Cancelled'].includes(activeTab) && (
+                            {['Delivered', 'Cancelled'].includes(order.status) && (
                               <button 
                                 onClick={() => openDrawer(order)}
                                 className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-655 text-[10px] font-black uppercase tracking-wider rounded-lg border border-slate-200 transition-colors cursor-pointer"
