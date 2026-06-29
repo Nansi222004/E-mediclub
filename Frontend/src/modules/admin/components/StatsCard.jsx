@@ -1,7 +1,20 @@
 import { motion } from 'framer-motion';
 import { FiTrendingUp, FiTrendingDown } from 'react-icons/fi';
 
-export default function StatsCard({ title, value, change, isPositive = true, icon: Icon, color = 'teal', sparklineData = [10, 20, 15, 30, 25, 40] }) {
+export default function StatsCard({ 
+  title, 
+  value, 
+  change, 
+  trend,
+  trendText,
+  isPositive = true, 
+  trendDirection,
+  icon: Icon, 
+  color = 'teal', 
+  iconColor,
+  sparklineData = [10, 20, 15, 30, 25, 40],
+  onClick
+}) {
   
   // Custom color mappings matching E Mediclub CSS tokens
   const colorMap = {
@@ -27,22 +40,40 @@ export default function StatsCard({ title, value, change, isPositive = true, ico
     }
   };
 
-  const activeColor = colorMap[color] || colorMap.teal;
+  // Map old iconColors to color mappings if color prop wasn't explicitly set to something else
+  let activeColorKey = color;
+  if (iconColor) {
+    if (iconColor === '#1A7A4A' || iconColor === '#10B981') activeColorKey = 'forest';
+    else if (iconColor === '#F5A623') activeColorKey = 'gold';
+    else if (iconColor === '#3B82F6' || iconColor === '#8B5CF6') activeColorKey = 'teal';
+    else if (iconColor === '#F97316' || iconColor === '#EF4444') activeColorKey = 'coral';
+  }
+  const activeColor = colorMap[activeColorKey] || colorMap.teal;
+
+  const displayChange = change || trend || trendText;
+  const displayIsPositive = trendDirection ? trendDirection === 'up' : isPositive;
 
   // Render SVG Sparkline
   const width = 120;
   const height = 40;
-  const points = sparklineData.map((val, index) => {
-    const x = (index / (sparklineData.length - 1)) * width;
-    // Normalize val assuming max of 50 and min of 0
-    const y = height - ((val / 50) * height);
-    return `${x},${y}`;
-  }).join(' ');
+  const isPathString = typeof sparklineData === 'string';
+  
+  let points = '';
+  if (!isPathString) {
+    const dataArray = Array.isArray(sparklineData) ? sparklineData : [10, 20, 15, 30, 25, 40];
+    points = dataArray.map((val, index) => {
+      const x = (index / (dataArray.length - 1)) * width;
+      // Normalize val assuming max of 50 and min of 0
+      const y = height - ((val / 50) * height);
+      return `${x},${y}`;
+    }).join(' ');
+  }
 
   return (
     <motion.div
+      onClick={onClick}
       whileHover={{ y: -4 }}
-      className={`glass-card rounded-[28px] border border-slate-100/60 p-4 sm:p-5 shadow-premium bg-gradient-to-br ${activeColor.gradient} hover:shadow-premium-hover transition-all duration-300 relative overflow-hidden flex flex-col justify-between`}
+      className={`glass-card rounded-[28px] border border-slate-100/60 p-4 sm:p-5 shadow-premium bg-gradient-to-br ${activeColor.gradient} hover:shadow-premium-hover transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1 min-w-0">
@@ -63,13 +94,17 @@ export default function StatsCard({ title, value, change, isPositive = true, ico
       <div className="flex items-center justify-between mt-3 sm:mt-5 pt-2 sm:pt-3 border-t border-slate-100/40 gap-2">
         {/* Percentage trend indicators */}
         <div className="flex items-center gap-1 min-w-0 flex-wrap">
-          {isPositive ? (
+          {trendDirection === 'neutral' ? (
+            <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] font-black text-slate-500 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded-full uppercase shrink-0">
+              {displayChange}
+            </span>
+          ) : displayIsPositive ? (
             <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] font-black text-teal bg-teal-light px-1.5 sm:px-2 py-0.5 rounded-full uppercase shrink-0">
-              <FiTrendingUp className="text-[10px] sm:text-xs" /> {change}
+              <FiTrendingUp className="text-[10px] sm:text-xs" /> {displayChange}
             </span>
           ) : (
             <span className="flex items-center gap-0.5 text-[9px] sm:text-[10px] font-black text-coral bg-coral-light px-1.5 sm:px-2 py-0.5 rounded-full uppercase shrink-0">
-              <FiTrendingDown className="text-[10px] sm:text-xs" /> {change}
+              <FiTrendingDown className="text-[10px] sm:text-xs" /> {displayChange}
             </span>
           )}
           <span className="text-[8px] sm:text-[9px] text-slate-400 font-extrabold uppercase whitespace-nowrap">vs last month</span>
@@ -77,15 +112,28 @@ export default function StatsCard({ title, value, change, isPositive = true, ico
 
         {/* Custom Mini Sparkline SVG */}
         <svg width={width} height={height} className="overflow-visible opacity-80 shrink-0 hidden sm:block">
-          <polyline
-            fill="none"
-            stroke={activeColor.sparkColor}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={points}
-            className="sparkline-path"
-          />
+          {isPathString ? (
+             <path
+               d={sparklineData}
+               fill="none"
+               stroke={activeColor.sparkColor}
+               strokeWidth="2.5"
+               strokeLinecap="round"
+               strokeLinejoin="round"
+               className="sparkline-path"
+               transform="scale(2, 2.5) translate(0, 2)"
+             />
+          ) : (
+            <polyline
+              fill="none"
+              stroke={activeColor.sparkColor}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              points={points}
+              className="sparkline-path"
+            />
+          )}
         </svg>
       </div>
     </motion.div>

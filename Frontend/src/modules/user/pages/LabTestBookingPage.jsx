@@ -45,7 +45,12 @@ export default function LabTestBookingPage() {
   // 4: Slot Selection
   // 5: Razorpay Payment UI (Dummy)
   // 6: Success Animation / Summary
+  const supportsHomeCollection = test?.supportsHomeCollection ?? test?.homeCollection ?? true;
+  const supportsWalkIn = test?.supportsWalkIn ?? true;
+
   const [currentStep, setCurrentStep] = useState(1);
+  const [collectionMethod, setCollectionMethod] = useState(supportsHomeCollection ? 'home' : 'lab');
+  const [expressDelivery, setExpressDelivery] = useState(false);
 
   // Form states
   const { register: registerPatient, trigger: triggerPatient, getValues: getPatientValues, formState: { errors: patientErrors } } = useForm({
@@ -71,9 +76,26 @@ export default function LabTestBookingPage() {
     return `${year}-${month}-${day}`;
   };
 
+  const getUpcomingDates = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      let label = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
+      if (i === 0) label = "Today";
+      else if (i === 1) label = "Tomorrow";
+      dates.push({ label, value: val });
+    }
+    return dates;
+  };
+  const upcomingDates = React.useMemo(() => getUpcomingDates(), []);
+
   // Slot selection states
   const [preferredDate, setPreferredDate] = useState(getTodayStr());
   const [preferredTimeSlot, setPreferredTimeSlot] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // Referring Doctor states
   const [doctorName, setDoctorName] = useState('');
@@ -95,35 +117,30 @@ export default function LabTestBookingPage() {
 
   // Validations handled by Zod Schema
 
-  const timeSlots = [
-    '06:00 AM - 09:00 AM (Early Bird)',
-    '09:00 AM - 12:00 PM (Morning Slot)',
-    '12:00 PM - 03:00 PM (Afternoon Slot)',
-    '03:00 PM - 06:00 PM (Evening Slot)'
-  ];
+  const groupedTimeSlots = {
+    Morning: [
+      { label: '07:00 AM - 08:00 AM', endHour: 8 },
+      { label: '08:00 AM - 09:00 AM', endHour: 9 },
+      { label: '09:00 AM - 10:00 AM', endHour: 10 },
+      { label: '10:00 AM - 11:00 AM', endHour: 11 },
+    ],
+    Afternoon: [
+      { label: '12:00 PM - 01:00 PM', endHour: 13 },
+      { label: '01:00 PM - 02:00 PM', endHour: 14 },
+      { label: '02:00 PM - 03:00 PM', endHour: 15 },
+    ],
+    Evening: [
+      { label: '04:00 PM - 05:00 PM', endHour: 17 },
+      { label: '05:00 PM - 06:00 PM', endHour: 18 },
+      { label: '06:00 PM - 07:00 PM', endHour: 19 },
+    ]
+  };
 
-  const isLabSlotAvailable = (slot, selectedDate) => {
+  const isLabSlotAvailable = (endHour, selectedDate) => {
     if (!selectedDate) return true;
 
     const todayStr = getTodayStr();
     if (selectedDate !== todayStr) return true;
-
-    // Determine the end hour of the slot in 24h format:
-    // '06:00 AM - 09:00 AM (Early Bird)' -> ends at 9:00 (9)
-    // '09:00 AM - 12:00 PM (Morning Slot)' -> ends at 12:00 (12)
-    // '12:00 PM - 03:00 PM (Afternoon Slot)' -> ends at 15:00 (15)
-    // '03:00 PM - 06:00 PM (Evening Slot)' -> ends at 18:00 (18)
-    let endHour = 9;
-
-    if (slot.includes('09:00 AM')) {
-      endHour = 9;
-    } else if (slot.includes('12:00 PM (Morning Slot)')) {
-      endHour = 12;
-    } else if (slot.includes('03:00 PM')) {
-      endHour = 15;
-    } else if (slot.includes('06:00 PM')) {
-      endHour = 18;
-    }
 
     const now = new Date();
     const currentHour = now.getHours();
@@ -175,10 +192,10 @@ export default function LabTestBookingPage() {
         setValidationError('Please fix the errors in patient information.');
         return;
       }
-      setCurrentStep(3);
+      setCurrentStep(collectionMethod === 'lab' ? 4 : 3);
     }
     else if (currentStep === 3) {
-      if (test.homeCollection) {
+      if (collectionMethod === 'home') {
         const hasSelectedAddress = selectedAddressId && addresses.some(a => a.id === selectedAddressId);
         if (!hasSelectedAddress && !customAddress.trim()) {
           setValidationError('Please select a saved address or enter a home collection address.');
@@ -203,7 +220,11 @@ export default function LabTestBookingPage() {
   const handleBackStep = () => {
     setValidationError('');
     if (currentStep > 1 && currentStep < 6) {
-      setCurrentStep(prev => prev - 1);
+      if (currentStep === 4 && collectionMethod === 'lab') {
+        setCurrentStep(2);
+      } else {
+        setCurrentStep(prev => prev - 1);
+      }
     }
   };
 
@@ -235,7 +256,8 @@ export default function LabTestBookingPage() {
       formData.append('id', bookingRef);
       formData.append('packageName', test.name);
       formData.append('address', selectedAddrStr);
-      formData.append('price', test.discountPrice || test.price);
+      const finalPrice = (test.discountPrice || test.price) + (expressDelivery ? 199 : 0);
+      formData.append('price', finalPrice);
       formData.append('date', preferredDate);
       formData.append('city', bookingCity);
       formData.append('pincode', bookingPincode);
@@ -283,10 +305,12 @@ export default function LabTestBookingPage() {
         otp: savedBooking.otp,
         paymentMethod: paymentMethod,
         paymentStatus: 'Paid',
-        amountPaid: test.discountPrice || test.price,
+        amountPaid: finalPrice,
         city: bookingCity,
         pincode: bookingPincode,
-        reportUrl: savedBooking.reportUrl || null
+        reportUrl: savedBooking.reportUrl || null,
+        collectionMethod,
+        expressDelivery
       };
 
       dispatch(bookLabPackage(newBooking));
@@ -302,31 +326,50 @@ export default function LabTestBookingPage() {
 
   const renderProgressSteps = () => {
     if (currentStep === 6) return null;
-    const stepNames = ['Review', 'Patient', 'Address', 'Schedule', 'Payment'];
+    let stepNames = ['Review', 'Patient', 'Address', 'Schedule', 'Payment'];
+    if (collectionMethod === 'lab') {
+      stepNames = ['Review', 'Patient', 'Schedule', 'Payment'];
+    }
+    
+    // We map visual step index (0-based) to actual step number
+    const getActualStep = (idx) => {
+      if (collectionMethod === 'lab') {
+        return idx < 2 ? idx + 1 : idx + 2; // [1, 2, 4, 5]
+      }
+      return idx + 1; // [1, 2, 3, 4, 5]
+    };
+
     return (
       <div className="flex items-center justify-between mb-8 select-none">
-        {stepNames.map((name, idx) => (
-          <React.Fragment key={idx}>
-            <div className="flex flex-col items-center gap-1.5 z-10">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${currentStep > idx + 1
-                  ? 'bg-forest text-white'
-                  : currentStep === idx + 1
-                    ? 'bg-teal text-white ring-4 ring-teal-light'
-                    : 'bg-slate-100 text-slate-400'
-                }`}>
-                {idx + 1}
+        {stepNames.map((name, idx) => {
+          const actualStep = getActualStep(idx);
+          const isPassed = currentStep > actualStep;
+          const isActive = currentStep === actualStep;
+          
+          return (
+            <React.Fragment key={idx}>
+              <div className="flex flex-col items-center gap-1.5 z-10">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
+                    isPassed
+                    ? 'bg-forest text-white'
+                    : isActive
+                      ? 'bg-teal text-white ring-4 ring-teal-light'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}>
+                  {idx + 1}
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-teal font-extrabold' : 'text-slate-400'
+                  }`}>
+                  {name}
+                </span>
               </div>
-              <span className={`text-[9px] font-black uppercase tracking-wider ${currentStep === idx + 1 ? 'text-teal font-extrabold' : 'text-slate-400'
-                }`}>
-                {name}
-              </span>
-            </div>
-            {idx < stepNames.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 transition-all ${currentStep > idx + 1 ? 'bg-forest' : 'bg-slate-100'
-                }`} />
-            )}
-          </React.Fragment>
-        ))}
+              {idx < stepNames.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-2 transition-all ${currentStep > getActualStep(idx) ? 'bg-forest' : 'bg-slate-100'
+                  }`} />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     );
   };
@@ -379,16 +422,68 @@ export default function LabTestBookingPage() {
             </div>
 
             <div>
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wide mb-2">Package Specifications</h3>
-              <p className="text-xs text-slate-500 leading-relaxed font-semibold">{test.description}</p>
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wide mb-2">Collection Method</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {supportsHomeCollection && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectionMethod('home')}
+                    className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${collectionMethod === 'home' ? 'border-teal bg-teal-light/20 shadow-sm' : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">🏠</span>
+                      <span className={`text-xs font-black uppercase tracking-wider ${collectionMethod === 'home' ? 'text-teal' : 'text-slate-700'}`}>Home Collection</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-semibold leading-relaxed ml-7">Free doorstep sample pickup at your convenience.</p>
+                  </button>
+                )}
+                {supportsWalkIn && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectionMethod('lab')}
+                    className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${collectionMethod === 'lab' ? 'border-teal bg-teal-light/20 shadow-sm' : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">🏥</span>
+                      <span className={`text-xs font-black uppercase tracking-wider ${collectionMethod === 'lab' ? 'text-teal' : 'text-slate-700'}`}>Visit Diagnostic Center</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-semibold leading-relaxed ml-7">Visit the lab personally on your scheduled time.</p>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="bg-amber-50/70 border border-amber-100 p-4 rounded-2xl flex items-start gap-2.5">
-              <span className="text-lg">🕒</span>
-              <div>
-                <h4 className="text-[10px] text-amber-800 font-extrabold uppercase tracking-wide">Fasting requirement</h4>
-                <p className="text-[11px] text-slate-650 font-bold mt-0.5">{test.fastingRequired}</p>
-              </div>
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wide mb-2 flex items-center justify-between">
+                <span>Express Report Delivery</span>
+                <span className="text-[10px] text-coral bg-coral-light/20 px-2 py-0.5 rounded font-black uppercase tracking-wider">+₹199</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setExpressDelivery(!expressDelivery)}
+                className={`text-left p-4 rounded-2xl border transition-all cursor-pointer w-full flex items-center justify-between ${expressDelivery ? 'border-coral bg-coral-light/10 shadow-sm' : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚡</span>
+                  <div>
+                    <span className={`text-[11px] font-black uppercase tracking-wider ${expressDelivery ? 'text-coral' : 'text-slate-700'}`}>Get reports in 6 hours</span>
+                    <p className="text-[9px] text-slate-500 font-semibold mt-0.5">Skip the queue and receive your results faster.</p>
+                  </div>
+                </div>
+                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${expressDelivery ? 'bg-coral border-coral' : 'border-slate-300'}`}>
+                  {expressDelivery && <FiCheckCircle className="text-white w-3.5 h-3.5" />}
+                </div>
+              </button>
+            </div>
+
+            <div className="bg-amber-50/70 border border-amber-100 p-4 rounded-2xl flex flex-col gap-2">
+              <h4 className="text-[10px] text-amber-800 font-extrabold uppercase tracking-wide flex items-center gap-1"><FiInfo className="w-3.5 h-3.5" /> Preparation Instructions</h4>
+              <ul className="text-[10px] text-slate-650 font-bold flex flex-col gap-2 leading-normal mt-1">
+                <li className="flex items-start gap-1.5"><span className="text-amber-600">✓</span> Fast for {test.fastingRequired !== 'Not Required' ? test.fastingRequired : '10-12 hours'}</li>
+                <li className="flex items-start gap-1.5"><span className="text-amber-600">✓</span> Drink only water</li>
+                <li className="flex items-start gap-1.5"><span className="text-amber-600">✓</span> Continue prescribed medicines unless advised</li>
+                <li className="flex items-start gap-1.5"><span className="text-amber-600">✓</span> Contact support for special conditions</li>
+              </ul>
             </div>
 
             <button
@@ -598,62 +693,102 @@ export default function LabTestBookingPage() {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Preferred Date *</label>
-                <input
-                  type="date"
-                  value={preferredDate}
-                  onChange={(e) => setPreferredDate(e.target.value)}
-                  min={getTodayStr()}
-                  className="px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer"
-                  required
-                />
+            {collectionMethod === 'lab' && (
+              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex flex-col gap-1.5 mb-2">
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Selected Diagnostic Center</span>
+                <div className="flex items-start gap-3 mt-1">
+                  <span className="text-2xl mt-0.5">🏥</span>
+                  <div className="flex-1">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide">{test.labName || 'Apex Diagnostics'}</h4>
+                    <p className="text-[10px] text-slate-500 font-semibold leading-relaxed mt-0.5 max-w-[200px]">123 Medical Hub, {city || 'Indore'}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                      <span className="text-[8.5px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Open: 7 AM–9 PM</span>
+                      <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">NABL Certified</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2.5">
+                <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Select Date *</label>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
+                  {upcomingDates.map((dateObj) => (
+                    <button
+                      key={dateObj.value}
+                      type="button"
+                      onClick={() => setPreferredDate(dateObj.value)}
+                      className={`shrink-0 py-2.5 px-4 rounded-xl border font-black text-xs transition-all cursor-pointer ${
+                        preferredDate === dateObj.value
+                          ? 'bg-teal border-teal text-white shadow-sm'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-teal/50 hover:bg-slate-50'
+                      }`}
+                    >
+                      {dateObj.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className={`shrink-0 py-2.5 px-4 rounded-xl border font-black text-xs transition-all cursor-pointer ${
+                      showCalendar ? 'bg-teal border-teal text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    + More
+                  </button>
+                </div>
+                {showCalendar && (
+                  <input
+                    type="date"
+                    value={preferredDate}
+                    onChange={(e) => { setPreferredDate(e.target.value); setShowCalendar(false); }}
+                    min={getTodayStr()}
+                    className="mt-2 px-4 py-3 rounded-xl border border-slate-200 bg-white focus:ring-1 focus:ring-teal/30 focus:border-teal/30 outline-none text-xs font-bold text-slate-800 transition-all cursor-pointer max-w-[200px] animate-fade-in"
+                  />
+                )}
               </div>
 
-              <div className="flex flex-col gap-1.5 mt-2 sm:mt-0 sm:col-span-2">
-                <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Preferred Time Slot *</label>
-                {/* Hidden required input to maintain form validation */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[9px] font-black uppercase text-slate-450 tracking-wider">Select Time Slot *</label>
                 <input type="text" required value={preferredTimeSlot} onChange={() => {}} className="absolute opacity-0 w-0 h-0 pointer-events-none" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                  {timeSlots.map((slot) => {
-                    const available = isLabSlotAvailable(slot, preferredDate);
-                    const slotTime = slot.split(' (')[0].replace(/ (AM|PM) - /, '-');
-                    const slotName = slot.includes('(') ? '(' + slot.split('(')[1] : '';
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        disabled={!available}
-                        onClick={() => setPreferredTimeSlot(slot)}
-                        className={`py-3 px-3 rounded-xl border transition-all flex flex-col items-center justify-center gap-0.5 ${
-                          !available 
-                            ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed opacity-60' 
-                            : preferredTimeSlot === slot 
-                              ? 'bg-teal border-teal text-white shadow-md scale-[1.02]' 
-                              : 'bg-white border-slate-200 text-slate-600 hover:border-teal hover:text-teal active:scale-[0.98]'
-                        }`}
-                      >
-                        <span className="text-[11px] font-black tracking-wide">{slotTime}</span>
-                        <span className={`text-[8.5px] font-bold uppercase tracking-wider ${preferredTimeSlot === slot ? 'text-teal-50' : 'text-slate-400'}`}>
-                          {slotName.replace(/[()]/g, '')}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                
+                {Object.entries(groupedTimeSlots).map(([groupName, slots]) => (
+                  <div key={groupName} className="mb-2">
+                    <span className="text-[9px] font-bold text-slate-400 block mb-2">{groupName}</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {slots.map((slot) => {
+                        const available = isLabSlotAvailable(slot.endHour, preferredDate);
+                        return (
+                          <button
+                            key={slot.label}
+                            type="button"
+                            disabled={!available}
+                            onClick={() => setPreferredTimeSlot(slot.label)}
+                            className={`py-2 px-2 rounded-xl border transition-all flex flex-col items-center justify-center gap-0.5 ${
+                              !available 
+                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed opacity-60' 
+                                : preferredTimeSlot === slot.label 
+                                  ? 'bg-teal border-teal text-white shadow-md scale-[1.02]' 
+                                  : 'bg-white border-slate-200 text-slate-600 hover:border-teal hover:text-teal active:scale-[0.98]'
+                            }`}
+                          >
+                            <span className="text-[10px] font-black tracking-wide">{slot.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Mandatory Instruction Deck */}
-            <div className="bg-amber-50/60 p-4 border border-amber-100 rounded-2xl flex flex-col gap-3">
+            <div className="bg-amber-50/60 p-4 border border-amber-100 rounded-2xl flex flex-col gap-3 mt-2">
               <h5 className="text-[10px] text-amber-800 font-extrabold uppercase tracking-wide flex items-center gap-1"><FiInfo /> Clinical Guidelines</h5>
               <ul className="text-[9.5px] text-slate-650 font-bold list-disc pl-3.5 flex flex-col gap-1.5 leading-normal">
                 <li>Bring a valid photo Identification proof (Aadhaar, Passport, or DL) at drawing time.</li>
                 <li>Report generated automatically inside {test.timeframe.toLowerCase()} and synced to email.</li>
-                {test.fastingRequired !== 'Not Required' && (
-                  <li className="text-amber-800 font-extrabold">Fasting required: {test.fastingRequired}</li>
-                )}
               </ul>
             </div>
 
@@ -688,8 +823,25 @@ export default function LabTestBookingPage() {
               <div>
                 <span className="text-[10px] text-slate-400 font-black uppercase">Order Amount</span>
                 <h4 className="text-base font-black text-slate-800 mt-0.5">{test.name}</h4>
+                {expressDelivery && (
+                  <span className="text-[9px] text-coral font-bold uppercase tracking-wider block mt-1">+ Express Delivery Fee</span>
+                )}
               </div>
-              <strong className="text-lg font-black text-forest">₹{test.discountPrice || test.price}</strong>
+              <div className="text-right">
+                <strong className="text-lg font-black text-forest block">₹{(test.discountPrice || test.price) + (expressDelivery ? 199 : 0)}</strong>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/70 border border-slate-100 p-4 rounded-2xl flex flex-col gap-2 mt-2">
+              <h4 className="text-[10px] text-slate-800 font-extrabold uppercase tracking-wide">Booking Policies</h4>
+              <ul className="text-[10px] text-slate-650 font-bold flex flex-col gap-2 mt-1">
+                <li className="flex items-start gap-1.5"><span className="text-emerald-500">✓</span> Free cancellation up to 2 hours before collection</li>
+                <li className="flex items-start gap-1.5"><span className="text-emerald-500">✓</span> One free reschedule available</li>
+                <li className="flex items-start gap-1.5"><span className="text-emerald-500">✓</span> Refund processed within 3–5 working days</li>
+                {collectionMethod === 'home' && (
+                  <li className="flex items-start gap-1.5"><span className="text-emerald-500">✓</span> Home collection fee refundable</li>
+                )}
+              </ul>
             </div>
 
             <form onSubmit={handleProcessPayment} className="flex flex-col gap-5">
@@ -827,60 +979,97 @@ export default function LabTestBookingPage() {
             key="step6"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-premium text-center select-none"
+            className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-premium text-center select-none max-w-md mx-auto"
           >
             {/* Confirmed Animation */}
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-5 shadow-sm animate-bounce">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-4 shadow-sm">
               <FiCheckCircle className="stroke-[2.5px]" />
             </div>
 
-            <span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1 rounded-full font-black uppercase tracking-wider">Payment Verified</span>
-            <h2 className="text-base md:text-lg font-black text-slate-800 leading-tight mt-4">Lab Test Confirmed Successfully!</h2>
-            <p className="text-xs text-slate-500 font-bold mt-2 max-w-sm mx-auto leading-relaxed">
-              Your diagnostic request is registered. A sterile sample dispatch technician will connect with you via SMS for live collection coordinates.
-            </p>
-
-            {/* Reference Box */}
-            <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5 my-6 max-w-sm mx-auto text-left flex flex-col gap-3">
-              <div className="flex justify-between items-center border-b border-slate-200/50 pb-2">
-                <span className="text-[9px] text-slate-400 font-black uppercase">Booking Reference</span>
-                <span className="text-xs font-black text-forest">{generatedRefId}</span>
+            <h2 className="text-xl font-black text-slate-800 leading-tight">Lab Test Confirmed</h2>
+            
+            {/* Booking Top Info */}
+            <div className="grid grid-cols-2 gap-3 mt-5 text-left border-y border-slate-100 py-4">
+              <div>
+                <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Booking ID</span>
+                <span className="text-xs font-black text-slate-800">{generatedRefId}</span>
               </div>
-              <div className="flex justify-between items-center text-xs pb-3 border-b border-slate-100">
-                <span className="text-slate-500 font-bold">Patient</span>
-                <span className="text-slate-700 font-extrabold truncate max-w-[180px]">{getPatientValues('patientName')}</span>
-              </div>
-              <div className="flex justify-between items-center text-[10.5px]">
-                <span className="text-slate-400 font-semibold">Diagnostic Package:</span>
-                <span className="text-slate-700 font-extrabold truncate max-w-[180px]">{test.name}</span>
-              </div>
-              <div className="flex justify-between items-center text-[10.5px]">
-                <span className="text-slate-400 font-semibold">Scheduled Drawing:</span>
-                <span className="text-slate-700 font-extrabold">{preferredDate} • {preferredTimeSlot.split(' ')[0]}</span>
-              </div>
-              <div className="flex justify-between items-center text-[10.5px]">
-                <span className="text-slate-400 font-semibold">Draw Coordinates:</span>
-                <span className="text-slate-750 font-extrabold truncate max-w-[180px]">
-                  {test.homeCollection ? (addresses.find(a => a.id === selectedAddressId)?.addressLine || customAddress) : 'Diagnostic Center'}
+              <div>
+                <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Collection Type</span>
+                <span className="text-xs font-black text-slate-800 flex items-center gap-1">
+                  {collectionMethod === 'home' ? '🏠 Home Collection' : '🏥 Lab Visit'}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-[10.5px] border-t border-slate-200/50 pt-2.5 mt-1">
-                <span className="text-slate-400 font-semibold">Payment Status:</span>
-                <span className="text-[9px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-black uppercase tracking-wide">Paid ₹{test.discountPrice || test.price}</span>
+              <div>
+                <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Date & Time</span>
+                <span className="text-xs font-black text-slate-800">{preferredDate} • {preferredTimeSlot.split(' ')[0]}</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Status</span>
+                <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-black tracking-wide inline-block mt-0.5">Payment Successful</span>
+              </div>
+            </div>
+
+            {/* Booking Timeline */}
+            <div className="text-left mt-5 mb-6">
+              <h4 className="text-[10px] text-slate-800 font-extrabold uppercase tracking-wide mb-3">Booking Journey</h4>
+              <div className="flex flex-col gap-3 relative before:absolute before:inset-y-2 before:left-[7px] before:w-0.5 before:bg-slate-100 pl-2">
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm flex items-center justify-center"><FiCheckCircle className="text-white w-2 h-2" /></div>
+                  <span className="text-[11px] font-black text-slate-800">Request Submitted</span>
+                </div>
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-300"></div>
+                  <span className="text-[11px] font-bold text-slate-500">Collector Assigned</span>
+                </div>
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-300"></div>
+                  <span className="text-[11px] font-bold text-slate-500">Sample Collected</span>
+                </div>
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-300"></div>
+                  <span className="text-[11px] font-bold text-slate-500">Testing In Progress</span>
+                </div>
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-300"></div>
+                  <span className="text-[11px] font-bold text-slate-500">Report Ready</span>
+                </div>
               </div>
             </div>
 
             {/* Navigation buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
-              <button
-                onClick={() => navigate('/profile')}
-                className="flex-1 py-3 px-5 bg-teal hover:bg-teal-dark text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0"
-              >
-                Go to Profile
-              </button>
+            <div className="flex flex-col gap-2.5">
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="py-3 px-2 bg-teal hover:bg-teal-dark text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0 w-full"
+                >
+                  Track Booking
+                </button>
+                <button
+                  onClick={() => alert('Invoice Download Initialized')}
+                  className="py-3 px-2 bg-slate-800 hover:bg-slate-900 text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0 w-full"
+                >
+                  Download Invoice
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="py-3 px-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0 w-full"
+                >
+                  Reschedule
+                </button>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="py-3 px-2 bg-slate-100 hover:bg-slate-200 text-coral-600 text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0 w-full"
+                >
+                  Cancel Booking
+                </button>
+              </div>
               <button
                 onClick={() => navigate('/')}
-                className="flex-1 py-3 px-5 bg-slate-100 hover:bg-slate-200 text-slate-655 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0"
+                className="mt-1 py-3 px-5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer w-full"
               >
                 Back to Home
               </button>
